@@ -1,5 +1,5 @@
 # AmigaED4-IDE
-A cross-platform C/C++ and m68k Assembler Tabbed Editor/IDE for m68k-amigaos-gccIDE for classic Amiga development, built with Qt6.
+A cross-platform C/C++ and m68k Assembler Tabbed Editor/IDE for m68k-amigaos-gcc and vbcc for classic Amiga development, built with Qt6.
 <img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/31e3cd55-fbad-43d4-b8c2-1e2daec18ee0" />
 <img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/fb3adcde-01fa-4950-9b4e-6c3563941029" />
 AmigaED brings project management, syntax highlighting, and one-click builds to AmigaOS 1.3/3.x cross-development, with out-of-the-box support for vbcc, m68k-amigaos-gcc, and SAS/C — plus integrated UAE emulator launching, so you can edit, compile, and test your Amiga software without ever leaving the editor.
@@ -40,3 +40,66 @@ AmigaED brings project management, syntax highlighting, and one-click builds to 
   - Optional automatic `.info` icon creation for the built executable (from a configurable default icon), handled per-platform (`copy` on Windows, `cp` on Linux/macOS) — including the Windows-specific quirks of `make` sometimes running recipes through a bundled `sh.exe` instead of `cmd.exe`
   - A `Makefile.sc` (SAS/C) generated alongside for manual on-Amiga builds
   - Sensible, research-backed default compiler/linker flags per toolchain and target OS (including `-lamiga`/`-lauto` for Workbench-capable
+
+## Building AmigaED
+
+AmigaED is a Qt6/qmake project (QScintilla-based). There are two ways to build it: from within Qt Creator, or entirely from the command line. Both work identically on Windows, Linux, and macOS.
+
+### Prerequisites (all platforms)
+
+- Qt 6 (developed against 6.11.2, but any reasonably recent Qt6 should work) — with the "Desktop" component and qmake
+- QScintilla 2, built against Qt6
+- A C++ compiler toolchain:
+  - **Windows:** MinGW 13.1.0 64-bit (as shipped with the Qt online installer) — MSVC is untested but should work with minor `.pro` adjustments
+  - **Linux/macOS:** GCC or Clang, whichever your Qt6 installation targets
+
+### Option A: Building with Qt Creator
+
+1. Open `AmigaED.pro` in Qt Creator.
+2. Select the Qt6 kit you want to build with.
+3. Build ▸ Run qmake, then Build ▸ Build Project "AmigaED" (or just hit **Run**).
+
+This is the easiest path, especially on Windows, since Qt Creator manages the MinGW toolchain and Qt paths for you.
+
+### Option B: Building from the command line
+
+```bash
+qmake6 AmigaED.pro   # or "qmake AmigaED.pro" if qmake6 isn't on your PATH
+make                 # mingw32-make.exe on Windows
+```
+
+The resulting binary (and, on Windows, the staged `windeployqt`/QScintilla DLL output — see below) ends up in the build directory qmake configured (`release/` or `debug/` by default, depending on build config).
+
+### Platform-specific notes
+
+**Windows:** The `.pro` file's `QMAKE_POST_LINK` step automatically runs `windeployqt` and copies the QScintilla DLL into the output folder after every successful build, so the result is a self-contained, runnable folder without manually hunting down DLLs. A ready-to-compile Inno Setup script is provided separately under `AmigaED_install/` for producing a proper Windows installer, once you have a build.
+
+**Linux:** Builds natively with no extra steps beyond the prerequisites below. Two additional packaging scripts are provided if you want a distributable package rather than just a local build:
+- `AppImage/build_appimage.sh` — bundles Qt6/QScintilla into a portable AppImage (needs `linuxdeploy` and the Qt plugin for it — not packaged via apt, see the script's own header comment for where to download them)
+- `Debian/build_deb.sh` — builds a native `.deb` with correctly detected runtime dependencies (via `dpkg-shlibdeps`)
+
+Neither script runs automatically as part of the normal build — both are invoked manually, after a normal build has already succeeded.
+
+**macOS:** Builds the same way as Linux (qmake + make, or via Qt Creator). No packaging script (e.g. for a `.app` bundle/`.dmg`) exists yet.
+
+### Required `.deb` packages (Debian/Ubuntu)
+
+To build AmigaED itself on a Debian- or Ubuntu-based system:
+
+```bash
+sudo apt install build-essential qt6-base-dev qt6-base-dev-tools libqscintilla2-qt6-dev
+```
+
+| Package | What it provides |
+|---|---|
+| `build-essential` | GCC/G++ and `make` |
+| `qt6-base-dev` | Qt6 core/widgets/gui headers and libraries |
+| `qt6-base-dev-tools` | `qmake6` and other Qt6 build tools |
+| `libqscintilla2-qt6-dev` | QScintilla 2 editor widget, built against Qt6 (headers + library) |
+
+Two more are only needed for specific extra steps, not for a normal build:
+
+| Package | Needed for |
+|---|---|
+| `dpkg-dev` | Building the `.deb` package (`Debian/build_deb.sh`) — provides `dpkg-shlibdeps`/`dpkg-deb` |
+| `qt6-l10n-tools` | Regenerating translations (`lupdate`/`lrelease`) after changing translatable strings — not needed just to build the app, since the compiled `.qm` translation file is already checked in |

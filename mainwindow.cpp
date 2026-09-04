@@ -1178,6 +1178,8 @@ void MainWindow::createMenus()
     preprocessorMenue->addAction(amigaIncludesAct);
     preprocessorMenue->addSeparator();
     preprocessorMenue->addAction(ifdefinedCompilerAct);
+    preprocessorMenue->addSeparator();
+    preprocessorMenue->addAction(versionStringAct);
     insertMenue->addSeparator();
     libraryMenue = insertMenue->addMenu(tr("Libraries..."));
     libraryMenue->addAction(OpenLibraryAct);
@@ -1210,6 +1212,8 @@ void MainWindow::createMenus()
     commentsMenue->addAction(c_multiAct);
     commentsMenue->addSeparator();
     commentsMenue->addAction(cpp_singleAct);
+    commentsMenue->addSeparator();
+    commentsMenue->addAction(lineDevideCommentAct);
     insertMenue->addSeparator();
     snippetsMenue = insertMenue->addMenu(tr("Snippets..."));
     snippetsMenue->addAction(snippet1Act);
@@ -7563,54 +7567,47 @@ void MainWindow::showCustomContextMenue(const QPoint &pos)
     // name the context menue
     QMenu contextMenu(tr("Inserts"), this);
 
-    // define a pseudo action to show some kind of menue title
+    // define a pseudo action to show some kind of menue title - disabled,
+    // so it reads as a heading rather than a dead, clickable-looking entry
     QAction pseudo_action(tr("What to insert?"), this);
-    pseudo_action.setStatusTip(tr("Select an item to be inserted into current text!"));
-    //connect(&pseudo_action, &QAction::triggered, this, []{qDebug() << "action 1 click!";});
+    pseudo_action.setEnabled(false);
 
-    // add all those predefined actions that we want to show...
+    // Mirrors the real "Inserts" menu (menu bar) exactly, by reusing the
+    // SAME submenu objects rather than hand-listing a separate, easily
+    // outdated copy of their contents here. This is deliberate: those
+    // submenus already group everything sensibly (Preprocessor, Libraries,
+    // Condition, Loops, Class, Comments, Snippets, Templates) - repeating
+    // that grouping by hand here would just be a second place to keep in
+    // sync (see the old flat version of this function, which drifted out
+    // of sync with the real menu over time - several items were missing,
+    // one existed here but nowhere else). A QMenu can be referenced by
+    // more than one parent menu's action at once, so this is safe even
+    // though those submenus are also permanently attached to insertMenue.
     contextMenu.addAction(&pseudo_action);
     contextMenu.addSeparator();
-    contextMenu.addAction(shellAppAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(fileheaderAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(ifdefinedAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(ifdefinedCompilerAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(includeAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(versionStringAct);
+    contextMenu.addMenu(templatesMenue);
+    contextMenu.addMenu(preprocessorMenue);
+    contextMenu.addMenu(libraryMenue);
+    contextMenu.addMenu(conditionsMenue);
+    contextMenu.addMenu(loopsMenue);
     contextMenu.addSeparator();
     contextMenu.addAction(mainAct);
-    contextMenu.addSeparator();
     contextMenu.addAction(functionAct);
-    contextMenu.addSeparator();
+    contextMenu.addAction(enumAct);
     contextMenu.addAction(structAct);
     contextMenu.addSeparator();
-    contextMenu.addAction(OpenLibraryAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(CloseLibraryAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(ifAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(if_elseAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(whileAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(do_whileAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(forAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(c_singleAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(c_multiAct);
-    contextMenu.addSeparator();
-    contextMenu.addAction(lineDevideCommentAct);
+    contextMenu.addMenu(classMenue);
+    contextMenu.addMenu(commentsMenue);
+    contextMenu.addMenu(snippetsMenue);
 
-    contextMenu.exec(mapToGlobal(pos));
-
+    // QCursor::pos() rather than mapToGlobal(pos): 'pos' arrives in the
+    // coordinates of whichever editor tab emitted customContextMenuRequested,
+    // but this function only has 'this' (MainWindow) to map from - using
+    // that mismatched widget placed the menu at the wrong screen position
+    // (offset by the toolbar/project panel/tab bar). The cursor's actual
+    // screen position is correct regardless of which widget's coordinate
+    // space 'pos' came from.
+    contextMenu.exec(QCursor::pos());
 }
 
 bool MainWindow::fileExists(QString path)

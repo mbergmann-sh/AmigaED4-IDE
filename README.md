@@ -3,6 +3,8 @@ A cross-platform C/C++ and m68k Assembler Tabbed Editor/IDE for m68k-amigaos-gcc
 <img width="1405" height="961" alt="grafik" src="https://github.com/user-attachments/assets/11037a21-2197-4a6a-87f8-bdbfd7426478" />
 <img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/31e3cd55-fbad-43d4-b8c2-1e2daec18ee0" />
 <img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/fb3adcde-01fa-4950-9b4e-6c3563941029" />
+<img width="1456" height="1017" alt="grafik" src="https://github.com/user-attachments/assets/955756d1-02e7-48ff-a9ab-838b644e7817" />
+
 AmigaED brings project management, syntax highlighting, and one-click builds to AmigaOS 1.3/3.x cross-development, with out-of-the-box support for vbcc, m68k-amigaos-gcc, and SAS/C — plus integrated UAE emulator launching, so you can edit, compile, and test your Amiga software without ever leaving the editor.
 
 ## Features

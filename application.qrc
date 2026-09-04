@@ -1,0 +1,46 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/copy.png</file>
+        <file>images/cut.png</file>
+        <file>images/new.png</file>
+        <file>images/open.png</file>
+        <file>images/paste.png</file>
+        <file>images/save.png</file>
+        <file>images/lemming.png</file>
+        <file>images/gotoline.png</file>
+        <file>images/brackets.png</file>
+        <file>images/dice.png</file>
+        <file>images/build_project.png</file>
+        <file>images/fileexit.png</file>
+        <file>images/workbench.png</file>
+        <file>images/filesaveas.png</file>
+        <file>images/printer.png</file>
+        <file>images/search.png</file>
+        <file>images/prefs.png</file>
+        <file>images/amiga_classic.png</file>
+        <file>images/aced-logo.png</file>
+        <file>images/noworkbench.png</file>
+        <file>images/btn_next.png</file>
+        <file>images/btn_prev.png</file>
+        <file>images/ico_note_attention.png</file>
+        <file>images/home.png</file>
+        <file>images/ico_out.png</file>
+        <file>images/find-and-replace.png</file>
+        <file>images/c-logo.png</file>
+        <file>images/cpp-logo.png</file>
+        <file>images/amiga_boing.png</file>
+        <file>images/stop-emu.png</file>
+        <file>images/start-emu.png</file>
+        <file>images/drawer.png</file>
+        <file>images/filetype_c.png</file>
+        <file>images/filetype_h.png</file>
+        <file>images/filetype_installer.png</file>
+        <file>images/filetype_guide.png</file>
+        <file>images/filetype_makefile.png</file>
+        <file>images/filetype_txt.png</file>
+        <file>images/filetype_readme.png</file>
+        <file>images/filetype_asm.png</file>
+        <file>images/filetype_pas.png</file>
+        <file>images/filetype_exe.png</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/translations">
+        <file alias="amigaed_de.qm">translations/amigaed_de.qm</file>
+    </qresource>
+</RCC>

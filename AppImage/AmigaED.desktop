@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AmigaED
+GenericName=Amiga Cross Editor
+Comment=C/C++ cross-development editor for classic Amiga (AmigaOS 1.3/3.x)
+Exec=AmigaED
+Icon=AmigaED
+Categories=Development;IDE;
+Terminal=false

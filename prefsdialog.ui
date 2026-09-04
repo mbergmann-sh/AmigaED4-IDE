@@ -1,0 +1,1329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PrefsDialog</class>
+ <widget class="QDialog" name="PrefsDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>535</width>
+    <height>374</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Prefs - AmigaED 4.0 </string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="application.qrc">
+    <normaloff>:/images/prefs.png</normaloff>:/images/prefs.png</iconset>
+  </property>
+  <property name="sizeGripEnabled">
+   <bool>false</bool>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_4">
+   <item row="1" column="0">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>211</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="1" column="2">
+    <widget class="QPushButton" name="btn_SavePrefs">
+     <property name="text">
+      <string>Save Prefs</string>
+     </property>
+     <property name="icon">
+      <iconset resource="application.qrc">
+       <normaloff>:/images/save.png</normaloff>:/images/save.png</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="btn_CancelSave">
+     <property name="text">
+      <string>Cancel</string>
+     </property>
+     <property name="icon">
+      <iconset resource="application.qrc">
+       <normaloff>:/images/fileexit.png</normaloff>:/images/fileexit.png</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="3">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>2</number>
+     </property>
+     <widget class="QWidget" name="tabProject">
+      <attribute name="title">
+       <string>Project</string>
+      </attribute>
+      <attribute name="toolTip">
+       <string>Basic settings for macros and pathes...</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Au&amp;thor:</string>
+         </property>
+         <property name="buddy">
+          <cstring>lineEdit_author</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEdit_author">
+         <property name="minimumSize">
+          <size>
+           <width>142</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>author_name</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Email:</string>
+         </property>
+         <property name="buddy">
+          <cstring>lineEdit_email</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lineEdit_email">
+         <property name="minimumSize">
+          <size>
+           <width>142</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>someone@somewhere.com</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>Website:</string>
+         </property>
+         <property name="buddy">
+          <cstring>lineEdit_website</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="lineEdit_website">
+         <property name="minimumSize">
+          <size>
+           <width>142</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>http://www.somewhere.com</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Pro&amp;jects root:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_projectsRootDir">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getProjectRootDir">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Select default Root Folder for your Projects&lt;br&gt;&lt;b&gt;Tipp:&lt;/b&gt; Should be accessiable by one of your emulated Amiga systems!</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/open.png</normaloff>:/images/open.png</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_12">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_10">
+           <property name="toolTip">
+            <string>Select default icon to be copied to compiled program</string>
+           </property>
+           <property name="text">
+            <string>Default icon:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getDefaultIcon">
+           <property name="toolTip">
+            <string>Select default icon to be copied to compiled program</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getDefaultIcon">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Select default icon to be copied to compiled program</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabGCC">
+      <attribute name="title">
+       <string>GCC</string>
+      </attribute>
+      <attribute name="toolTip">
+       <string>Basic settings for gcc and g++</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_14">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_6">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getGCCexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getGCCexefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>GNU gcc:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <layout class="QGridLayout" name="gridLayout_7">
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getGPPexefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getGPPexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>GNU g++:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <layout class="QGridLayout" name="gridLayout_8">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getMAKEexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getMAKEexefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_7">
+           <property name="text">
+            <string>GNU make:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="0">
+        <layout class="QGridLayout" name="gridLayout_28">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getSTRIPexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getSTRIPexefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_27">
+           <property name="text">
+            <string>GNU s&amp;trip:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="4" column="0">
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_8">
+           <property name="text">
+            <string>GCC OS 1.3 compiler opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_GCC13CompilerOpts">
+           <property name="toolTip">
+            <string>Compiler options for m68k-amigaos-gcc when targetting AmigaOS 1.3 (used for single-file compiles, the "Compiler Options" prompt when creating a new project, and the generated Makefile's CCARGS). Includes -mcrt=nix13, since it affects code generation and must be present at compile time too, not just when linking.</string>
+           </property>
+           <property name="text">
+            <string>-std=gnu89 -O2 -Wall -mcrt=nix13</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_37">
+           <property name="text">
+            <string>GCC OS 3.x compiler opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="lineEdit_GCC30CompilerOpts">
+           <property name="toolTip">
+            <string>Compiler options for m68k-amigaos-gcc when targetting AmigaOS 3.x (used for single-file compiles, the "Compiler Options" prompt when creating a new project, and the generated Makefile's CCARGS)</string>
+           </property>
+           <property name="text">
+            <string>-std=gnu89 -O2 -Wall</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_38">
+           <property name="text">
+            <string>GCC OS 1.3 linker opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="lineEdit_GCC13LinkerOpts">
+           <property name="toolTip">
+            <string>Linker options for m68k-amigaos-gcc when targetting AmigaOS 1.3 (used for single-file compiles, the "Linker Options" prompt when creating a new project, and the generated Makefile's LDFLAGS) Note: -lamiga/-lauto are VBCC library names (amiga.lib/auto.lib) and do not apply to m68k-amigaos-gcc.</string>
+           </property>
+           <property name="text">
+            <string>-noixemul</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_39">
+           <property name="text">
+            <string>GCC OS 3.x linker opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="lineEdit_GCC30LinkerOpts">
+           <property name="toolTip">
+            <string>Linker options for m68k-amigaos-gcc when targetting AmigaOS 3.x (used for single-file compiles, the "Linker Options" prompt when creating a new project, and the generated Makefile's LDFLAGS) Note: -lamiga/-lauto are VBCC library names (amiga.lib/auto.lib) and do not apply to m68k-amigaos-gcc.</string>
+           </property>
+           <property name="text">
+            <string>-noixemul</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_9">
+           <property name="text">
+            <string>G++ OS 1.3 compiler opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="lineEdit_GPP13CompilerOpts">
+           <property name="toolTip">
+            <string>Compiler options for m68k-amigaos-g++ when targetting AmigaOS 1.3 (used for single-file compiles, the "Compiler Options" prompt when creating a new project, and the generated Makefile's CCARGS). Includes -mcrt=nix13, since it affects code generation and must be present at compile time too, not just when linking.</string>
+           </property>
+           <property name="text">
+            <string>-std=c++11 -O2 -Wall -mcrt=nix13</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="label_40">
+           <property name="text">
+            <string>G++ OS 3.x compiler opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLineEdit" name="lineEdit_GPP30CompilerOpts">
+           <property name="toolTip">
+            <string>Compiler options for m68k-amigaos-g++ when targetting AmigaOS 3.x (used for single-file compiles, the "Compiler Options" prompt when creating a new project, and the generated Makefile's CCARGS)</string>
+           </property>
+           <property name="text">
+            <string>-std=c++11 -O2 -Wall</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="label_41">
+           <property name="text">
+            <string>G++ OS 1.3 linker opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QLineEdit" name="lineEdit_GPP13LinkerOpts">
+           <property name="toolTip">
+            <string>Linker options for m68k-amigaos-g++ when targetting AmigaOS 1.3 (used for single-file compiles, the "Linker Options" prompt when creating a new project, and the generated Makefile's LDFLAGS) Note: -lamiga/-lauto are VBCC library names (amiga.lib/auto.lib) and do not apply to m68k-amigaos-gcc.</string>
+           </property>
+           <property name="text">
+            <string>-noixemul</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="0">
+          <widget class="QLabel" name="label_42">
+           <property name="text">
+            <string>G++ OS 3.x linker opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="1">
+          <widget class="QLineEdit" name="lineEdit_GPP30LinkerOpts">
+           <property name="toolTip">
+            <string>Linker options for m68k-amigaos-g++ when targetting AmigaOS 3.x (used for single-file compiles, the "Linker Options" prompt when creating a new project, and the generated Makefile's LDFLAGS) Note: -lamiga/-lauto are VBCC library names (amiga.lib/auto.lib) and do not apply to m68k-amigaos-gcc.</string>
+           </property>
+           <property name="text">
+            <string>-noixemul</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="5" column="0">
+        <widget class="QCheckBox" name="checkBox_ShowGccOpts">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If set, you will be presented with an options field where you might change options for recent compilation every time compilation is triggered&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::RightToLeft</enum>
+         </property>
+         <property name="text">
+          <string>Show/Change Opts at compiler start</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabVBCC">
+      <attribute name="title">
+       <string>VBCC</string>
+      </attribute>
+      <attribute name="toolTip">
+       <string>Basic settings for vc</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_9">
+       <item row="0" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_18">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_19">
+           <property name="text">
+            <string>vc: </string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getVCexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getVCexefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_16">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_17">
+           <property name="text">
+            <string>vasm: </string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getVASMexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getVASMexefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_17">
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getVCconfigDir">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/open.png</normaloff>:/images/open.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_18">
+           <property name="text">
+            <string>config dir:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getVCconfigDir">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_19">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_VCdefaultOptsOS13">
+           <property name="toolTip">
+            <string>Compiler options for vbcc when targetting AmigaOS 1.3 (used for single-file compiles, the "Compiler Options" prompt when creating a new project, and the generated Makefile's CCARGS). '+kick13' must stay the first token.</string>
+           </property>
+           <property name="text">
+            <string>+kick13 -cpp-comments -v -O2 -size -cpu=68020 -I$NDK13_INC</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_20">
+           <property name="text">
+            <string>VBCC OS &amp;1.3 compiler opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_20">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_VCdefaultOptsOS30">
+           <property name="toolTip">
+            <string>Compiler options for vbcc when targetting AmigaOS 3.x (used for single-file compiles, the "Compiler Options" prompt when creating a new project, and the generated Makefile's CCARGS). '+aos68k' must stay the first token.</string>
+           </property>
+           <property name="text">
+            <string>+aos68k -cpp-comments  -v -O2 -size -cpu=68030 -I$NDK39_INC</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_32">
+           <property name="text">
+            <string>VBCC OS &amp;3.x compiler opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="5" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_30">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_VC13LinkerOpts">
+           <property name="toolTip">
+            <string>Linker options for vbcc when targetting AmigaOS 1.3 (used for single-file compiles, the "Linker Options" prompt when creating a new project, and the generated Makefile's LDFLAGS)</string>
+           </property>
+           <property name="text">
+            <string>-noixemul -L$NDK13_LIB -lauto</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_43">
+           <property name="text">
+            <string>VBCC OS 1.3 linker opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="6" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_29">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_VCdefaultLinkerOpts">
+           <property name="toolTip">
+            <string>Linker options for vbcc when targetting AmigaOS 3.x (used for single-file compiles, the "Linker Options" prompt when creating a new project, and the generated Makefile's LDFLAGS)</string>
+           </property>
+           <property name="text">
+            <string>-noixemul -L$NDK39_LIB -lmieee -lauto -lamiga</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_36">
+           <property name="text">
+            <string>VBCC OS 3.x linker opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="7" column="0">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>32</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="7" column="1">
+        <layout class="QGridLayout" name="gridLayout_13">
+         <item row="0" column="2">
+          <widget class="QLabel" name="label_11">
+           <property name="text">
+            <string>Default Target OS:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="5">
+          <widget class="QCheckBox" name="checkBox_ShowVbccOpts">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If set, you will be presented with an options field where you might change options for recent compilation every time compilation is triggered&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="layoutDirection">
+            <enum>Qt::RightToLeft</enum>
+           </property>
+           <property name="text">
+            <string>Show/Change Opts at compiler start</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QComboBox" name="comboBoxVbccDefaultTargetOS">
+           <property name="toolTip">
+            <string>Select whether to compile for OS 1.3 or OS 2.x to OS 3.x by default</string>
+           </property>
+           <property name="currentIndex">
+            <number>1</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>OS 1.3</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>OS 3.x</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="0" column="4">
+          <spacer name="horizontalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>28</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabSASC">
+      <attribute name="title">
+       <string>SAS/C</string>
+      </attribute>
+      <attribute name="toolTip">
+       <string>Basic settings for SAS/C - used only for generating Makefile.sc, never invoked automatically (SAS/C only runs on a real Amiga or emulator)</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_31">
+       <item row="0" column="0" colspan="2">
+        <layout class="QGridLayout" name="gridLayout_32">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_44">
+           <property name="text">
+            <string>SAS/C default opts:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_SASCdefaultOpts">
+           <property name="toolTip">
+            <string>Options passed to "sc" in the generated Makefile.sc (e.g. "sc ICONS ERRORREXX file.c LINK TO target"). No OS 1.3/3.x distinction is made for SAS/C.</string>
+           </property>
+           <property name="text">
+            <string>ICONS ERRORREXX</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>32</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabEmulator">
+      <attribute name="title">
+       <string>Emulator</string>
+      </attribute>
+      <attribute name="toolTip">
+       <string>Basic settings for UAE emulation startup</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_27">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_22">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_22">
+           <property name="text">
+            <string>UAE:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getEmulatorExefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getEmulatorExefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <layout class="QGridLayout" name="gridLayout_21">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_21">
+           <property name="text">
+            <string>OS &amp;1.3 config:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getOS13Configfile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getOS13Configfile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <layout class="QGridLayout" name="gridLayout_24">
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getOS3Configfile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_24">
+           <property name="text">
+            <string>OS &amp;3.x config:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getOS3Configfile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="0">
+        <layout class="QGridLayout" name="gridLayout_26">
+         <item row="0" column="0">
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLabel" name="label_26">
+           <property name="text">
+            <string>Default config:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QComboBox" name="comboBox_defaultEmulator">
+           <property name="toolTip">
+            <string>Select default AmigaOS to be started</string>
+           </property>
+           <property name="currentIndex">
+            <number>1</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>AmigaOS 1.3</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>AmigaOS 3.x</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabMisc">
+      <attribute name="title">
+       <string>Misc</string>
+      </attribute>
+      <attribute name="toolTip">
+       <string>Misc settings for GUI look and feel, compiler to use, compiler behaviour...</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_10">
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Application Look and Feel</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_28">
+            <property name="text">
+             <string>Default application style:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBoxDefaultStyle">
+            <property name="toolTip">
+             <string>Select default Application style (only styles that are available on your system will be shown!). "Dark" gives the whole application - including the editor - a dark theme.</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBoxNoLCD">
+            <property name="toolTip">
+             <string>Use standard text widgets for cursor position</string>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="text">
+             <string>Don't use LCD for cursor position</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBoxIndentationLines">
+            <property name="toolTip">
+             <string>Show indentation guides by default?</string>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="text">
+             <string>Show indentation lines:</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkBoxNoCompileButton">
+            <property name="toolTip">
+             <string>Hide compiler selection and compile buttons from statusbar</string>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="text">
+             <string>Don't show compiler buttons in statusbar</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="checkBoxDebugOutput">
+            <property name="toolTip">
+             <string>Show debug output (only usefull for developers in order to enhange Amiga Cross Editor!)</string>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="text">
+             <string>Show debug output:</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QCheckBox" name="checkBoxSimpleStatusbar">
+            <property name="toolTip">
+             <string>use a simple statusbar without any gimmicks</string>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="text">
+             <string>Use simple statusbar</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_33">
+            <property name="text">
+             <string>Default GUI Language:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBoxDefaultGuiLanguage">
+            <property name="toolTip">
+             <string>Select the GUI language to use the next time the program starts (can also be switched at runtime via View -&gt; GUI Language)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>Build System</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_11">
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBoxWarnRequesters">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Dont' show messageboxes on compilation finished or failed&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Don't use warn requesters</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_31">
+            <property name="text">
+             <string>Default Cross Compiler:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBoxOpenOnFail">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open output console on compiler failure only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Open panel on failure only</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBoxDefaultCompiler">
+            <property name="toolTip">
+             <string>Select default cross compiler to use</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkBoxCreateIcon">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="toolTip">
+             <string>Create an icon for your successfully compiled Amiga program</string>
+            </property>
+            <property name="text">
+             <string>create icon</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>lineEdit_author</tabstop>
+  <tabstop>lineEdit_email</tabstop>
+  <tabstop>lineEdit_website</tabstop>
+  <tabstop>lineEdit_projectsRootDir</tabstop>
+  <tabstop>btn_getProjectRootDir</tabstop>
+  <tabstop>btn_SavePrefs</tabstop>
+  <tabstop>btn_CancelSave</tabstop>
+  <tabstop>lineEdit_getEmulatorExefile</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>lineEdit_getGCCexefile</tabstop>
+  <tabstop>btn_getGCCexefile</tabstop>
+  <tabstop>lineEdit_getGPPexefile</tabstop>
+  <tabstop>btn_getGPPexefile</tabstop>
+  <tabstop>lineEdit_getMAKEexefile</tabstop>
+  <tabstop>btn_getMAKEexefile</tabstop>
+  <tabstop>lineEdit_getSTRIPexefile</tabstop>
+  <tabstop>btn_getSTRIPexefile</tabstop>
+  <tabstop>lineEdit_GCC13CompilerOpts</tabstop>
+  <tabstop>lineEdit_GCC30CompilerOpts</tabstop>
+  <tabstop>lineEdit_GCC13LinkerOpts</tabstop>
+  <tabstop>lineEdit_GCC30LinkerOpts</tabstop>
+  <tabstop>lineEdit_GPP13CompilerOpts</tabstop>
+  <tabstop>lineEdit_GPP30CompilerOpts</tabstop>
+  <tabstop>lineEdit_GPP13LinkerOpts</tabstop>
+  <tabstop>lineEdit_GPP30LinkerOpts</tabstop>
+  <tabstop>lineEdit_getVCexefile</tabstop>
+  <tabstop>btn_getVCexefile</tabstop>
+  <tabstop>lineEdit_getVASMexefile</tabstop>
+  <tabstop>btn_getVASMexefile</tabstop>
+  <tabstop>lineEdit_getVCconfigDir</tabstop>
+  <tabstop>btn_getVCconfigDir</tabstop>
+  <tabstop>lineEdit_VCdefaultOptsOS13</tabstop>
+  <tabstop>lineEdit_VCdefaultOptsOS30</tabstop>
+  <tabstop>lineEdit_VC13LinkerOpts</tabstop>
+  <tabstop>lineEdit_VCdefaultLinkerOpts</tabstop>
+  <tabstop>lineEdit_SASCdefaultOpts</tabstop>
+  <tabstop>btn_getEmulatorExefile</tabstop>
+  <tabstop>lineEdit_getOS13Configfile</tabstop>
+  <tabstop>btn_getOS13Configfile</tabstop>
+  <tabstop>lineEdit_getOS3Configfile</tabstop>
+  <tabstop>btn_getOS3Configfile</tabstop>
+  <tabstop>comboBox_defaultEmulator</tabstop>
+  <tabstop>checkBoxIndentationLines</tabstop>
+  <tabstop>checkBoxNoLCD</tabstop>
+  <tabstop>checkBoxDebugOutput</tabstop>
+  <tabstop>comboBoxDefaultStyle</tabstop>
+  <tabstop>comboBoxDefaultCompiler</tabstop>
+  <tabstop>checkBoxNoCompileButton</tabstop>
+  <tabstop>checkBoxSimpleStatusbar</tabstop>
+  <tabstop>comboBoxDefaultGuiLanguage</tabstop>
+  <tabstop>checkBoxOpenOnFail</tabstop>
+  <tabstop>checkBoxWarnRequesters</tabstop>
+ </tabstops>
+ <resources>
+  <include location="application.qrc"/>
+ </resources>
+ <connections/>
+</ui>

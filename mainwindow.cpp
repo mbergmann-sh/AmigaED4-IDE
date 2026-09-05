@@ -534,6 +534,78 @@ void MainWindow::about()
 }
 
 //
+// Open (or, if already open, simply raise) the non-modal Manual viewer
+// window. Shows the HTML manual matching the current GUI language
+// (p_guiLanguage) - embedded as Qt resources (see application.qrc), so
+// this works regardless of where AmigaED was installed from.
+//
+// Deliberately non-modal (QDialog::show(), never exec()): the user must
+// be able to keep working in the editor with the manual open alongside
+// it. p_manualWindow enforces the "only once" requirement - a second F1
+// press (or Help > Manual click) while it's already open just raises
+// the existing window instead of creating another one; its destroyed()
+// signal resets the pointer back to nullptr once the user closes it, so
+// the next call knows to create a fresh instance.
+//
+void MainWindow::actionShowManual()
+{
+    if (!p_manualWindow)
+    {
+        p_manualWindow = new QDialog(this);
+        p_manualWindow->setAttribute(Qt::WA_DeleteOnClose);
+        p_manualWindow->setWindowTitle(tr("AmigaED Manual"));
+        p_manualWindow->setWindowFlag(Qt::WindowMinMaxButtonsHint, true);
+        p_manualWindow->resize(920, 720);
+
+        QTextBrowser *browser = new QTextBrowser(p_manualWindow);
+        browser->setOpenExternalLinks(true);   // http(s):// links (e.g. in "Recommendations") open in the system browser
+
+        // The manual's HTML is authored with fixed light colours (like a
+        // printed page), but AmigaED's "Dark" application style (Prefs >
+        // Misc) works by installing a dark QApplication-wide QPalette -
+        // which this new window would otherwise inherit, leaving anything
+        // the HTML doesn't itself paint (scrollbar track, any margin
+        // around the page) dark while the page content stays light.
+        // Forcing a plain light palette here, independent of the app's
+        // current theme, keeps the whole window readable either way; the
+        // HTML's own explicit "background-color:#fff" on <html>/<body>
+        // (see help/manual_en.html / manual_de.html) already covers the
+        // page content itself, so this is belt-and-suspenders for the
+        // chrome around it.
+        QPalette lightPalette = browser->palette();
+        lightPalette.setColor(QPalette::Base, Qt::white);
+        lightPalette.setColor(QPalette::Text, Qt::black);
+        lightPalette.setColor(QPalette::Window, Qt::white);
+        lightPalette.setColor(QPalette::WindowText, Qt::black);
+        browser->setPalette(lightPalette);
+        browser->setAutoFillBackground(true);
+        p_manualWindow->setPalette(lightPalette);
+        p_manualWindow->setAutoFillBackground(true);
+
+        const QString resourcePath = (p_guiLanguage == "de")
+                ? QStringLiteral("qrc:/help/manual_de.html")
+                : QStringLiteral("qrc:/help/manual_en.html");
+        browser->setSource(QUrl(resourcePath));
+
+        QVBoxLayout *layout = new QVBoxLayout(p_manualWindow);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(browser);
+        p_manualWindow->setLayout(layout);
+
+        // WA_DeleteOnClose means the QDialog object itself is destroyed
+        // when closed - catch that here to null the pointer out, rather
+        // than leaving it dangling until the next actionShowManual() call.
+        connect(p_manualWindow, &QDialog::destroyed, this, [this]() {
+            p_manualWindow = nullptr;
+        });
+    }
+
+    p_manualWindow->show();
+    p_manualWindow->raise();
+    p_manualWindow->activateWindow();
+}
+
+//
 // react on SIGNAL textChanged() if text was modified
 //
 // Since AmigaED v3.2, this is connected per-tab (see newEditorTab()), so
@@ -962,21 +1034,6 @@ void MainWindow::createActions()
     /*
      * insertMenue actions:
      */
-    shellAppAct = new QAction(tr("Shell application template"), this); // inserts into insertMenue => preprocessorMenue
-    shellAppAct->setShortcut(tr("Ctrl+Alt+n"));
-    shellAppAct->setStatusTip(tr("Create a new file containing a complete AmigaShell app template"));
-    connect(shellAppAct, SIGNAL(triggered()), this, SLOT(actionInsertShellAppSkeletton()));
-
-    stdCAppAct = new QAction(tr("ANSI C application template"), this); // inserts into insertMenue => preprocessorMenue
-    stdCAppAct->setShortcut(tr("Ctrl+Alt+a"));
-    stdCAppAct->setStatusTip(tr("Create a new file containing a complete ANSI C app template"));
-    connect(stdCAppAct, SIGNAL(triggered()), this, SLOT(actionInsertCAppSkeletton()));
-
-    stdCppAppAct = new QAction(tr("C++ application template"), this); // inserts into insertMenue => preprocessorMenue
-    stdCppAppAct->setShortcut(tr("Ctrl+Alt+p"));
-    stdCppAppAct->setStatusTip(tr("Create a new file containing a complete C++ app template"));
-    connect(stdCppAppAct, SIGNAL(triggered()), this, SLOT(actionInsertCppAppSkeletton()));
-
     includeAct = new QAction(tr("#include"), this); // inserts into insertMenue => preprocessorMenue
     includeAct->setShortcut(tr("Ctrl+i"));
     includeAct->setStatusTip(tr("insert #include <file>..."));
@@ -1052,17 +1109,9 @@ void MainWindow::createActions()
     enumAct->setStatusTip(tr("insert enum {...}"));
     connect(enumAct, SIGNAL(triggered()), this, SLOT(actionInsertEnum()));
 
-    structAct = new QAction(tr("struct name {...}"), this); // inserts into insertMenue
-    structAct->setStatusTip(tr("insert struct name {...}"));
-    connect(structAct, SIGNAL(triggered()), this, SLOT(actionInsertStruct()));
-
-    c_classAct = new QAction(tr("C-style class..."), this); // inserts into insertMenue => classMenue
-    c_classAct->setStatusTip(tr("insert C-style class"));
-    connect(c_classAct, SIGNAL(triggered()), this, SLOT(actionInsertCClass()));
-
-    cpp_classAct = new QAction(tr("C++ style class..."), this); // inserts into insertMenue => classMenue
-    cpp_classAct->setStatusTip(tr("insert C++ style class"));
-    connect(cpp_classAct, SIGNAL(triggered()), this, SLOT(actionInsertCppClass()));
+    consoleDebugAct = new QAction(tr("Console Debugging Message"), this); // inserts into insertMenue
+    consoleDebugAct->setStatusTip(tr("insert if(myDebug){...} debugging block"));
+    connect(consoleDebugAct, SIGNAL(triggered()), this, SLOT(actionInsertConsoleDebugMessage()));
 
     fileheaderAct = new QAction(tr("Fileheader comment..."), this); // inserts into insertMenue => commentsMenue
     fileheaderAct->setStatusTip(tr("insert Fileheader comment"));
@@ -1088,23 +1137,12 @@ void MainWindow::createActions()
     lineDevideCommentAct->setStatusTip(tr("insert code dividing comment: /* --- COMMENT -------*/"));
     connect(lineDevideCommentAct, SIGNAL(triggered()), this, SLOT(actionInsertCLineDevideComment()));
 
-    snippet1Act = new QAction(tr("Snippet #1..."), this); // inserts into insertMenue => snippetsMenue
-    snippet1Act->setStatusTip(tr("insert Snippet #1"));
-    connect(snippet1Act, SIGNAL(triggered()), this, SLOT(actionInsertSnippet1()));
-
-    snippet2Act = new QAction(tr("Snippet #2..."), this); // inserts into insertMenue => snippetsMenue
-    snippet2Act->setStatusTip(tr("insert Snippet #2"));
-    connect(snippet2Act, SIGNAL(triggered()), this, SLOT(actionInsertSnippet2()));
-
-    snippet3Act = new QAction(tr("Snippet #3..."), this); // inserts into insertMenue => snippetsMenue
-    snippet3Act->setStatusTip(tr("insert Snippet #3"));
-    connect(snippet3Act, SIGNAL(triggered()), this, SLOT(actionInsertSnippet3()));
-
-    snippet4Act = new QAction(tr("Snippet #4..."), this); // inserts into insertMenue => snippetsMenue
-    snippet4Act->setStatusTip(tr("insert Snippet #4"));
-    connect(snippet4Act, SIGNAL(triggered()), this, SLOT(actionInsertSnippet4()));
-
     /* --- Help -------------------------------------------------------------------------*/
+    manualAct = new QAction(tr("Manual"), this);
+    manualAct->setShortcut(QKeySequence(Qt::Key_F1));
+    manualAct->setStatusTip(tr("Open the AmigaED manual"));
+    connect(manualAct, SIGNAL(triggered()), this, SLOT(actionShowManual()));
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, SIGNAL(triggered()), this, SLOT(about()));
@@ -1161,13 +1199,6 @@ void MainWindow::createMenus()
 
     // Inserts menue
     insertMenue = menuBar()->addMenu(tr("&Inserts"));
-    templatesMenue = insertMenue->addMenu(tr("Application templates..."));
-    templatesMenue->addAction(stdCAppAct);
-    templatesMenue->addSeparator();
-    templatesMenue->addAction(stdCppAppAct);
-    templatesMenue->addSeparator();
-    templatesMenue->addAction(shellAppAct);
-    insertMenue->addSeparator();
     preprocessorMenue = insertMenue->addMenu(tr("Preprocessor..."));
     preprocessorMenue->addAction(includeAct);
     preprocessorMenue->addAction(defineAct);
@@ -1198,12 +1229,8 @@ void MainWindow::createMenus()
     insertMenue->addAction(mainAct);
     insertMenue->addAction(functionAct);
     insertMenue->addAction(enumAct);
-    insertMenue->addAction(structAct);
     insertMenue->addSeparator();
-    classMenue = insertMenue->addMenu(tr("Class..."));
-    classMenue->addAction(c_classAct);
-    classMenue->addSeparator();
-    classMenue->addAction(cpp_classAct);
+    insertMenue->addAction(consoleDebugAct);
     insertMenue->addSeparator();
     commentsMenue = insertMenue->addMenu(tr("Comments..."));
     commentsMenue->addAction(fileheaderAct);
@@ -1214,12 +1241,6 @@ void MainWindow::createMenus()
     commentsMenue->addAction(cpp_singleAct);
     commentsMenue->addSeparator();
     commentsMenue->addAction(lineDevideCommentAct);
-    insertMenue->addSeparator();
-    snippetsMenue = insertMenue->addMenu(tr("Snippets..."));
-    snippetsMenue->addAction(snippet1Act);
-    snippetsMenue->addAction(snippet2Act);
-    snippetsMenue->addAction(snippet3Act);
-    snippetsMenue->addAction(snippet4Act);
 
     menuBar()->addSeparator();
 
@@ -1314,6 +1335,8 @@ void MainWindow::createMenus()
 
     // Help menue
     helpMenue = menuBar()->addMenu(tr("&Help"));
+    helpMenue->addAction(manualAct);
+    helpMenue->addSeparator();
     helpMenue->addAction(aboutAct);
     helpMenue->addAction(aboutQtAct);
 }
@@ -1430,9 +1453,6 @@ void MainWindow::retranslateUi()
     lexM68kAsmAct->setText(tr("m68k Assembler..."));
     lexPascalAct->setText(tr("Pascal..."));
     lexPlainTextAct->setText(tr("Plain Text..."));
-    shellAppAct->setText(tr("Shell application template"));
-    stdCAppAct->setText(tr("ANSI C application template"));
-    stdCppAppAct->setText(tr("C++ application template"));
     includeAct->setText(tr("#include"));
     amigaIncludesAct->setText(tr("Amiga #include files"));
     defineAct->setText(tr("#define"));
@@ -1451,19 +1471,14 @@ void MainWindow::retranslateUi()
     mainAct->setText(tr("int main {...}"));
     functionAct->setText(tr("int function {...}"));
     enumAct->setText(tr("enum {...}"));
-    structAct->setText(tr("struct name {...}"));
-    c_classAct->setText(tr("C-style class..."));
-    cpp_classAct->setText(tr("C++ style class..."));
+    consoleDebugAct->setText(tr("Console Debugging Message"));
     fileheaderAct->setText(tr("Fileheader comment..."));
     versionStringAct->setText(tr("Amiga C version string"));
     c_singleAct->setText(tr("C-style single line comment..."));
     c_multiAct->setText(tr("C-style multi line comment..."));
     cpp_singleAct->setText(tr("C++ style single line comment..."));
     lineDevideCommentAct->setText(tr("C-style single line code dividing comment..."));
-    snippet1Act->setText(tr("Snippet #1..."));
-    snippet2Act->setText(tr("Snippet #2..."));
-    snippet3Act->setText(tr("Snippet #3..."));
-    snippet4Act->setText(tr("Snippet #4..."));
+    manualAct->setText(tr("Manual"));
     aboutAct->setText(tr("&About"));
     aboutQtAct->setText(tr("About &Qt"));
 
@@ -1516,9 +1531,6 @@ void MainWindow::retranslateUi()
     lexM68kAsmAct->setStatusTip(tr("highlight m68k Assembler syntax"));
     lexPascalAct->setStatusTip(tr("highlight Pascal syntax"));
     lexPlainTextAct->setStatusTip(tr("show Plain Text only"));
-    shellAppAct->setStatusTip(tr("Create a new file containing a complete AmigaShell app template"));
-    stdCAppAct->setStatusTip(tr("Create a new file containing a complete ANSI C app template"));
-    stdCppAppAct->setStatusTip(tr("Create a new file containing a complete C++ app template"));
     includeAct->setStatusTip(tr("insert #include <file>..."));
     amigaIncludesAct->setStatusTip(tr("insert most commonly used Amiga #include files..."));
     defineAct->setStatusTip(tr("insert #define SOME_VALUE..."));
@@ -1537,19 +1549,14 @@ void MainWindow::retranslateUi()
     mainAct->setStatusTip(tr("insert main() {...}"));
     functionAct->setStatusTip(tr("insert C function definition"));
     enumAct->setStatusTip(tr("insert enum {...}"));
-    structAct->setStatusTip(tr("insert struct name {...}"));
-    c_classAct->setStatusTip(tr("insert C-style class"));
-    cpp_classAct->setStatusTip(tr("insert C++ style class"));
+    consoleDebugAct->setStatusTip(tr("insert if(myDebug){...} debugging block"));
     fileheaderAct->setStatusTip(tr("insert Fileheader comment"));
     versionStringAct->setStatusTip(tr("insert $VER: programname version.revision (dd.mm.yyyy)"));
     c_singleAct->setStatusTip(tr("insert C-style single line comment"));
     c_multiAct->setStatusTip(tr("insert C-style multi line comment"));
     cpp_singleAct->setStatusTip(tr("insert C++ style single line comment"));
     lineDevideCommentAct->setStatusTip(tr("insert code dividing comment: /* --- COMMENT -------*/"));
-    snippet1Act->setStatusTip(tr("insert Snippet #1"));
-    snippet2Act->setStatusTip(tr("insert Snippet #2"));
-    snippet3Act->setStatusTip(tr("insert Snippet #3"));
-    snippet4Act->setStatusTip(tr("insert Snippet #4"));
+    manualAct->setStatusTip(tr("Open the AmigaED manual"));
     aboutAct->setStatusTip(tr("Show the application's About box"));
     aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
     addProjectFileBtn->setStatusTip(tr("Add an existing file to the project"));
@@ -1565,14 +1572,11 @@ void MainWindow::retranslateUi()
     recentFilesMenue->setTitle(tr("Recent files"));
     editMenue->setTitle(tr("&Edit"));
     insertMenue->setTitle(tr("&Inserts"));
-    templatesMenue->setTitle(tr("Application templates..."));
     preprocessorMenue->setTitle(tr("Preprocessor..."));
     libraryMenue->setTitle(tr("Libraries..."));
     conditionsMenue->setTitle(tr("Condition..."));
     loopsMenue->setTitle(tr("Loops..."));
-    classMenue->setTitle(tr("Class..."));
     commentsMenue->setTitle(tr("Comments..."));
-    snippetsMenue->setTitle(tr("Snippets..."));
     buildMenue->setTitle(tr("&Build"));
     compilerMenue->setTitle(tr("Select Compiler..."));
     navigationMenue->setTitle(tr("&Navigation"));
@@ -3289,9 +3293,16 @@ void MainWindow::actionInsertInclude()
     textEdit->getCursorPosition(&line, &index); // get the position...
 
     // ...now insert our text:
-    textEdit->insert("#include    <some_header.h>");
-    // finally, move caret to next line.
-    textEdit->setCursorPosition(line, index + 13);
+    QString insertText = "#include    <some_header.h>";
+    textEdit->insert(insertText);
+
+    // Move the caret to the end of what we just inserted, generate a
+    // line feed there, and land on the fresh new line - rather than
+    // leaving the caret in the middle of "<some_header.h>" as before,
+    // this puts the user straight into position to keep typing.
+    textEdit->setCursorPosition(line, index + insertText.length());
+    textEdit->insert("\n");
+    textEdit->setCursorPosition(line + 1, 0);
 }
 
 //
@@ -3302,6 +3313,10 @@ void MainWindow::actionInsertAmigaIncludes()
     // we need the caret's ("cursor") recent position stored as a starting point for insertion!
     int line, index;
     textEdit->getCursorPosition(&line, &index); // get the position...
+    // 'index' (the starting column) is no longer needed afterwards now
+    // that the caret ends up at column 0 on a fresh line - but
+    // getCursorPosition() still requires an out-parameter for it.
+    Q_UNUSED(index);
 
     // we need some #includes, so let's insert them:
     textEdit->insertAt("\n", ++line, 0);  // insert empty line!
@@ -3365,8 +3380,10 @@ void MainWindow::actionInsertAmigaIncludes()
     textEdit->insertAt("#include\t<proto/wb.h>\n", ++line, 0);
     textEdit->insertAt("#endif\n", ++line, 0);
 
-    // finally, move caret to next line.
-    textEdit->setCursorPosition(line, index);
+    // finally, move caret to the new line the block's trailing "\n"
+    // already created, right after everything we just inserted (rather
+    // than back into the middle of the block, as before).
+    textEdit->setCursorPosition(line + 1, 0);
 }
 
 //
@@ -3443,36 +3460,45 @@ void MainWindow::actionInsertIfdefinedCompiler()
     // ...now insert the first line of text!
     textEdit->insert("\n");
     // next, we need to continue printing at a certain location:
+
+    // STR_HELPER/STR stringize a macro's VALUE (rather than its name) at
+    // preprocessing time via the standard two-level "#" trick - needed
+    // below so __GNUC__/__GNUC_MINOR__/__GNUC_PATCHLEVEL__'s numeric
+    // values can be folded into a plain string constant (via adjacent
+    // string literal concatenation) instead of a printf() format string.
+    textEdit->insertAt("#define STR_HELPER(x) #x\n", ++line, 0);
+    textEdit->insertAt("#define STR(x) STR_HELPER(x)\n", ++line, 0);
+    textEdit->insertAt("\n", ++line, 0);
     textEdit->insertAt("#if defined(__STORM__)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is StormC3 */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with StormC3.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with StormC3.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(__STORMGCC__)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is StormGCC4 */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with GNU gcc, StormC4 flavour.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with GNU gcc, StormC4 flavour.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(__MAXON__)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is Maxon/HiSoft C++ */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with Maxon/HiSoft C++.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with Maxon/HiSoft C++.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(__GNUC__)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is gcc */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with GNU gcc v%d.%d Patchlevel %d.\\n\\n\", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with GNU gcc v\" STR(__GNUC__) \".\" STR(__GNUC_MINOR__) \" Patchlevel \" STR(__GNUC_PATCHLEVEL__) \".\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(__VBCC__)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is vbcc */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with vbcc.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with vbcc.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(__SASC)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is SAS/C */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with SAS/C.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with SAS/C.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(LATTICE)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is Lattice C */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with Lattice C.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with Lattice C.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(AZTEC_C)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is Aztec C */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with Manx Aztec C.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with Manx Aztec C.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(_DCC)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is dice */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"compiled with dice.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with dice.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#else\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler not identified */\n", ++line, 0);
-    textEdit->insertAt("\tprintf(\"Compiler was not identified.\\n\\n\");\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"Compiler was not identified.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#endif\n", ++line, 0);
 
     // finally, we set our caret to the next following empty line!
@@ -3505,8 +3531,21 @@ void MainWindow::actionInsertIfndef()
 //
 void MainWindow::actionInsertOpenLibrary()
 {
-    qDebug() << "in OpenLibrary";
-    popNotImplemented();
+    // we need the caret's ("cursor") recent position stored as a starting point for insertion!
+    int line, index;
+    textEdit->getCursorPosition(&line, &index); // get the position...
+
+    // ...now insert the first line of text!
+    textEdit->insert("\n");
+    // next, we need to continue printing at a certain location:
+    textEdit->insertAt("if( !(DummyBase = (struct DummyBase *) OpenLibrary(\"dummy.library\", 0L)) )\n", ++line, 0);
+    textEdit->insertAt("{\n", ++line, 0);
+    textEdit->insertAt("\tPutStr(\"Error: dummy.library is missing.\\n\");\n", ++line, 0);
+    textEdit->insertAt("\treturn 20;\n", ++line, 0);
+    textEdit->insertAt("}\n", ++line, 0);
+
+    // finally, we set our caret to the next following empty line!
+    textEdit->setCursorPosition(line + 1, index);
 }
 
 //
@@ -3514,8 +3553,17 @@ void MainWindow::actionInsertOpenLibrary()
 //
 void MainWindow::actionInsertCloseLibrary()
 {
-    qDebug() << "in CloseLibrary";
-    popNotImplemented();
+    // we need the caret's ("cursor") recent position stored as a starting point for insertion!
+    int line, index;
+    textEdit->getCursorPosition(&line, &index); // get the position...
+
+    // ...now insert the first line of text!
+    textEdit->insert("\n");
+    // next, we need to continue printing at a certain location:
+    textEdit->insertAt("if (DummyBase) CloseLibrary( (struct Library *)DummyBase );\n", ++line, 0);
+
+    // finally, we set our caret to the next following empty line!
+    textEdit->setCursorPosition(line + 1, index);
 }
 
 //
@@ -3642,8 +3690,21 @@ void MainWindow::actionInsertDoWhile()
 //
 void MainWindow::actionInsertSwitch()
 {
-    qDebug() << "in switch";
-    popNotImplemented();
+    // we need the caret's ("cursor") recent position stored as a starting point for insertion!
+    int line, index;
+    textEdit->getCursorPosition(&line, &index); // get the position...
+
+    // ...now insert the first line of text!
+    textEdit->insert("\n");
+    // next, we need to continue printing at a certain location:
+    textEdit->insertAt("switch( condition )\n", ++line, 0);
+    textEdit->insertAt("{\n", ++line, 0);
+    textEdit->insertAt("\tcase dummy:\n", ++line, 0);
+    textEdit->insertAt("\t\tbreak;\n", ++line, 0);
+    textEdit->insertAt("}\n", ++line, 0);
+
+    // finally, we set our caret to the next following empty line!
+    textEdit->setCursorPosition(line + 1, index);
 }
 
 //
@@ -3670,8 +3731,9 @@ void MainWindow::actionInsertMain()
         textEdit->insertAt("\tprintf(\"Now produce something usefull!\\n\");\n", ++line, 0);
         textEdit->insertAt("\n\n\treturn(0);\n}\n", ++line, 0);
 
-        // finally, we set our caret to the place where editing might start
-        textEdit->setCursorPosition(line - 1, index + 2);
+        // finally, we set our caret to a new line right after the function
+        // (previously landed back inside the function body).
+        textEdit->setCursorPosition(line + 1, index);
         p_main_set = true;
     }
     else
@@ -3684,328 +3746,6 @@ void MainWindow::actionInsertMain()
 
     }
 
-}
-
-//
-// Insert a partially functional App skeletton
-// with Fileheader, #includes, versionstring and main() function
-//
-void MainWindow::actionInsertShellAppSkeletton()
-{
-    QMessageBox::StandardButton ret = QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
-                                                           tr("<b>WARNING:</b> This will abandon your current document and "
-                                                              "create a new file containing an <i>AmigaShell app template!</i>\n"
-                                                              "<br>You will be asked to save your file under a new name first.</br>\n"
-                                                              "<br><br>Do you want to continue?</br></br>"),
-                                                           QMessageBox::Yes | QMessageBox::No,
-                                                           QMessageBox::Yes);
-    if (ret == QMessageBox::Yes)
-    {
-        qDebug() << "text in editor: " << textEdit->text().isEmpty();
-
-        // if document allready contains text...
-        if(!(textEdit->text().isEmpty()))
-        {
-            qDebug() << "Text not empty!";
-            // ...empty it!
-            textEdit->setText("");
-        }
-
-        // Let's save our template with a new name first!
-        saveAs();
-        qDebug() << "Filename after creation: " << curFile;
-        QFileInfo file(curFile);
-        qDebug() << "File: " << file.baseName();
-
-        // Now let's build a fileheader containing some information
-        int line, index;
-        textEdit->getCursorPosition(&line, &index); // get the position...
-
-        // ...now insert the first line of text!
-        textEdit->insert("/*\n");
-        // next, we need to continue printing at a certain location:
-        textEdit->insertAt(" *\tFile:\t\t " + strippedName(curFile) + "\n", ++line, 0);
-        textEdit->insertAt(" *\tProgram:\t\t " + file.baseName() + "\n", ++line, 0);
-        textEdit->insertAt(" *\tVersion:\t\t1.0\n", ++line, 0);
-        textEdit->insertAt(" *\tRevision:\t\t0\n", ++line, 0);
-        textEdit->insertAt(" *\n", ++line, 0);
-        textEdit->insertAt(" *\tAuthor:\t\t" + p_author + "\n", ++line, 0);
-        textEdit->insertAt(" *\tEmail:\t\t" + p_email + "\n", ++line, 0);
-        textEdit->insertAt(" *\tWeb:\t\t" + p_website + "\n", ++line, 0);
-        textEdit->insertAt(" */\n", ++line, 0);
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-
-        // Let's do some versioning...
-        textEdit->insertAt("/* ------------- AUTHOR, PROGNAME & VERSION ----------------------------------- */\n", ++line, 0);
-        textEdit->insertAt("#define AUTHOR\t\t\"by " + p_author + "\""  + "\n", ++line, 0);
-        textEdit->insertAt("#define PROGRAMNAME\t\t""\"" + file.baseName() + "\"" + "\n", ++line, 0);
-        textEdit->insertAt("#define VERSION\t\t\t\t1\n", ++line, 0);
-        textEdit->insertAt("#define REVISION\t\t\t\t0\n", ++line, 0);
-        textEdit->insertAt("#define VERSIONSTRING\t\t\"1.0\"\n", ++line, 0);
-
-
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-
-        // we need some #includes, though...
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/* ------------- INCLUDE FILES ----------------------------------------------- */\n", ++line, 0);
-        textEdit->insertAt("#include\t<exec/exec.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<dos/dos.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<dos/dostags.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<dos/datetime.h>\n", ++line, 0);
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("#include\t<intuition/intuition.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<intuition/intuitionbase.h>\n", ++line, 0);
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("#include\t<libraries/asl.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<libraries/locale.h>\n", ++line, 0);
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/* --- protos ----------------- */\n", ++line, 0);
-        textEdit->insertAt("#if !defined(__MAXON__)\n", ++line, 0);
-        textEdit->insertAt("#include\t<proto/asl.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<proto/dos.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<proto/exec.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<proto/intuition.h>\n", ++line, 0);
-        textEdit->insertAt("#include\t<proto/locale.h>\n", ++line, 0);
-        textEdit->insertAt("#endif\n", ++line, 0);
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/* --- console output --- */\n", ++line, 0);
-        textEdit->insertAt("#include\t<stdio.h>\n", ++line, 0);
-
-
-        // it's good style to provide function prototypes...
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/* ------------- FUNCTION PROTOS -------------------------------------- */\n", ++line, 0);
-        textEdit->insertAt("extern int main(int argc, char* argv[]);\n", ++line, 0);
-
-        // ok - let's build an Amiga-style version tag:
-        QString sas_versionstring = "\tconst UBYTE VersionTag[] = \"$VER: \" PROGRAMNAME \" \" VERSIONSTRING \" \" AUTHOR \" \" __AMIGADATE__ \"\\n\\0\";";
-        QString dice_versionstring = "\tconst UBYTE VersionTag[] = \"$VER: \" PROGRAMNAME \" \" VERSIONSTRING \" \" AUTHOR \" (\" __COMMODORE_DATE__ \")\\n\\0\";";
-        QString other_versionstring = "\tconst UBYTE VersionTag[] = \"$VER: \" PROGRAMNAME \" \" VERSIONSTRING \" \" AUTHOR \" (\" __DATE__ \")\\n\\0\";";
-
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/* ------------- VERSION TAG -------------------------------------- */\n", ++line, 0);
-        textEdit->insertAt("#if defined(__SASC)\n", ++line, 0);
-        textEdit->insertAt(sas_versionstring + "\n", ++line, 0);
-        textEdit->insertAt("#elif defined(_DCC)\n", ++line, 0);
-        textEdit->insertAt(dice_versionstring + "\n", ++line, 0);
-        textEdit->insertAt("#else\n", ++line, 0);
-        textEdit->insertAt(other_versionstring + "\n", ++line, 0);
-        textEdit->insertAt("#endif\n", ++line, 0);
-
-        // ...finally, we need a main() function!
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/*************************\n", ++line, 0);
-        textEdit->insertAt(" **	main() function    **\n", ++line, 0);
-        textEdit->insertAt(" ************************/\n", ++line, 0);
-        textEdit->insertAt("int main(int argc, char* argv[])\n", ++line, 0);
-        textEdit->insertAt("{\n", ++line, 0);
-        textEdit->insertAt("\t/* TODO: Write your code! */\n", ++line, 0);
-        textEdit->insertAt("\tprintf(\"\\nI am an AmigaShell program!\\n\");\n", ++line, 0);
-        textEdit->insertAt("\tprintf(\"%s\\n\", VersionTag);\n", ++line, 0);
-        textEdit->insertAt("\n\n\treturn(0);\n}\n", ++line, 0);
-
-        // we're gonna save our freshly created file with its automated changes now...
-        saveFile(curFile);
-
-        // disable insertion of main() and versionstring
-        p_main_set = true;
-        p_versionstring_set = true;
-
-        // we're gona give the user some information on how to edit the template
-        (void)QMessageBox::information(this,
-                                        AMIGAED_VERSION_STRING, "You have successfully created a <i><b>AmigaShell </b>app template!</i><br> "
-                                        "Now you may edit the file according to your needs."
-                                        "<br>A good starting point would be to change your application's PROGRAMNAME, VERSION, REVISION and VERSIONSTRING definitions!",
-                                        QMessageBox::Ok);
-
-        // now let's hump to the top of the document, so the user can revise and edit his template.
-        actionGotoTop();
-
-
-    }
-    else if (ret == QMessageBox::Cancel)
-    {
-        //return 1;
-    }
-}
-
-//
-// Insert a partially functional C App skeletton
-// with Fileheader, #includes and main() function
-//
-void MainWindow::actionInsertCAppSkeletton()
-{
-    QMessageBox::StandardButton ret = QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
-                                                           tr("<b>WARNING:</b> This will abandon your current document and "
-                                                              "create a new file containing an <i>standard console ANSI C app template!</i>\n"
-                                                              "<br>You will be asked to save your file under a new name first.</br>\n"
-                                                              "<br><br>Do you want to continue?</br></br>"),
-                                                           QMessageBox::Yes | QMessageBox::No,
-                                                           QMessageBox::Yes);
-    if (ret == QMessageBox::Yes)
-    {
-        qDebug() << "text in editor: " << textEdit->text().isEmpty();
-
-        // if document allready contains text...
-        if(!(textEdit->text().isEmpty()))
-        {
-            qDebug() << "Text not empty!";
-            // ...empty it!
-            textEdit->setText("");
-        }
-
-        // Let's save our template with a new name first!
-        saveAs();
-        qDebug() << "Filename after creation: " << curFile;
-        QFileInfo file(curFile);
-
-        // Now let's build a fileheader containing some information
-        int line, index;
-        textEdit->getCursorPosition(&line, &index); // get the position...
-
-        // ...now insert the first line of text!
-        textEdit->insert("/*\n");
-        // next, we need to continue printing at a certain location:
-        textEdit->insertAt(" *\tFile:\t\t " + strippedName(curFile) + "\n", ++line, 0);
-        textEdit->insertAt(" *\tProgram:\t\t " + file.baseName() + "\n", ++line, 0);
-        textEdit->insertAt(" *\tVersion:\t\t1.0\n", ++line, 0);
-        textEdit->insertAt(" *\tRevision:\t\t0\n", ++line, 0);
-        textEdit->insertAt(" *\n", ++line, 0);
-        textEdit->insertAt(" *\tAuthor:\t\t" + p_author + "\n", ++line, 0);
-        textEdit->insertAt(" *\tEmail:\t\t" + p_email + "\n", ++line, 0);
-        textEdit->insertAt(" *\tWeb:\t\t" + p_website + "\n", ++line, 0);
-        textEdit->insertAt(" */\n", ++line, 0);
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-
-        // we need some #includes, though...
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/* ------------- INCLUDE FILES ----------------------------------------------- */\n", ++line, 0);
-        textEdit->insertAt("#include\t<stdio.h>\n", ++line, 0);
-
-
-        // it's good style to provide function prototypes...
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/* ------------- FUNCTION PROTOS -------------------------------------- */\n", ++line, 0);
-        textEdit->insertAt("extern int main(int argc, char* argv[]);\n", ++line, 0);
-
-        // ...finally, we need a main() function!
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/*************************\n", ++line, 0);
-        textEdit->insertAt(" **	main() function    **\n", ++line, 0);
-        textEdit->insertAt(" ************************/\n", ++line, 0);
-        textEdit->insertAt("int main(int argc, char* argv[])\n", ++line, 0);
-        textEdit->insertAt("{\n", ++line, 0);
-        textEdit->insertAt("\t/* TODO: Write your code! */\n", ++line, 0);
-        textEdit->insertAt("\tprintf(\"\\nI am an ANSI C console program!\\n\");\n", ++line, 0);
-        textEdit->insertAt("\n\treturn(0);\n}\n", ++line, 0);
-
-        // we're gonna save our freshly created file with its automated changes now...
-        saveFile(curFile);
-
-        // we're gona give the user some information on how to edit the template
-        (void)QMessageBox::information(this,
-                                        AMIGAED_VERSION_STRING, "You have successfully created a <i><b>ANSI C </b>app template!</i><br> "
-                                        "Now you may edit the file according to your needs.",
-                                        QMessageBox::Ok);
-
-        // now let's hump to the top of the document, so the user can revise and edit his template.
-        actionGotoTop();
-
-
-    }
-    else if (ret == QMessageBox::Cancel)
-    {
-        //return 1;
-    }
-}
-
-//
-// Insert a partially functional C++ App skeletton
-// with Fileheader, #includes and main() function
-//
-void MainWindow::actionInsertCppAppSkeletton()
-{
-    QMessageBox::StandardButton ret = QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
-                                                           tr("<b>WARNING:</b> This will abandon your current document and "
-                                                              "create a new file containing an <i>standard console C++ app template!</i>\n"
-                                                              "<br>You will be asked to save your file under a new name first.</br>\n"
-                                                              "<br><br>Do you want to continue?</br></br>"),
-                                                           QMessageBox::Yes | QMessageBox::No,
-                                                           QMessageBox::Yes);
-    if (ret == QMessageBox::Yes)
-    {
-        qDebug() << "text in editor: " << textEdit->text().isEmpty();
-
-        // if document allready contains text...
-        if(!(textEdit->text().isEmpty()))
-        {
-            qDebug() << "Text not empty!";
-            // ...empty it!
-            textEdit->setText("");
-        }
-
-        // Let's save our template with a new name first!
-        saveAs();
-        qDebug() << "Filename after creation: " << curFile;
-        QFileInfo file(curFile);
-
-        // Now let's build a fileheader containing some information
-        int line, index;
-        textEdit->getCursorPosition(&line, &index); // get the position...
-
-        // ...now insert the first line of text!
-        textEdit->insert("/*\n");
-        // next, we need to continue printing at a certain location:
-        textEdit->insertAt(" *\tFile:\t\t " + strippedName(curFile) + "\n", ++line, 0);
-        textEdit->insertAt(" *\tProgram:\t\t " + file.baseName() + "\n", ++line, 0);
-        textEdit->insertAt(" *\tVersion:\t\t1.0\n", ++line, 0);
-        textEdit->insertAt(" *\tRevision:\t\t0\n", ++line, 0);
-        textEdit->insertAt(" *\n", ++line, 0);
-        textEdit->insertAt(" *\tAuthor:\t\t" + p_author + "\n", ++line, 0);
-        textEdit->insertAt(" *\tEmail:\t\t" + p_email + "\n", ++line, 0);
-        textEdit->insertAt(" *\tWeb:\t\t" + p_website + "\n", ++line, 0);
-        textEdit->insertAt(" */\n", ++line, 0);
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-
-        // we need some #includes, though...
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/* ------------- INCLUDE FILES ----------------------------------------------- */\n", ++line, 0);
-        textEdit->insertAt("#include\t<iostream>\n", ++line, 0);
-
-        // we are in namespace <std>
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("using namespace std;\n", ++line, 0);
-
-        // ...finally, we need a main() function!
-        textEdit->insertAt("\n", ++line, 0);  // insert empty line!
-        textEdit->insertAt("/*************************\n", ++line, 0);
-        textEdit->insertAt(" **	main() function    **\n", ++line, 0);
-        textEdit->insertAt(" ************************/\n", ++line, 0);
-        textEdit->insertAt("int main(int argc, char* argv[])\n", ++line, 0);
-        textEdit->insertAt("{\n", ++line, 0);
-        textEdit->insertAt("\t/* TODO: Write your code! */\n", ++line, 0);
-        textEdit->insertAt("\tcout << \"\\nI am an standard C++ console program!\\n\" << endl;\n", ++line, 0);
-        textEdit->insertAt("\n\treturn(0);\n}\n", ++line, 0);
-
-        // we're gonna save our freshly created file with its automated changes now...
-        saveFile(curFile);
-
-        // we're gona give the user some information on how to edit the template
-        (void)QMessageBox::information(this,
-                                        AMIGAED_VERSION_STRING, "You have successfully created a <i><b>C++ </b>app template!</i><br> "
-                                        "Now you may edit the file according to your needs.",
-                                        QMessageBox::Ok);
-
-
-        // now let's hump to the top of the document, so the user can revise and edit his template.
-        actionGotoTop();
-
-    }
-    else if (ret == QMessageBox::Cancel)
-    {
-        //return 1;
-    }
 }
 
 //
@@ -4041,8 +3781,9 @@ void MainWindow::actionInsertFunction()
     textEdit->insertAt("\tprintf(\"Now let your function do some work...\\n\");\n", ++line, 0);
     textEdit->insertAt("\n\treturn(0);\n}\n", ++line, 0);
 
-    // finally, we set our caret to the place where editing might start
-    textEdit->setCursorPosition(line - 1, index + 1);
+    // finally, we set our caret to a new line right after the function
+    // (previously landed back inside the function body).
+    textEdit->setCursorPosition(line + 1, index);
 }
 
 //
@@ -4050,35 +3791,49 @@ void MainWindow::actionInsertFunction()
 //
 void MainWindow::actionInsertEnum()
 {
-    qDebug() << "in Enum";
-    popNotImplemented();
+    // we need the caret's ("cursor") recent position stored as a starting point for insertion!
+    int line, index;
+    textEdit->getCursorPosition(&line, &index); // get the position...
+
+    // ...now insert the first line of text!
+    textEdit->insert("\n");
+    // next, we need to continue printing at a certain location:
+    textEdit->insertAt("enum SomeEnum\n", ++line, 0);
+    textEdit->insertAt("{\n", ++line, 0);
+    textEdit->insertAt("\tENUM_VALUE_ONE,\n", ++line, 0);
+    textEdit->insertAt("\tENUM_VALUE_TWO,\n", ++line, 0);
+    textEdit->insertAt("\tENUM_VALUE_THREE\n", ++line, 0);
+    textEdit->insertAt("};\n", ++line, 0);
+
+    // finally, we set our caret to the next following empty line!
+    textEdit->setCursorPosition(line + 1, index);
 }
 
 //
-// Insert C custom data structure
+// Insert if(myDebug){...} console debugging block
 //
-void MainWindow::actionInsertStruct()
+void MainWindow::actionInsertConsoleDebugMessage()
 {
-    qDebug() << "in Struct";
-    popNotImplemented();
-}
+    // we need the caret's ("cursor") recent position stored as a starting point for insertion!
+    int line, index;
+    textEdit->getCursorPosition(&line, &index); // get the position...
 
-//
-// Insert C pseudo class: typedef struct{...}class_something
-//
-void MainWindow::actionInsertCClass()
-{
-    qDebug() << "in CClass";
-    popNotImplemented();
-}
+    // ...now insert the first line of text!
+    textEdit->insert("\n");
+    // next, we need to continue printing at a certain location:
+    textEdit->insertAt("if (myDebug)\n", ++line, 0);
+    textEdit->insertAt("{\n", ++line, 0);
+    textEdit->insertAt("\t/* --- Insert debugging messages here: --- */\n", ++line, 0);
+    textEdit->insertAt("\t\n", ++line, 0);
+    textEdit->insertAt("}\n", ++line, 0);
 
-//
-// Insert C++ class
-//
-void MainWindow::actionInsertCppClass()
-{
-    qDebug() << "in CppClass";
-    popNotImplemented();
+    // unlike most other insertMenue templates, the caret lands INSIDE
+    // the block - on the blank (indented) line right after the comment,
+    // ready for the user to start typing debug output calls - rather
+    // than after the whole block. 'line' was last incremented for the
+    // "}\n" insertion above, so the blank line sits one line before it;
+    // column 1 lands right after that line's leading tab.
+    textEdit->setCursorPosition(line - 1, 1);
 }
 
 //
@@ -4171,15 +3926,6 @@ void MainWindow::actionInsertCLineDevideComment()
 }
 
 //
-// Insert snippet...
-//
-void MainWindow::actionInsertSnippet1()
-{
-    qDebug() << "in Snippet1";
-    popNotImplemented();
-}
-
-//
 // Insert Amiga Version String...
 //
 void MainWindow::actionInsertAmigaVersionString()
@@ -4210,33 +3956,6 @@ void MainWindow::actionInsertAmigaVersionString()
                                         QMessageBox::Ok);
 
     }
-}
-
-//
-// Insert snippet...
-//
-void MainWindow::actionInsertSnippet2()
-{
-    qDebug() << "in Snippet2";
-    popNotImplemented();
-}
-
-//
-// Insert snippet...
-//
-void MainWindow::actionInsertSnippet3()
-{
-    qDebug() << "in Snippet3";
-    popNotImplemented();
-}
-
-//
-// Insert snippet...
-//
-void MainWindow::actionInsertSnippet4()
-{
-    qDebug() << "in Snippet4";
-    popNotImplemented();
 }
 /* ------------ End insertMenue Actions -------------------*/
 
@@ -6057,6 +5776,7 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             "#include <dos/dos.h>\n"
             "#include <proto/exec.h>\n"
             "#include <proto/dos.h>\n\n"
+            "#define myDebug TRUE\n\n"
             "int main(int argc, char *argv[])\n"
             "{\n"
             "\tPrintf(\"Hello from an AmigaShell program!\\n\");\n\n"
@@ -6075,6 +5795,7 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             " * need an AmigaOS-specific library - a plain console program like\n"
             " * this one doesn't need them at all. */\n"
             "#include <stdio.h>\n\n"
+            "#define myDebug TRUE\n\n"
             "int main(int argc, char *argv[])\n"
             "{\n"
             "\t/* TODO: Write your code! */\n"
@@ -6095,6 +5816,7 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             "#include <workbench/startup.h>\n"
             "#include <proto/exec.h>\n"
             "#include <proto/dos.h>\n\n"
+            "#define myDebug TRUE\n\n"
             "#define PROGRAMNAME \"" + baseName + "\"\n"
             "#define VERSIONSTRING \"1.0\"\n"
             "#define WANTED_VERSION 39\n\n"
@@ -6188,6 +5910,7 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             "#include <proto/dos.h>\n"
             "#include <proto/intuition.h>\n"
             "#include <proto/utility.h>\n\n"
+            "#define myDebug TRUE\n\n"
             "struct Library *IntuitionBase;\n"
             "struct Library *UtilityBase;\n\n"
             "int main(int argc, char *argv[])\n"
@@ -6217,6 +5940,7 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             "#include <proto/exec.h>\n"
             "#include <proto/muimaster.h>\n"
             "#include <libraries/mui.h>\n\n"
+            "#define myDebug TRUE\n\n"
             "struct Library *MUIMasterBase;\n\n"
             "int main(int argc, char *argv[])\n"
             "{\n"
@@ -6251,6 +5975,7 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
     default:
         return header +
             "#include <stdio.h>\n\n"
+            "#define myDebug TRUE\n\n"
             "int main(int argc, char *argv[])\n"
             "{\n"
             "\t/* TODO: Write your code! */\n"
@@ -7564,6 +7289,15 @@ void MainWindow::popNotImplemented()
 //
 void MainWindow::showCustomContextMenue(const QPoint &pos)
 {
+    // 'pos' arrives in the coordinates of whichever editor tab emitted
+    // customContextMenuRequested, but isn't used - see the QCursor::pos()
+    // comment further down for why the menu is positioned differently.
+    // Q_UNUSED silences the resulting "unused parameter" warning without
+    // renaming/removing the parameter (its name documents where it comes
+    // from, and the signature must match the customContextMenuRequested
+    // signal it's connected to).
+    Q_UNUSED(pos);
+
     // name the context menue
     QMenu contextMenu(tr("Inserts"), this);
 
@@ -7576,7 +7310,7 @@ void MainWindow::showCustomContextMenue(const QPoint &pos)
     // SAME submenu objects rather than hand-listing a separate, easily
     // outdated copy of their contents here. This is deliberate: those
     // submenus already group everything sensibly (Preprocessor, Libraries,
-    // Condition, Loops, Class, Comments, Snippets, Templates) - repeating
+    // Condition, Loops, Comments) - repeating
     // that grouping by hand here would just be a second place to keep in
     // sync (see the old flat version of this function, which drifted out
     // of sync with the real menu over time - several items were missing,
@@ -7585,7 +7319,6 @@ void MainWindow::showCustomContextMenue(const QPoint &pos)
     // though those submenus are also permanently attached to insertMenue.
     contextMenu.addAction(&pseudo_action);
     contextMenu.addSeparator();
-    contextMenu.addMenu(templatesMenue);
     contextMenu.addMenu(preprocessorMenue);
     contextMenu.addMenu(libraryMenue);
     contextMenu.addMenu(conditionsMenue);
@@ -7594,11 +7327,10 @@ void MainWindow::showCustomContextMenue(const QPoint &pos)
     contextMenu.addAction(mainAct);
     contextMenu.addAction(functionAct);
     contextMenu.addAction(enumAct);
-    contextMenu.addAction(structAct);
     contextMenu.addSeparator();
-    contextMenu.addMenu(classMenue);
+    contextMenu.addAction(consoleDebugAct);
+    contextMenu.addSeparator();
     contextMenu.addMenu(commentsMenue);
-    contextMenu.addMenu(snippetsMenue);
 
     // QCursor::pos() rather than mapToGlobal(pos): 'pos' arrives in the
     // coordinates of whichever editor tab emitted customContextMenuRequested,

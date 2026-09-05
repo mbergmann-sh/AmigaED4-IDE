@@ -87,14 +87,48 @@ DisableWelcomePage=no
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+; Used by the documentation Yes/No prompt in [Code] below - {cm:...}/
+; CustomMessage() automatically picks whichever of these two matches the
+; language chosen on Setup's language-selection page, same mechanism the
+; built-in {cm:CreateDesktopIcon} etc. already rely on elsewhere in this
+; script.
+english.InstallDocsQuestion=Would you like to install the documentation (manual as PDF)?
+german.InstallDocsQuestion=Möchten Sie die Dokumentation (Handbuch als PDF) installieren?
+
+; Used by the custom "already installed" dialog (AskInstallChoice in
+; [Code] below) instead of a plain Yes/No/Cancel MsgBox - a stock MsgBox
+; can't carry custom button captions, and a real 3-way choice (Reinstall
+; / Update / Uninstall) needs more than Yes/No/Cancel provides anyway.
+english.AlreadyInstalledCaption=%1 is already installed
+english.AlreadyInstalledText=What would you like to do?
+english.BtnReinstall=&Reinstall (keep old files, install over them)
+english.BtnUpdate=&Update (remove the old version first, then install fresh)
+english.BtnUninstall=&Uninstall %1
+english.BtnCancel=Cancel
+english.UninstallFailed=The uninstallation could not be started.
+german.AlreadyInstalledCaption=%1 ist bereits installiert
+german.AlreadyInstalledText=Was möchten Sie tun?
+german.BtnReinstall=&Neu installieren (alte Dateien behalten, drüberinstallieren)
+german.BtnUpdate=&Update (alte Version zuerst entfernen, dann neu installieren)
+german.BtnUninstall=%1 &deinstallieren
+german.BtnCancel=Abbrechen
+german.UninstallFailed=Die Deinstallation konnte nicht gestartet werden.
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
 ; Everything staged by the build (the .exe, every DLL, and every plugin
 ; subfolder windeployqt created) - copied as-is, subfolder structure
-; preserved.
-Source: "*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; preserved. DOC (the manuals) is excluded here and handled by its own
+; entry below, gated by the Yes/No prompt in [Code].
+Source: "*"; DestDir: "{app}"; Excludes: "DOC\*"; Flags: recursesubdirs createallsubdirs ignoreversion
+; Documentation (DE/EN PDF manuals), staged into install_src\DOC by
+; AmigaED.pro's win32 build step (see install_stage.bat). Only copied to
+; the chosen install directory if the user answers "Yes" to the
+; documentation prompt asked from InitializeSetup below.
+Source: "DOC\*"; DestDir: "{app}\DOC"; Flags: recursesubdirs createallsubdirs ignoreversion; Check: ShouldInstallDocs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -110,19 +144,124 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 ; future manual copy) so a reinstall always starts from a clean folder.
 Type: filesandordirs; Name: "{app}"
 
-; --- Install-or-uninstall prompt -------------------------------------
-; Runs before the wizard shows any page. If AmigaED is already
-; installed (its uninstall registry key exists), asks the user whether
-; they want to (re)install or uninstall instead of just barrelling into
-; a reinstall - and if they choose uninstall, hands off to the existing
-; uninstaller and exits without ever showing the install wizard.
+; --- Install-or-uninstall-or-update prompt -----------------------------
+; Runs before the wizard shows any page. If AmigaED is already installed
+; (its uninstall registry key exists), asks the user what to do instead
+; of just barrelling into a reinstall: reinstall over the top, do a
+; clean update (uninstall first, then install fresh), or uninstall only.
+; A plain uninstall or a cancelled dialog exits without ever showing the
+; install wizard.
 [Code]
+var
+  // Set from the Yes/No prompt in InitializeSetup below; read back by
+  // ShouldInstallDocs() as the Check: for the DOC entry in [Files]. By
+  // the time InitializeSetup runs, Inno has already resolved the active
+  // setup language (via its language-selection page or /LANG), so
+  // {cm:InstallDocsQuestion} below always comes out in that language.
+  InstallDocs: Boolean;
+
+  // Set by the button click handlers below; AskInstallChoice() reads it
+  // back once the dialog closes. 1 = reinstall over the top, 2 = clean
+  // update (uninstall then reinstall), 3 = uninstall only, 0 = cancel
+  // (including the dialog being closed via its title bar/Esc).
+  InstallChoiceResult: Integer;
+  InstallChoiceForm: TSetupForm;
+  // Running Y position while AddInstallChoiceButton stacks buttons onto
+  // InstallChoiceForm - a plain global instead of a local var, since
+  // Inno Setup's Pascal Script does not support nested functions (a
+  // helper local to AskInstallChoice, as this used to be, fails to
+  // compile with "'BEGIN' expected").
+  InstallChoiceBtnTop: Integer;
+
+function ShouldInstallDocs(): Boolean;
+begin
+  Result := InstallDocs;
+end;
+
+// One shared handler for all four buttons - simpler than four near-
+// identical procedures, since every button already carries its own
+// result value via its Tag property (set where each button is created
+// in AddInstallChoiceButton below).
+procedure InstallChoiceButtonClick(Sender: TObject);
+begin
+  InstallChoiceResult := TNewButton(Sender).Tag;
+  InstallChoiceForm.Close;
+end;
+
+// Creates one button on InstallChoiceForm, stacked below the previous
+// one via InstallChoiceBtnTop, wired to AResultValue through its Tag.
+// A top-level function rather than nested inside AskInstallChoice below
+// - see the InstallChoiceBtnTop comment above for why.
+function AddInstallChoiceButton(const ACaption: String; AResultValue: Integer): TNewButton;
+begin
+  Result := TNewButton.Create(InstallChoiceForm);
+  Result.Parent := InstallChoiceForm;
+  Result.Left := ScaleX(16);
+  Result.Top := InstallChoiceBtnTop;
+  Result.Width := InstallChoiceForm.ClientWidth - ScaleX(32);
+  Result.Height := ScaleY(23);
+  Result.Caption := ACaption;
+  Result.Tag := AResultValue;
+  Result.OnClick := @InstallChoiceButtonClick;
+  InstallChoiceBtnTop := InstallChoiceBtnTop + ScaleY(30);
+end;
+
+// Small custom dialog replacing the old three-way Yes/No/Cancel MsgBox:
+// a stock MsgBox can't carry custom button captions, and a real 3-way
+// choice (Reinstall / Update / Uninstall) plus Cancel needs more than
+// Yes/No/Cancel provides. All captions come from [CustomMessages] above,
+// so - like the documentation prompt - this always shows in whichever
+// language the user picked on Setup's language-selection page.
+function AskInstallChoice(): Integer;
+var
+  Btn: TNewButton;
+  InfoLabel: TNewStaticText;
+begin
+  InstallChoiceResult := 0; // closing the form any other way still counts as Cancel
+
+  // CreateCustomForm's signature changed in Inno Setup 6.6.0: ClientWidth/
+  // ClientHeight are now constructor parameters (read-only afterwards)
+  // instead of settable properties, plus two new KeepSizeX/KeepSizeY
+  // parameters (whether the form may grow with WizardSizePercent) -
+  // False/False keeps this dialog a fixed size, matching the old
+  // behaviour from before 6.6.0.
+  InstallChoiceForm := CreateCustomForm(ScaleX(420), ScaleY(210), False, False);
+  try
+    InstallChoiceForm.Caption := ExpandConstant('{cm:AlreadyInstalledCaption,{#MyAppName}}');
+    InstallChoiceForm.Position := poScreenCenter;
+    InstallChoiceForm.BorderStyle := bsDialog;
+
+    InfoLabel := TNewStaticText.Create(InstallChoiceForm);
+    InfoLabel.Parent := InstallChoiceForm;
+    InfoLabel.Left := ScaleX(16);
+    InfoLabel.Top := ScaleY(16);
+    InfoLabel.Width := InstallChoiceForm.ClientWidth - ScaleX(32);
+    InfoLabel.AutoSize := False;
+    InfoLabel.WordWrap := True;
+    InfoLabel.Caption := ExpandConstant('{cm:AlreadyInstalledText}');
+
+    InstallChoiceBtnTop := ScaleY(60);
+    AddInstallChoiceButton(ExpandConstant('{cm:BtnReinstall}'), 1);
+    AddInstallChoiceButton(ExpandConstant('{cm:BtnUpdate}'), 2);
+    Btn := AddInstallChoiceButton(ExpandConstant('{cm:BtnUninstall,{#MyAppName}}'), 3);
+    Btn := AddInstallChoiceButton(ExpandConstant('{cm:BtnCancel}'), 0);
+    Btn.Cancel := True; // Esc / closing the dialog acts as Cancel
+
+    InstallChoiceForm.ActiveControl := Btn;
+    InstallChoiceForm.ShowModal;
+  finally
+    InstallChoiceForm.Free;
+  end;
+
+  Result := InstallChoiceResult;
+end;
+
 function InitializeSetup(): Boolean;
 var
   UninstallString: String;
   UninstallRegKey: String;
   ResultCode: Integer;
-  UserChoice: Integer;
+  Choice: Integer;
 begin
   Result := True;
 
@@ -131,33 +270,55 @@ begin
   if RegQueryStringValue(HKLM, UninstallRegKey, 'UninstallString', UninstallString) or
      RegQueryStringValue(HKCU, UninstallRegKey, 'UninstallString', UninstallString) then
   begin
-    UserChoice := MsgBox(
-      '{#MyAppName} ist bereits installiert.' + #13#10 + #13#10 +
-      'Möchten Sie {#MyAppName} erneut installieren (Ja) oder deinstallieren (Nein)?' + #13#10 +
-      '(Abbrechen beendet das Setup, ohne etwas zu ändern.)',
-      mbConfirmation, MB_YESNOCANCEL);
+    Choice := AskInstallChoice();
+    UninstallString := RemoveQuotes(UninstallString);
 
-    if UserChoice = IDNO then
-    begin
-      // Strip any surrounding quotes Inno wrote around the path itself.
-      UninstallString := RemoveQuotes(UninstallString);
-      if Exec(UninstallString, '', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) then
-      begin
-        // The uninstaller runs standalone; nothing more for this setup
-        // to do either way, whether it succeeded or the user cancelled
-        // it partway through.
-      end
-      else
-      begin
-        MsgBox('Die Deinstallation konnte nicht gestartet werden.', mbError, MB_OK);
-      end;
-      Result := False; // never show the install wizard in this run
-    end
-    else if UserChoice = IDCANCEL then
-    begin
+    case Choice of
+      1:
+        begin
+          // Reinstall over the top: Result stays True, falls through
+          // into the normal install wizard, same as before.
+        end;
+
+      2:
+        begin
+          // Clean update: run the existing uninstaller silently first
+          // (/VERYSILENT hides its UI so this reads as one continuous
+          // operation, not two separate installer windows), then fall
+          // through into the normal install wizard exactly like case 1.
+          // [UninstallDelete] on the OLD installation already removes
+          // anything [Files] didn't track, so the install directory is
+          // clean by the time the wizard starts copying files again.
+          if not Exec(UninstallString, '/VERYSILENT', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+          begin
+            MsgBox(ExpandConstant('{cm:UninstallFailed}'), mbError, MB_OK);
+            Result := False;
+          end;
+        end;
+
+      3:
+        begin
+          // Uninstall only - same as the old "No" branch: hand off to
+          // the existing (visible) uninstaller and exit without ever
+          // showing the install wizard.
+          if not Exec(UninstallString, '', '', SW_SHOW, ewWaitUntilTerminated, ResultCode) then
+          begin
+            MsgBox(ExpandConstant('{cm:UninstallFailed}'), mbError, MB_OK);
+          end;
+          Result := False;
+        end;
+
+    else // 0 = cancel
       Result := False;
     end;
-    // IDYES: Result stays True, falls through into the normal install
-    // wizard (acts as a reinstall/repair/upgrade).
+  end;
+
+  // Documentation prompt - only asked when the wizard is actually going
+  // to run (Result still True here: reinstall, a successful clean
+  // update, or no prior installation at all). Answer is read back later
+  // by ShouldInstallDocs() as the [Files] Check: for the DOC entry.
+  if Result then
+  begin
+    InstallDocs := (MsgBox(ExpandConstant('{cm:InstallDocsQuestion}'), mbConfirmation, MB_YESNO) = IDYES);
   end;
 end;

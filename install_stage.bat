@@ -25,6 +25,17 @@ mkdir "%DEST%"
 
 robocopy "%SRC%" "%DEST%" *.* /E /XD release /XF Makefile* .qmake.stash *.rc *.h /NFL /NDL /NJH /NP
 
+rem Also stage the DOC folder (the DE/EN PDF manuals) alongside the built
+rem app. Unlike SRC above, this isn't part of the build output (DESTDIR) -
+rem it's a static folder that lives next to this .bat file in the project
+rem tree, so it's addressed via %~dp0 (this script's own folder) instead
+rem of being passed in as an argument. AmigaED_install\AmigaED.iss decides
+rem at install time - via its own Yes/No prompt - whether the documentation
+rem actually gets copied into the end user's chosen install directory; it
+rem just needs to be present here in install_src for that prompt to have
+rem something to copy from.
+robocopy "%~dp0DOC" "%DEST%\DOC" *.* /E /NFL /NDL /NJH /NP
+
 rem robocopy's exit codes are bit-flags (0-7 = success in various
 rem shades, 8+ = real failure) - always report plain success here so
 rem the calling recipe line (and mingw32-make) never has to interpret

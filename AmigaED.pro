@@ -148,9 +148,11 @@ win32 {
     # copy of everything a distributable AmigaED needs - the .exe, every
     # DLL (Qt's own plus qscintilla2_qt6.dll), and every plugin
     # subfolder windeployqt created (platforms, styles, imageformats,
-    # etc.) - into <project root>\AmigaED_install\install_src. That
-    # folder is meant to be handed straight to the .iss installer
-    # script as its SourceDir (see AmigaED_install\AmigaED.iss).
+    # etc.) - into <project root>\AmigaED_install\install_src, plus the
+    # DOC folder (DE/EN PDF manuals). That folder is meant to be handed
+    # straight to the .iss installer script as its SourceDir (see
+    # AmigaED_install\AmigaED.iss, which asks the end user whether to
+    # actually install the manuals).
     #
     # The actual copy logic (clean, recreate, robocopy with its exclude
     # patterns) lives in install_stage.bat, a plain static file shipped
@@ -178,6 +180,7 @@ win32 {
 
 DISTFILES += \
     README.md \
+    Revisions.md \
     aslrequest.txt \
     install_linux.sh \
     install_stage.bat \

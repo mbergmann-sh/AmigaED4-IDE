@@ -82,6 +82,7 @@
 #include <QLabel>
 #include <QSpacerItem>
 
+#include <QDialog>
 #include <QDebug>
 #include <QTranslator>
 #include <QDragEnterEvent>
@@ -308,6 +309,7 @@ private slots:
     bool save();                                    // saves current file
     bool saveAs();                                  // saves current file as...
     void about();                                   // pops up "about" MessageBox
+    void actionShowManual();                        // opens (or raises) the non-modal Manual viewer window, in the current GUI language
     void startPrefs();                              // Workaround to start prefsDialog with a parameter
     void setEmulatorMenu();                         // disable emulator menu entries if no config was specified
     void actionResetFontSize();                      // zoomTo(0) wrapper, since QAction::triggered() has no args
@@ -358,9 +360,6 @@ private slots:
     void actionShowUnprintable();         // show or hide unprintable characters
     void actionShowIndentationGuides();   // show or hide indentation guides
     // insertMenue and submenue actions:
-    void actionInsertShellAppSkeletton();
-    void actionInsertCAppSkeletton();
-    void actionInsertCppAppSkeletton();
     void actionInsertInclude();
     void actionInsertAmigaIncludes();
     void actionInsertDefine();
@@ -378,20 +377,14 @@ private slots:
     void actionInsertSwitch();
     void actionInsertMain();
     void actionInsertEnum();
-    void actionInsertStruct();
+    void actionInsertConsoleDebugMessage();
     void actionInsertFunction();
     void actionInsertAmigaVersionString();
-    void actionInsertCClass();
-    void actionInsertCppClass();
     void actionInsertFileheaderComment();
     void actionInsertCSingleComment();
     void actionInsertCMultiComment();
     void actionInsertCppSingleComment();
     void actionInsertCLineDevideComment();
-    void actionInsertSnippet1();
-    void actionInsertSnippet2();
-    void actionInsertSnippet3();
-    void actionInsertSnippet4();
     void actionSelectCompilerVBCC();
     void actionSelectCompilerGCC();
     void actionSelectCompilerGPP();
@@ -562,9 +555,6 @@ private:
     QMenu *conditionsMenue;     // Submenue of insertMenue, holds C condition inserts
     QMenu *loopsMenue;          // Submenue of insertMenue, holds C/++ loops inserts
     QMenu *commentsMenue;       // Submenue of insertMenue, holds comment inserts
-    QMenu *classMenue;          // Submenue of insertMenue, holds C/++ class inserts
-    QMenu *snippetsMenue;       // Submenue of insertMenue, holds inserts for user-defined code snippets
-    QMenu *templatesMenue;      // Submenue of insertMenue, holds inserts for application templates
     QMenu *compilerMenue;       // Submenue of buildMenue, holds entries for selecting a certain compiler
     QMenu *charMenue;           // Submenue of viewMenue, holds entries for EOL and unprintable characters
 
@@ -587,6 +577,11 @@ private:
     QAction *guiLanguageGermanAct = nullptr;
     QActionGroup *guiLanguageGroup = nullptr;   // holds English/Deutsch for mutual exclusion in menue
     QTranslator *p_guiTranslator = nullptr;   // currently installed translator (nullptr while English/source language is active)
+
+    // Manual viewer (Help > Manual, F1) - non-modal, single instance. nullptr
+    // while closed; reset back to nullptr via its destroyed() signal once
+    // the user closes it (see actionShowManual()).
+    QDialog *p_manualWindow = nullptr;
 
     // Functions Browser visibility - View menue, right after GUI Language
     QAction *showFunctionsBrowserAct = nullptr;
@@ -622,6 +617,7 @@ private:
     QAction *pasteAct;              // paste clipboard
     QAction *searchAct;             // search for text
     // Actions for helpMenue
+    QAction *manualAct;             // opens the non-modal HTML Manual viewer (F1)
     QAction *aboutAct;              // show about message
     QAction *aboutQtAct;            // show about-Qt message
     // Actions for navigationMenue
@@ -671,10 +667,6 @@ private:
     QAction *lexPascalAct;          // switch lexer to Pascal syntax
     QAction *lexPlainTextAct;       // switch lexer to no syntax highlighting
     // Actions for insertMenue
-    // Shell App skelleton
-    QAction *shellAppAct;           // abandons all the previous work and inserts a brand new file with complete AmigaShell app skelleton
-    QAction *stdCAppAct;            // abandons all the previous work and inserts a brand new file with complete std. C app skelleton
-    QAction *stdCppAppAct;          // abandons all the previous work and inserts a brand new file with complete std. C++app skelleton
     // Preprocessor
     QAction *includeAct;            // inserts #include <file>
     QAction *amigaIncludesAct;      // inserts the most common Amiga #include files
@@ -694,26 +686,17 @@ private:
     QAction *forAct;                // inserts while(condition) {...}do loop
     QAction *do_whileAct;           // inserts do{...}while(condition) loop
     QAction *switchAct;             // inserts switch(condition) select case statements
-    // Class
-    QAction *c_classAct;            // inserts a C-style class skelleton
-    QAction *cpp_classAct;          // inserts a C++-style class skelleton
     // Comments
     QAction *fileheaderAct;         // inserts a fileheader comment
     QAction *c_singleAct;           // inserts a C-style single line comment
     QAction *c_multiAct;            // inserts a C-style multi line comment
     QAction *cpp_singleAct;         // inserts a C++-style single line comment
     QAction *lineDevideCommentAct;  // inserts a C-style comment line devider
-    // Snippets
-    QAction *snippet1Act;           // inserts Snippet #1 from snippetfile1.snip
-    QAction *snippet2Act;           // inserts Snippet #2 from snippetfile2.snip
-    QAction *snippet3Act;           // inserts Snippet #3 from snippetfile3.snip
-    QAction *snippet4Act;           // inserts Snippet #4 from snippetfile4.snip
-    // main(), Function, Enum,
-    // Struct, Amiga version string...
+    // main(), Function, Enum, Amiga version string...
     QAction *mainAct;
     QAction *functionAct;            // inserts C function skeletton
     QAction *enumAct;                // inserts C enumeration skeletton
-    QAction *structAct;              // inserts C struct skeletton
+    QAction *consoleDebugAct;        // inserts if(myDebug){...} console debugging block
     QAction *versionStringAct;       // inserts Amiga C version string
 
     // statusbar widgets

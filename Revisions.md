@@ -8,6 +8,127 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.100
+- Reverted rev.99's `QWebEngineView` for the Help > Manual viewer back
+  to `QTextBrowser`: Qt WebEngine (Chromium) does not compile with
+  MinGW at all - a hard upstream limitation, not a missing Qt
+  Maintenance Tool component - and this project's Qt kit uses MinGW.
+  Removed `webenginewidgets` from `AmigaED.pro` again.
+- Instead, found and fixed the actual rendering bug that motivated
+  trying WebEngine in the first place: images in the manual's HTML
+  were overlapping the heading/caption around them. Root cause -
+  confirmed by rendering the HTML through the real QTextDocument engine
+  offscreen (not just eyeballing it in a browser, which uses a
+  completely different, far more capable engine) - was the `line-height`
+  CSS property anywhere in the stylesheet, combined with this page's
+  non-uniform body padding (`24px 34px 60px 34px`): together they made
+  QTextBrowser drastically under-reserve vertical space for any image
+  that followed. Removed `line-height` from the manual's CSS entirely;
+  also switched image centering from `style="margin:auto"` to the
+  old-school `<p align="center">`, and gave every `<img>` explicit
+  pixel `width`/`height` attributes (computed from each image's real
+  size) instead of percentage-based sizing - both were separately
+  confirmed, the same way, to make QTextBrowser reserve the correct
+  space. Added `<a name="...">` anchors alongside each heading's `id`
+  attribute as a belt-and-suspenders measure for the Table of Contents'
+  jump links (verified working either way).
+
+## rev.99
+- The Help > Manual viewer (F1) now renders the HTML manual with a real
+  Chromium engine (`QWebEngineView`) instead of `QTextBrowser` - whose
+  limited HTML/CSS subset rendered the manual's layout, tables, and
+  images poorly. Requires the new `webenginewidgets` Qt module (added
+  to `AmigaED.pro`) and, on the Qt kit used to build it, the "Qt
+  WebEngine" component installed via the Qt Maintenance Tool if not
+  already present. This is a substantially heavier dependency than
+  before - it adds Chromium's own binaries/resources to a built
+  install (`windeployqt` already stages these automatically, no
+  install-script changes were needed) - but renders the manual exactly
+  as intended.
+
+## rev.98
+- Fixed two build errors reported for rev.97:
+  - `actionGoto_matching_brace()`: `SendScintilla(SCI_BRACEMATCH, bracePos, 0)`
+    failed to compile ("call ... is ambiguous") because the literal `0`
+    matched multiple overloads at once (`long`, `void *`, `const char *`).
+    Fixed with explicit casts to the exact `(unsigned long, long)` overload.
+  - A `//` comment line ending in a single trailing backslash was merging
+    with the next line (`-Wcomment` "multi-line comment" warning) -
+    reworded so no comment line ends in `\`.
+- New **Undo**/**Redo** actions, added to the Edit menu (above Cut) and
+  the Edit toolbar, with newly drawn matching curved-arrow icons and
+  the platform-standard shortcuts (`QKeySequence::Undo`/`::Redo` - e.g.
+  Ctrl+Z/Ctrl+Y on Windows/Linux). Simply forward to the active tab's
+  `textEdit->undo()`/`redo()` - Scintilla's own undo buffer isn't capped
+  to any fixed step count by AmigaED, so it comfortably covers "at least
+  10 steps" in both directions without any extra bookkeeping.
+
+## rev.97
+- New action **"Comment/Uncomment Block"** (Ctrl+/), added to the
+  Comments submenu - which, being shared between the main Inserts menu
+  and the editor's context menu, automatically appears in both.
+  Toggles a `// ` line-comment prefix on every line of the current
+  selection (or just the current line if nothing is selected): if every
+  non-blank line in range already starts with `//`, it strips the
+  prefix from each; otherwise it adds `// ` to each. Grouped into a
+  single undo action, and re-selects the affected block afterwards so
+  an immediate second press toggles it straight back.
+
+## rev.96
+- Renamed View menu entry "Fold all..." to **"Fold/Unfold all..."** and
+  rewrote its logic: it now uses Scintilla's own `SCI_FOLDALL` message
+  with an explicit contract/expand action, forcing every fold point in
+  the document to the same state in one call - reliable even when some
+  blocks were already folded/unfolded by hand first (the previous
+  `foldAll(bool)`-based version toggled each fold header based on its
+  own current state, which produced an inconsistent result from a mixed
+  starting point). Repeated presses alternate between "fold everything"
+  and "unfold everything", tracked independently of Scintilla's
+  per-line state.
+- Navigation/"Go to matching bracket" rewritten: it now explicitly
+  checks both the character right before AND right after the caret for
+  a bracket - the previous version relied solely on QScintilla's
+  `moveToMatchingBrace()`, which only reliably matches a bracket
+  sitting at the caret's position (to its right), silently doing
+  nothing for the more common case of the caret sitting right *after*
+  a bracket. The caret now always lands right after whichever bracket
+  it jumped to, in both directions.
+
+## rev.95
+- **Search and Replace fully rewritten.** The previous implementation
+  took an action parameter but never actually branched on it, so
+  Find-next/Find-previous/Replace/Replace-all all silently did the
+  exact same (broken) thing, and the replace field was never even
+  read - nothing was ever replaced. Rewritten from scratch using
+  QsciScintilla's own `findFirst()`/`findNext()`/`replace()` directly:
+  Find-next/previous now search forward/backward correctly; Replace
+  replaces the current match and advances to the next one; Replace-all
+  processes the whole document from the start (safe against infinite
+  loops even when the replacement text contains the search text) and
+  reports how many occurrences it replaced.
+- New context menu entry **"Search and Replace..."**, topmost, followed
+  by a separator above "What to insert?". If a word sits under the
+  click, it is used as the initial search term (via QScintilla's
+  `wordAtPoint()`).
+- Preprocessor/"Identify Amiga compiler": the GNU gcc branch now also
+  checks the GCC version at compile time - GCC >= 6.5 appends an extra
+  line, "Probably Beppo's amiga-gcc or one of its forks.", to
+  `compiler_string`.
+- New toolbar button for the existing "Clean Project" action (a
+  freshly drawn, multi-colored broom icon, same size/style as the
+  other toolbar icons), placed right next to "Build Project".
+- Fixed the default-icon-copy step in generated `Makefile.gcc` failing
+  with "Syntaxfehler" for some icon paths on Windows: the path had its
+  backslashes doubled before being embedded in the `cmd /c copy`
+  recipe line, inconsistent with (and apparently not as reliable as)
+  the already-proven single-backslash pattern used for the same sh/cmd
+  handoff elsewhere in this project (`install_stage.bat`'s invocation
+  in `AmigaED.pro`). Removed the doubling.
+- Both manuals' "Recommendations for Amiga C Programmers" chapter:
+  expanded the Codecraft entry with its full description and added a
+  second source link (http://boemann.dk/codecraft/), in the PDFs, the
+  HTML exports, and both languages.
+
 ## rev.94
 - Fixed the Manual window (Help > Manual, F1) being unreadable while
   AmigaED's "Dark" application style is active: that style works by

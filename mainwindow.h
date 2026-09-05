@@ -118,6 +118,13 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    // Search and replace: which of the four buttons (or Enter in the
+    // Find field, which behaves like FindNext) triggered
+    // doSearchAndReplace(). Replaces the old, never-actually-checked
+    // QString action_str ("0".."4") the previous implementation took
+    // but never switched on.
+    enum class SearchReplaceAction { FindNext, FindPrevious, Replace, ReplaceAll };
+
     explicit MainWindow(QString cmdFileName);
     bool fileExists(QString path);
     bool allready_selected = false;
@@ -313,6 +320,8 @@ private slots:
     void startPrefs();                              // Workaround to start prefsDialog with a parameter
     void setEmulatorMenu();                         // disable emulator menu entries if no config was specified
     void actionResetFontSize();                      // zoomTo(0) wrapper, since QAction::triggered() has no args
+    void actionUndo();                                // forwards to the active tab's textEdit->undo()
+    void actionRedo();                                // forwards to the active tab's textEdit->redo()
     void actionCut();                                 // forwards to the active tab's textEdit->cut()
     void actionCopy();                                // forwards to the active tab's textEdit->copy()
     void actionPaste();                               // forwards to the active tab's textEdit->paste()
@@ -381,6 +390,7 @@ private slots:
     void actionInsertFunction();
     void actionInsertAmigaVersionString();
     void actionInsertFileheaderComment();
+    void actionToggleCommentBlock();       // comments/uncomments the selected block (or current line) with "// "
     void actionInsertCSingleComment();
     void actionInsertCMultiComment();
     void actionInsertCppSingleComment();
@@ -399,12 +409,13 @@ private slots:
     void actionShowOutputConsole();
 
     // search and replace connections:
-    void do_search_and_replace(QString action_str);  // search and replace for matching word
+    void doSearchAndReplace(SearchReplaceAction action);  // shared implementation behind the four search/replace buttons
     void on_btn_next();                         // search for next occurance of matching word
     void on_btn_previous();                 // search for previous occurance ofmatching word
     void on_btn_replace();                  // replace current occurance of matching word
     void on_btn_replace_all();              // replace all occurances of matching word
     void on_btn_hide();                     // hide search & replace, set p_search_allready_open to false
+    void actionSearchReplaceFromContext();  // context-menu entry: pre-fills Find: with the word under the click, then opens/focuses the search panel
 
 private:
     QProcess *cmd;
@@ -612,10 +623,13 @@ private:
     QAction *printAct;              // print current file
     QAction *exitAct;               // quit the app
     // Actions for editMenue
+    QAction *undoAct;               // undo the last edit
+    QAction *redoAct;               // redo the last undone edit
     QAction *cutAct;                // copy marked text into clipboard and delete original
     QAction *copyAct;               // copy marked text into clipboard
     QAction *pasteAct;              // paste clipboard
     QAction *searchAct;             // search for text
+    QAction *contextSearchReplaceAct;  // "Search and Replace..." - context menu only, topmost entry (see showCustomContextMenue())
     // Actions for helpMenue
     QAction *manualAct;             // opens the non-modal HTML Manual viewer (F1)
     QAction *aboutAct;              // show about message
@@ -687,6 +701,7 @@ private:
     QAction *do_whileAct;           // inserts do{...}while(condition) loop
     QAction *switchAct;             // inserts switch(condition) select case statements
     // Comments
+    QAction *toggleCommentBlockAct; // comments/uncomments the selected block (or current line) with "// "
     QAction *fileheaderAct;         // inserts a fileheader comment
     QAction *c_singleAct;           // inserts a C-style single line comment
     QAction *c_multiAct;            // inserts a C-style multi line comment
@@ -716,9 +731,19 @@ private:
 
     // is search allready opened?
     bool p_search_is_open = false;
+    // Word under the cursor at the moment the editor's context menu was
+    // opened (see showCustomContextMenue()) - captured there (while
+    // 'pos' still refers to that click) and read back by
+    // actionSearchReplaceFromContext() once the user actually picks
+    // "Search and Replace..." from it. Empty if there was no word there.
+    QString p_contextMenuWordAtClick;
 
-    // is document text folded?
-    bool foldall;
+    // Tracks which state the LAST "Fold/Unfold all" invocation forced the
+    // whole document into (see initializeFolding()) - alternates on each
+    // click, independent of Scintilla's own per-line fold state, so it
+    // reliably alternates fold/unfold even after the user manually folded
+    // or expanded individual blocks by hand in between clicks.
+    bool foldall = false;
     bool p_show_compilerbutton = true;  // enable or disable Button in statusbar via prefs
 
     // check if there is allready a main() function in a file

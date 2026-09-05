@@ -288,6 +288,28 @@
         <translation>Anwendung beenden</translation>
     </message>
     <message>
+        <location filename="../mainwindow.cpp" line="737"/>
+        <location filename="../mainwindow.cpp" line="1449"/>
+        <source>&amp;Undo</source>
+        <translation>&amp;Rückgängig</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="739"/>
+        <source>Undo the last edit</source>
+        <translation>Letzte Änderung rückgängig machen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="742"/>
+        <location filename="../mainwindow.cpp" line="1450"/>
+        <source>&amp;Redo</source>
+        <translation>&amp;Wiederholen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="744"/>
+        <source>Redo the last undone edit</source>
+        <translation>Letzte rückgängig gemachte Änderung wiederholen</translation>
+    </message>
+    <message>
         <location filename="../mainwindow.cpp" line="665"/>
         <location filename="../mainwindow.cpp" line="1395"/>
         <source>Cu&amp;t</source>
@@ -351,6 +373,44 @@
         <location filename="../mainwindow.cpp" line="1484"/>
         <source>Search text in document</source>
         <translation>Text im Dokument suchen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="778"/>
+        <location filename="../mainwindow.cpp" line="1431"/>
+        <source>Search and Replace...</source>
+        <translation>Suchen und Ersetzen...</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="779"/>
+        <location filename="../mainwindow.cpp" line="1510"/>
+        <source>Open Search and Replace, using the word under the click as the search term</source>
+        <translation>Suchen und Ersetzen öffnen, mit dem angeklickten Wort als Suchbegriff</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="8455"/>
+        <source>Nothing to search for.</source>
+        <translation>Kein Suchbegriff eingegeben.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="8471"/>
+        <location filename="../mainwindow.cpp" line="8501"/>
+        <source>"%1" not found.</source>
+        <translation>"%1" nicht gefunden.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="8494"/>
+        <source>No more occurrences of "%1".</source>
+        <translation>Keine weiteren Vorkommen von "%1".</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="8523"/>
+        <source>Replaced 1 occurrence of "%1".</source>
+        <translation>1 Vorkommen von "%1" ersetzt.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="8524"/>
+        <source>Replaced %1 occurrences of "%2".</source>
+        <translation>%1 Vorkommen von "%2" ersetzt.</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="703"/>
@@ -421,21 +481,31 @@
         <translation>Zur passenden Klammer springen...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="724"/>
-        <location filename="../mainwindow.cpp" line="1403"/>
-        <source>&amp;Fold all...</source>
-        <translation>Alles &amp;einklappen...</translation>
+        <location filename="../mainwindow.cpp" line="2760"/>
+        <source>No bracket next to the cursor.</source>
+        <translation>Keine Klammer neben dem Cursor.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="725"/>
+        <location filename="../mainwindow.cpp" line="2767"/>
+        <source>No matching bracket found.</source>
+        <translation>Keine passende Klammer gefunden.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="804"/>
+        <location filename="../mainwindow.cpp" line="1434"/>
+        <source>&amp;Fold/Unfold all...</source>
+        <translation>Alles ein-/&amp;ausklappen...</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="805"/>
         <source>Ctrl+Alt+f</source>
         <translation>Ctrl+Alt+f</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="728"/>
-        <location filename="../mainwindow.cpp" line="1489"/>
-        <source>Toggle folding for whole document</source>
-        <translation>Einklappen für das gesamte Dokument umschalten</translation>
+        <location filename="../mainwindow.cpp" line="806"/>
+        <location filename="../mainwindow.cpp" line="1513"/>
+        <source>Fold or unfold the whole document</source>
+        <translation>Das gesamte Dokument ein- oder ausklappen</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="731"/>
@@ -1145,6 +1215,33 @@
         <translation>if(myDebug){...}-Debug-Block einfügen</translation>
     </message>
     <message>
+        <location filename="../mainwindow.cpp" line="1126"/>
+        <location filename="../mainwindow.cpp" line="1490"/>
+        <source>Comment/Uncomment Block</source>
+        <translation>Block kommentieren/entkommentieren</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1127"/>
+        <source>Ctrl+/</source>
+        <translation>Ctrl+/</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1128"/>
+        <location filename="../mainwindow.cpp" line="1570"/>
+        <source>Comment out the selected lines with "// ", or remove it if they're already commented</source>
+        <translation>Ausgewählte Zeilen mit "// " auskommentieren, oder entfernen, falls bereits kommentiert</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="4008"/>
+        <source>Block uncommented.</source>
+        <translation>Block entkommentiert.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="4008"/>
+        <source>Block commented.</source>
+        <translation>Block kommentiert.</translation>
+    </message>
+    <message>
         <location filename="../mainwindow.cpp" line="1067"/>
         <location filename="../mainwindow.cpp" line="1457"/>
         <source>Fileheader comment...</source>
@@ -1724,9 +1821,19 @@ Anschließend müssen Sie Amiga Cross Editor neu starten!</translation>
         <translation>Syntax auf Pascal geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5131"/>
-        <source>Folding toggled</source>
-        <translation>Einklappen umgeschaltet</translation>
+        <location filename="../mainwindow.cpp" line="4955"/>
+        <source>Folding is not available for this file type.</source>
+        <translation>Einklappen ist für diesen Dateityp nicht verfügbar.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="4962"/>
+        <source>All folds collapsed.</source>
+        <translation>Alles eingeklappt.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="4962"/>
+        <source>All folds expanded.</source>
+        <translation>Alles ausgeklappt.</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="5195"/>

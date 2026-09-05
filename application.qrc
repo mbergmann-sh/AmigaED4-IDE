@@ -1,6 +1,8 @@
 <RCC>
     <qresource prefix="/">
         <file>images/copy.png</file>
+        <file>images/undo.png</file>
+        <file>images/redo.png</file>
         <file>images/cut.png</file>
         <file>images/new.png</file>
         <file>images/open.png</file>
@@ -11,6 +13,7 @@
         <file>images/brackets.png</file>
         <file>images/dice.png</file>
         <file>images/build_project.png</file>
+        <file>images/clean_project.png</file>
         <file>images/fileexit.png</file>
         <file>images/workbench.png</file>
         <file>images/filesaveas.png</file>

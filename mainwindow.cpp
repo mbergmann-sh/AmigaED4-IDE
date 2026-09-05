@@ -557,6 +557,20 @@ void MainWindow::actionShowManual()
         p_manualWindow->setWindowFlag(Qt::WindowMinMaxButtonsHint, true);
         p_manualWindow->resize(920, 720);
 
+        // QTextBrowser (back again as of rev.100 - see Revisions.md for
+        // the QWebEngineView detour in rev.99 and why it had to be
+        // reverted: Qt WebEngine/Chromium simply does not compile with
+        // MinGW on Windows, which is what this project's own Qt kit
+        // uses - not a missing Maintenance Tool component, a hard
+        // upstream Chromium limitation). help/manual_en.html and
+        // manual_de.html were reworked instead to render cleanly within
+        // QTextBrowser's own (QTextDocument) HTML/CSS subset - notably,
+        // avoid the "line-height" CSS property anywhere in that
+        // stylesheet: combined with this specific page's non-uniform
+        // body padding, it made this engine drastically under-reserve
+        // vertical space for any image that followed, so headings and
+        // captions ended up overlapping the image above them instead of
+        // sitting cleanly below it.
         QTextBrowser *browser = new QTextBrowser(p_manualWindow);
         browser->setOpenExternalLinks(true);   // http(s):// links (e.g. in "Recommendations") open in the system browser
 
@@ -700,7 +714,7 @@ void MainWindow::createActions()
     buildProjectAct->setStatusTip(tr("Run the project's Makefile (target \"all\") for the currently selected compiler"));
     connect(buildProjectAct, SIGNAL(triggered()), this, SLOT(actionBuildProject()));
 
-    cleanProjectAct = new QAction(tr("Clean Project"), this);
+    cleanProjectAct = new QAction(QIcon(":/images/clean_project.png"), tr("Clean Project"), this);
     cleanProjectAct->setStatusTip(tr("Run the project's Makefile (target \"clean\") for the currently selected compiler"));
     connect(cleanProjectAct, SIGNAL(triggered()), this, SLOT(actionCleanProject()));
 
@@ -734,6 +748,16 @@ void MainWindow::createActions()
     connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
 
     /* --- Edit -----------------------------------------------------------------------*/
+    undoAct = new QAction(QIcon(":/images/undo.png"), tr("&Undo"), this);
+    undoAct->setShortcut(QKeySequence::Undo);
+    undoAct->setStatusTip(tr("Undo the last edit"));
+    connect(undoAct, SIGNAL(triggered()), this, SLOT(actionUndo()));
+
+    redoAct = new QAction(QIcon(":/images/redo.png"), tr("&Redo"), this);
+    redoAct->setShortcut(QKeySequence::Redo);
+    redoAct->setStatusTip(tr("Redo the last undone edit"));
+    connect(redoAct, SIGNAL(triggered()), this, SLOT(actionRedo()));
+
     cutAct = new QAction(QIcon(":/images/cut.png"), tr("Cu&t"), this);
     cutAct->setShortcut(tr("Ctrl+X"));
     cutAct->setStatusTip(tr("Cut the current selection's contents to the "
@@ -771,6 +795,14 @@ void MainWindow::createActions()
     searchAct->setStatusTip(tr("Search text in document"));
     connect(searchAct, SIGNAL(triggered()), this, SLOT(actionSearch()));
 
+    // Context-menu-only entry (see showCustomContextMenue()); not part
+    // of any menu-bar menu, unlike the "Inserts" section mirrored below
+    // it - this is a shortcut into the same search-and-replace feature
+    // as searchAct above, not an insert template.
+    contextSearchReplaceAct = new QAction(QIcon(":/images/search.png"), tr("Search and Replace..."), this);
+    contextSearchReplaceAct->setStatusTip(tr("Open Search and Replace, using the word under the click as the search term"));
+    connect(contextSearchReplaceAct, SIGNAL(triggered()), this, SLOT(actionSearchReplaceFromContext()));
+
     /* --- Navigation -------------------------------------------------------------------*/
     gotoTopAct = new QAction( tr("&Goto top..."), this);
     gotoTopAct->setShortcut(tr("Ctrl+Home"));
@@ -793,11 +825,9 @@ void MainWindow::createActions()
     connect(gotoMatchingBraceAct, SIGNAL(triggered()), this, SLOT(actionGoto_matching_brace()));
 
     /* --- View -----------------------------------------------------------------------*/
-    toggleFoldAct = new QAction(tr("&Fold all..."), this);
+    toggleFoldAct = new QAction(tr("&Fold/Unfold all..."), this);
     toggleFoldAct->setShortcut(tr("Ctrl+Alt+f"));
-    toggleFoldAct->setCheckable(true);
-    toggleFoldAct->setChecked(false);
-    toggleFoldAct->setStatusTip(tr("Toggle folding for whole document"));
+    toggleFoldAct->setStatusTip(tr("Fold or unfold the whole document"));
     connect(toggleFoldAct, SIGNAL(triggered()), this, SLOT(initializeFolding()));
 
     showLineNumbersAct = new QAction(tr("Show line numbers..."), this);
@@ -1117,6 +1147,11 @@ void MainWindow::createActions()
     fileheaderAct->setStatusTip(tr("insert Fileheader comment"));
     connect(fileheaderAct, SIGNAL(triggered()), this, SLOT(actionInsertFileheaderComment()));
 
+    toggleCommentBlockAct = new QAction(tr("Comment/Uncomment Block"), this); // inserts into insertMenue => commentsMenue
+    toggleCommentBlockAct->setShortcut(tr("Ctrl+/"));
+    toggleCommentBlockAct->setStatusTip(tr("Comment out the selected lines with \"// \", or remove it if they're already commented"));
+    connect(toggleCommentBlockAct, SIGNAL(triggered()), this, SLOT(actionToggleCommentBlock()));
+
     versionStringAct = new QAction(tr("Amiga C version string"), this); // inserts into insertMenue => preprocessorMenue
     versionStringAct->setStatusTip(tr("insert $VER: programname version.revision (dd.mm.yyyy)"));
     connect(versionStringAct, SIGNAL(triggered()), this, SLOT(actionInsertAmigaVersionString()));
@@ -1189,6 +1224,9 @@ void MainWindow::createMenus()
 
     // Edit menue
     editMenue = menuBar()->addMenu(tr("&Edit"));
+    editMenue->addAction(undoAct);
+    editMenue->addAction(redoAct);
+    editMenue->addSeparator();
     editMenue->addAction(cutAct);
     editMenue->addAction(copyAct);
     editMenue->addAction(pasteAct);
@@ -1233,6 +1271,8 @@ void MainWindow::createMenus()
     insertMenue->addAction(consoleDebugAct);
     insertMenue->addSeparator();
     commentsMenue = insertMenue->addMenu(tr("Comments..."));
+    commentsMenue->addAction(toggleCommentBlockAct);
+    commentsMenue->addSeparator();
     commentsMenue->addAction(fileheaderAct);
     commentsMenue->addSeparator();
     commentsMenue->addAction(c_singleAct);
@@ -1358,6 +1398,9 @@ void MainWindow::createToolBars()
     fileToolBar->addAction(printAct);
 
     editToolBar = addToolBar(tr("Edit"));
+    editToolBar->addAction(undoAct);
+    editToolBar->addAction(redoAct);
+    editToolBar->addSeparator();
     editToolBar->addAction(cutAct);
     editToolBar->addAction(copyAct);
     editToolBar->addAction(pasteAct);
@@ -1372,6 +1415,7 @@ void MainWindow::createToolBars()
     buildToolBar = addToolBar(tr("Build"));
     buildToolBar->addAction(compileAct);
     buildToolBar->addAction(buildProjectAct);   // mirrors menu entry Build/Build Project
+    buildToolBar->addAction(cleanProjectAct);   // mirrors menu entry Build/Clean Project
     buildToolBar->addSeparator();
     buildToolBar->addAction(emulatorAct);
     buildToolBar->addAction(killEmulatorAct);
@@ -1415,15 +1459,18 @@ void MainWindow::retranslateUi()
     prefsReloadAct->setText(tr("Reload settings"));
     printAct->setText(tr("&Print file..."));
     exitAct->setText(tr("&Exit"));
+    undoAct->setText(tr("&Undo"));
+    redoAct->setText(tr("&Redo"));
     cutAct->setText(tr("Cu&t"));
     copyAct->setText(tr("&Copy"));
     pasteAct->setText(tr("&Paste"));
     searchAct->setText(tr("Sea&rch..."));
+    contextSearchReplaceAct->setText(tr("Search and Replace..."));
     gotoTopAct->setText(tr("&Goto top..."));
     gotoBottomAct->setText(tr("&Goto bottom..."));
     gotoLineAct->setText(tr("&Goto Line..."));
     gotoMatchingBraceAct->setText(tr("Goto &matching bracket {} ... [] ... ()..."));
-    toggleFoldAct->setText(tr("&Fold all..."));
+    toggleFoldAct->setText(tr("&Fold/Unfold all..."));
     showLineNumbersAct->setText(tr("Show line numbers..."));
     showCaretLineAct->setText(tr("Show caret line..."));
     showDebugInfoAct->setText(tr("Show debug output"));
@@ -1472,6 +1519,7 @@ void MainWindow::retranslateUi()
     functionAct->setText(tr("int function {...}"));
     enumAct->setText(tr("enum {...}"));
     consoleDebugAct->setText(tr("Console Debugging Message"));
+    toggleCommentBlockAct->setText(tr("Comment/Uncomment Block"));
     fileheaderAct->setText(tr("Fileheader comment..."));
     versionStringAct->setText(tr("Amiga C version string"));
     c_singleAct->setText(tr("C-style single line comment..."));
@@ -1497,11 +1545,12 @@ void MainWindow::retranslateUi()
     printAct->setStatusTip(tr("Prepare for printing..."));
     exitAct->setStatusTip(tr("Exit the application"));
     searchAct->setStatusTip(tr("Search text in document"));
+    contextSearchReplaceAct->setStatusTip(tr("Open Search and Replace, using the word under the click as the search term"));
     gotoTopAct->setStatusTip(tr("Goto top of file..."));
     gotoBottomAct->setStatusTip(tr("Goto bottom of file..."));
     gotoLineAct->setStatusTip(tr("Goto line X..."));
     gotoMatchingBraceAct->setStatusTip(tr("Goto matching bracket..."));
-    toggleFoldAct->setStatusTip(tr("Toggle folding for whole document"));
+    toggleFoldAct->setStatusTip(tr("Fold or unfold the whole document"));
     showLineNumbersAct->setStatusTip(tr("Show or hide line numbers"));
     showCaretLineAct->setStatusTip(tr("Show or hide caret line"));
     showDebugInfoAct->setStatusTip(tr("Toggle debug output visibility"));
@@ -1550,6 +1599,7 @@ void MainWindow::retranslateUi()
     functionAct->setStatusTip(tr("insert C function definition"));
     enumAct->setStatusTip(tr("insert enum {...}"));
     consoleDebugAct->setStatusTip(tr("insert if(myDebug){...} debugging block"));
+    toggleCommentBlockAct->setStatusTip(tr("Comment out the selected lines with \"// \", or remove it if they're already commented"));
     fileheaderAct->setStatusTip(tr("insert Fileheader comment"));
     versionStringAct->setStatusTip(tr("insert $VER: programname version.revision (dd.mm.yyyy)"));
     c_singleAct->setStatusTip(tr("insert C-style single line comment"));
@@ -2711,9 +2761,70 @@ void MainWindow::actionGoto_Line()
 //
 // jump to matching brace: {...}, [...], (...)
 //
+// Rewritten (rev.96): the previous one-liner just called QScintilla's
+// own moveToMatchingBrace(), which only reliably checks the character
+// AT the caret position (i.e. immediately to its RIGHT) for a brace -
+// Scintilla's underlying SCI_BRACEMATCH message matches the brace AT a
+// given document position, not "whichever brace is nearest the caret".
+// That silently failed to do anything for the very case the user
+// described: caret sitting right AFTER a bracket (the bracket is then
+// the character to the caret's LEFT, at position-1, not at its
+// position). This version explicitly checks both sides of the caret -
+// left first (matching "the cursor is right behind a bracket"), then
+// right - so it works from either side and in either search direction
+// (opening-to-closing and closing-to-opening are the same
+// SCI_BRACEMATCH call either way). The caret always ends up right
+// AFTER the matching bracket, whichever one that is.
+//
 void MainWindow::actionGoto_matching_brace()
 {
-    textEdit->moveToMatchingBrace();
+    if (!textEdit)
+        return;
+
+    auto isBracket = [](char c) {
+        return c == '(' || c == ')' || c == '{' || c == '}' || c == '[' || c == ']';
+    };
+
+    const long curPos = textEdit->SendScintilla(QsciScintillaBase::SCI_GETCURRENTPOS);
+
+    // Check the character immediately to the LEFT of the caret first -
+    // this is what "the cursor stands right behind a bracket" means -
+    // then fall back to the character immediately to its RIGHT, so a
+    // caret sitting right before an opening bracket (about to type past
+    // it) still works too.
+    long bracePos = -1;
+    if (curPos > 0 && isBracket(static_cast<char>(textEdit->SendScintilla(QsciScintillaBase::SCI_GETCHARAT, curPos - 1))))
+        bracePos = curPos - 1;
+    else if (isBracket(static_cast<char>(textEdit->SendScintilla(QsciScintillaBase::SCI_GETCHARAT, curPos))))
+        bracePos = curPos;
+
+    if (bracePos < 0)
+    {
+        createStatusBarMessage(tr("No bracket next to the cursor."), 3000);
+        return;
+    }
+
+    // Explicit casts needed here: passing a plain "0" as the unused
+    // third (lParam) argument is genuinely ambiguous between this
+    // overload's "long", the "void *", and the "const char *"
+    // overloads (0 is a valid null-pointer-constant for either of the
+    // latter two as well as a valid integer for the former) - the
+    // compiler can't pick one on its own. Casting both arguments to
+    // match the (unsigned long, long) overload exactly resolves it.
+    const long matchPos = textEdit->SendScintilla(QsciScintillaBase::SCI_BRACEMATCH,
+                                                   static_cast<unsigned long>(bracePos),
+                                                   static_cast<long>(0));
+    if (matchPos < 0)   // Scintilla returns INVALID_POSITION (-1) if the bracket has no partner
+    {
+        createStatusBarMessage(tr("No matching bracket found."), 3000);
+        return;
+    }
+
+    // Land right AFTER the matching bracket, regardless of which
+    // direction the jump went - matches the same "cursor sits right
+    // behind the bracket" convention the search above started from.
+    textEdit->SendScintilla(QsciScintillaBase::SCI_GOTOPOS, matchPos + 1);
+    textEdit->setFocus();
 }
 
 //
@@ -3237,6 +3348,23 @@ void MainWindow::actionResetFontSize()
 // always points at whichever tab is currently active, and can change
 // between the time an action is created and the time it's triggered.
 //
+// Undo/redo history itself is QScintilla's own (Scintilla's built-in undo
+// buffer, one per document/tab) - it isn't capped to any fixed number of
+// steps by AmigaED, so "at least 10 steps forward and back" is comfortably
+// covered without any extra bookkeeping here.
+//
+void MainWindow::actionUndo()
+{
+    if (textEdit)
+        textEdit->undo();
+}
+
+void MainWindow::actionRedo()
+{
+    if (textEdit)
+        textEdit->redo();
+}
+
 void MainWindow::actionCut()
 {
     if(textEdit)
@@ -3480,7 +3608,11 @@ void MainWindow::actionInsertIfdefinedCompiler()
     textEdit->insertAt("\tconst char *compiler_string = \"compiled with Maxon/HiSoft C++.\\n\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(__GNUC__)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is gcc */\n", ++line, 0);
-    textEdit->insertAt("\tconst char *compiler_string = \"compiled with GNU gcc v\" STR(__GNUC__) \".\" STR(__GNUC_MINOR__) \" Patchlevel \" STR(__GNUC_PATCHLEVEL__) \".\\n\\n\";\n", ++line, 0);
+    textEdit->insertAt("\tconst char *compiler_string = \"compiled with GNU gcc v\" STR(__GNUC__) \".\" STR(__GNUC_MINOR__) \" Patchlevel \" STR(__GNUC_PATCHLEVEL__) \".\\n\"\n", ++line, 0);
+    textEdit->insertAt("#if (__GNUC__ > 6) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 5)\n", ++line, 0);
+    textEdit->insertAt("\t\"Probably Beppo's amiga-gcc or one of its forks.\\n\"\n", ++line, 0);
+    textEdit->insertAt("#endif\n", ++line, 0);
+    textEdit->insertAt("\t\"\\n\";\n", ++line, 0);
     textEdit->insertAt("#elif defined(__VBCC__)\n", ++line, 0);
     textEdit->insertAt("\t/* Compiler is vbcc */\n", ++line, 0);
     textEdit->insertAt("\tconst char *compiler_string = \"compiled with vbcc.\\n\\n\";\n", ++line, 0);
@@ -3834,6 +3966,109 @@ void MainWindow::actionInsertConsoleDebugMessage()
     // "}\n" insertion above, so the blank line sits one line before it;
     // column 1 lands right after that line's leading tab.
     textEdit->setCursorPosition(line - 1, 1);
+}
+
+//
+// Comment/Uncomment Block: toggles a "// " line-comment prefix on every
+// line of the current selection (or just the current line, if nothing
+// is selected).
+//
+// Detection: the block counts as "already commented" if every non-blank
+// line within it already starts with "//" - in which case the prefix
+// ("// " if present, else just "//") is removed from each line instead.
+// Blank/whitespace-only lines are ignored when deciding which way to
+// toggle (so a comment block with a blank line in the middle doesn't
+// force "add comments" mode), but are otherwise left untouched either
+// way - there's nothing meaningful to comment or uncomment on an empty
+// line.
+//
+void MainWindow::actionToggleCommentBlock()
+{
+    if (!textEdit)
+        return;
+
+    int lineFrom, indexFrom, lineTo, indexTo;
+    textEdit->getSelection(&lineFrom, &indexFrom, &lineTo, &indexTo);
+    const bool hadSelection = (lineFrom != -1);
+
+    if (!hadSelection)
+    {
+        // Nothing selected - act on just the current line.
+        textEdit->getCursorPosition(&lineFrom, &indexFrom);
+        lineTo = lineFrom;
+    }
+    else if (indexTo == 0 && lineTo > lineFrom)
+    {
+        // The selection's last line has no characters actually selected
+        // on it (the drag ended right at its very start) - exclude it,
+        // matching the common editor convention for line-based commands
+        // like this one, so selecting up to the start of the following
+        // line doesn't unexpectedly comment that line too.
+        --lineTo;
+    }
+
+    // First pass: does EVERY non-blank line in range already start with
+    // "//"? That decides whether this run comments or uncomments.
+    bool allCommented = true;
+    bool sawNonBlankLine = false;
+    for (int line = lineFrom; line <= lineTo; ++line)
+    {
+        const QString trimmed = textEdit->text(line).trimmed();
+        if (trimmed.isEmpty())
+            continue;
+        sawNonBlankLine = true;
+        if (!trimmed.startsWith(QStringLiteral("//")))
+        {
+            allCommented = false;
+            break;
+        }
+    }
+    const bool shouldUncomment = sawNonBlankLine && allCommented;
+
+    // Second pass: actually apply it. Grouped into a single undo action
+    // so Ctrl+Z undoes the whole block at once, not line by line.
+    textEdit->beginUndoAction();
+    for (int line = lineFrom; line <= lineTo; ++line)
+    {
+        const QString lineText = textEdit->text(line);
+        if (shouldUncomment)
+        {
+            if (lineText.startsWith(QStringLiteral("// ")))
+            {
+                textEdit->setSelection(line, 0, line, 3);
+                textEdit->removeSelectedText();
+            }
+            else if (lineText.startsWith(QStringLiteral("//")))
+            {
+                textEdit->setSelection(line, 0, line, 2);
+                textEdit->removeSelectedText();
+            }
+            // else: this particular line doesn't start with "//" (e.g.
+            // it's blank) - nothing to remove, leave it as it is.
+        }
+        else
+        {
+            textEdit->insertAt(QStringLiteral("// "), line, 0);
+        }
+    }
+    textEdit->endUndoAction();
+
+    // Leave the whole affected block selected again afterwards (if it
+    // was a selection to begin with) so an immediate second press
+    // toggles it straight back. text(line) includes the line's EOL
+    // characters, which setSelection()/setCursorPosition() would
+    // otherwise place the caret past (into the start of the next line)
+    // - strip them first so the length here is the visible column count.
+    QString lastLineText = textEdit->text(lineTo);
+    while (lastLineText.endsWith(QLatin1Char('\n')) || lastLineText.endsWith(QLatin1Char('\r')))
+        lastLineText.chop(1);
+    const int lastLineLength = lastLineText.length();
+    if (hadSelection)
+        textEdit->setSelection(lineFrom, 0, lineTo, lastLineLength);
+    else
+        textEdit->setCursorPosition(lineFrom, lastLineLength);
+
+    createStatusBarMessage(shouldUncomment ? tr("Block uncommented.") : tr("Block commented."), 2000);
 }
 
 //
@@ -4223,13 +4458,33 @@ void MainWindow::actionPrefsDialog(int tabindex = 0)
 //
 void MainWindow::actionSearch()
 {
-    if(!(p_search_is_open)) // allready opened?
+    if (!p_search_is_open)
     {
         searchGroup->show();
-        lineEdit_find->setFocus();
         p_search_is_open = true;
-        qDebug() << "in actionSearch()";
     }
+    // Always (re-)focus and select the existing text, even if the panel
+    // was already open - previously, a second Ctrl+F while it was
+    // already open did nothing at all, which also would have made the
+    // context menu's "Search and Replace..." entry (see
+    // actionSearchReplaceFromContext()) fail to focus/select the word
+    // it just filled in whenever the panel happened to be open already.
+    lineEdit_find->setFocus();
+    lineEdit_find->selectAll();
+}
+
+//
+// Context-menu entry "Search and Replace...": pre-fills Find: with the
+// word under the click (captured in showCustomContextMenue(), since by
+// the time this slot fires the click position no longer means anything),
+// then opens/focuses the panel exactly like Ctrl+F.
+//
+void MainWindow::actionSearchReplaceFromContext()
+{
+    if (!p_contextMenuWordAtClick.isEmpty())
+        lineEdit_find->setText(p_contextMenuWordAtClick);
+
+    actionSearch();
 }
 
 
@@ -4832,22 +5087,48 @@ void MainWindow::initializeCaretLine(QsciScintilla *editor)
 }
 
 //
-// toggle code folding if called from action
+// Menu View/Navigation entry "Fold/Unfold all" - forces every fold point
+// in the current document to the same explicit state.
+//
+// Rewritten (rev.96): the previous version toggled based on
+// textEdit->folding() (whether the fold MARGIN/style is currently
+// enabled at all - a per-lexer display setting, set independently in
+// initializeLexerXxx()) and then called QScintilla's foldAll(bool),
+// which toggles each top-level fold header based on ITS OWN current
+// state. That combination had two problems: it conflated "is the fold
+// margin shown" with "is the document folded", and foldAll() itself
+// produces an inconsistent result whenever the document starts in a
+// MIXED state (some blocks already folded/unfolded by hand via the
+// margin's +/- markers) - exactly the case this menu entry is supposed
+// to handle cleanly.
+//
+// This version leaves the fold margin/style alone entirely (that
+// remains whatever initializeLexerXxx() set it to for this file type)
+// and instead sends Scintilla's own SCI_FOLDALL message with an
+// explicit CONTRACT or EXPAND action, which forces every single fold
+// point in the document to that exact state in one call, regardless of
+// whatever mixed state it started in. foldall (bool) simply remembers
+// which state this command last forced, so repeated presses alternate
+// fold/unfold rather than needing to inspect Scintilla's (potentially
+// still-mixed) per-line state to decide what "the opposite" would mean.
 //
 void MainWindow::initializeFolding()
 {
-    QsciScintilla::FoldStyle state = static_cast<QsciScintilla::FoldStyle>((!textEdit->folding()) * 5);
-    if (!state)
+    if (!textEdit)
+        return;
+
+    if (textEdit->folding() == QsciScintilla::NoFoldStyle)
     {
-        textEdit->foldAll(false);
-    }
-    else
-    {
-        textEdit->foldAll(true);
+        createStatusBarMessage(tr("Folding is not available for this file type."), 3000);
+        return;
     }
 
-    textEdit->setFolding(state);
-    statusBar()->showMessage(tr("Folding toggled"), 2000);
+    foldall = !foldall;
+    const int action = foldall ? QsciScintillaBase::SC_FOLDACTION_CONTRACT
+                                : QsciScintillaBase::SC_FOLDACTION_EXPAND;
+    textEdit->SendScintilla(QsciScintillaBase::SCI_FOLDALL, action);
+
+    createStatusBarMessage(foldall ? tr("All folds collapsed.") : tr("All folds expanded."), 2000);
 }
 
 //
@@ -5609,8 +5890,20 @@ void MainWindow::regenerateProjectMakefiles()
             // forward-slash support also turns out unreliable for a path
             // this deep (confirmed: the identical backslash path works
             // fine, the forward-slash version doesn't), so native
-            // backslashes are used, doubled so sh's own escape handling
-            // doesn't strip them before cmd.exe/copy see the path.
+            // backslashes are used.
+            //
+            // Single backslashes only - NOT doubled. An earlier version of
+            // this code doubled them ("so sh's own escape handling doesn't
+            // strip them"), but that assumption turned out wrong in
+            // practice (reported: "Syntaxfehler" from cmd.exe for some
+            // icon paths) and was never actually consistent with the
+            // proven-working pattern already used elsewhere in this same
+            // project for the exact same sh/cmd handoff - see
+            // AmigaED.pro's DESTDIR_WIN/INSTALL_SRC_DIR_WIN, built via
+            // qmake's $$replace(..., /, \\) - in a qmake string, two
+            // backslashes together mean one literal backslash - and
+            // passed to install_stage.bat with single backslashes, no
+            // doubling.
             //
             // Deliberately NO quotes around either path here (also
             // confirmed by testing): with sh handing the whole line to
@@ -5624,7 +5917,6 @@ void MainWindow::regenerateProjectMakefiles()
             // fighting it further.
             QString iconSrc = p_default_icon;
             iconSrc.replace(QLatin1Char('/'), QLatin1Char('\\'));
-            iconSrc.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
             out << "\tcmd /c copy /Y " << iconSrc << " $(TARGET).info\n";
 #else
             out << "\tcp \"" << p_default_icon << "\" \"$(TARGET).info\"\n";
@@ -7289,17 +7581,23 @@ void MainWindow::popNotImplemented()
 //
 void MainWindow::showCustomContextMenue(const QPoint &pos)
 {
-    // 'pos' arrives in the coordinates of whichever editor tab emitted
-    // customContextMenuRequested, but isn't used - see the QCursor::pos()
-    // comment further down for why the menu is positioned differently.
-    // Q_UNUSED silences the resulting "unused parameter" warning without
-    // renaming/removing the parameter (its name documents where it comes
-    // from, and the signature must match the customContextMenuRequested
-    // signal it's connected to).
-    Q_UNUSED(pos);
+    // Capture the word under the click (if any) now, while 'pos' still
+    // refers to it - actionSearchReplaceFromContext() reads this back
+    // once the user actually picks "Search and Replace..." below, which
+    // happens later (from inside contextMenu.exec() further down), by
+    // which point 'pos' itself no longer means anything (the context
+    // menu is what's under the cursor by then).
+    p_contextMenuWordAtClick = textEdit ? textEdit->wordAtPoint(pos) : QString();
 
     // name the context menue
     QMenu contextMenu(tr("Inserts"), this);
+
+    // Search and Replace - topmost entry, ahead of (and separated from)
+    // the "Inserts" section below. Not part of that mirrored section
+    // (see the comment on contextMenu.addAction(&pseudo_action) further
+    // down) since searching/replacing isn't a code-insertion template.
+    contextMenu.addAction(contextSearchReplaceAct);
+    contextMenu.addSeparator();
 
     // define a pseudo action to show some kind of menue title - disabled,
     // so it reads as a heading rather than a dead, clickable-looking entry
@@ -8366,104 +8664,125 @@ void MainWindow::jumpToError(int error_line, int error_column)
 
 //
 // search and replace:
-// Helper slot for compatible call of do_search_and_replace()
-// from editingFinished()
-// void call_do_search_and_replace()
+// Helper slot for compatible call of doSearchAndReplace()
+// from lineEdit_find's returnPressed() - Enter in the Find field
+// behaves the same as clicking "next".
 //
 void MainWindow::call_do_search_and_replace()
 {
-    do_search_and_replace("0");
+    doSearchAndReplace(SearchReplaceAction::FindNext);
 }
 
 //
-// search & replace:
-// do_search_and_replace() - search for matching word
+// search & replace: shared implementation behind the four buttons (and
+// Enter in the Find field, via call_do_search_and_replace() above).
 //
-void MainWindow::do_search_and_replace(QString action_str)
+// Rewritten from scratch (rev.95) - the previous version took an
+// action_str parameter but never actually branched on it (no switch/if
+// anywhere), so every button did the exact same thing: a broken "find,
+// then try to mark all occurrences" that mixed flat QString character
+// offsets (docText.indexOf()) with Scintilla's own line/index and byte-
+// position addressing - two different coordinate systems that don't
+// reliably agree once a document contains anything beyond plain ASCII.
+// lineEdit_replace was never even read, so nothing was ever replaced.
+//
+// This version uses QsciScintilla's own find/replace primitives
+// (findFirst()/findNext()/replace()) directly instead of hand-rolling
+// position bookkeeping, and actually branches on which action was
+// requested.
+//
+void MainWindow::doSearchAndReplace(SearchReplaceAction action)
 {
-    //clearMarkers();
-    int line, index;
-    qDebug() <<  "do_search_and_replace()";
-    // just to be sure...
-    if(action_str.isEmpty())
-        action_str == "0";
+    if (!textEdit)
+        return;
 
-    int action_nr = action_str.toInt();    // convert argument to int, so we can switch() on it...
-    QString text = lineEdit_find->text();
-    QString docText = textEdit->text();
-    qDebug() <<  "action_nr: " << action_nr;
-
-    textEdit->getCursorPosition(&line, &index);
-    textEdit->setCursorPosition(line - 1, index);
-    clearMarkers();
-
-    //
-    // first part: Find first occurance of search term and select it
-    //
-    bool use_regular_expression, is_case_sensitive, match_whole_word_only, use_wrap, search_forward;
-    use_regular_expression = false;
-    is_case_sensitive = checkBox_CaseSensitive->isChecked();
-    match_whole_word_only = checkBox_WholeWords->isChecked();
-    use_wrap = true;
-    search_forward = checkBox_SearchForwards->isChecked();
-
-    textEdit->SendScintilla(QsciScintillaBase::SCI_INDICSETSTYLE, 0, QsciScintilla::INDIC_FULLBOX);
-    textEdit->SendScintilla(QsciScintillaBase::SCI_INDICSETFORE,0, QColor(Qt::darkBlue));
-
-    bool found = textEdit->findFirst(text, use_regular_expression, is_case_sensitive, match_whole_word_only, use_wrap, search_forward);
-    qDebug() <<  "START: found = " << found;
-    while(found)
+    const QString findText = lineEdit_find->text();
+    if (findText.isEmpty())
     {
-        textEdit->getCursorPosition(&line, &index);
-
-        qDebug() << "line: " << line << " index: " << index;
-        qDebug() << text;
-
-        // pattern: found = findFirst(pattern, use_regular_expression, is_case_sensitive, match_whole_word_only, use_wrap, search_forward)
-        //found = ui->textEdit->findFirst(text, use_regular_expression, is_case_sensitive, match_whole_word_only, use_wrap, search_forward);
-
-        if(found && !text.isEmpty())
-        {
-            textEdit->SendScintilla(QsciScintillaBase::SCI_INDICATORFILLRANGE, line, text.length());
-            int start = textEdit->positionFromLineIndex(line, index);
-            int end = textEdit->positionFromLineIndex(line, index + text.length());
-            qDebug() << "line: " << line << " start: " << start << " end: " << end;
-
-            //            found = ui->textEdit->findNext();
-            //            ui->textEdit->SendScintilla(QsciScintillaBase::SCI_INDICATORFILLRANGE, line, text.length());
-
-        }
-
-        found = false;
+        createStatusBarMessage(tr("Nothing to search for."), 4000);
+        return;
     }
 
-    //
-    // second part: Mark all occurances of search term
-    //
-    found = textEdit->findFirst(text, use_regular_expression, is_case_sensitive, match_whole_word_only, use_wrap, search_forward);
-    if (!( text.isEmpty() ) && found == true)
+    const bool caseSensitive = checkBox_CaseSensitive->isChecked();
+    const bool wholeWords = checkBox_WholeWords->isChecked();
+    const bool useRegExp = false;
+
+    switch (action)
     {
-        qDebug() << text;
-        qDebug() << "found in markALL: " << found;
-        textEdit->SendScintilla(QsciScintillaBase::SCI_INDICSETSTYLE, 0, QsciScintilla::INDIC_FULLBOX);
-        textEdit->SendScintilla(QsciScintillaBase::SCI_INDICSETFORE,0, QColor(Qt::darkBlue));
+    case SearchReplaceAction::FindNext:
+    case SearchReplaceAction::FindPrevious:
+    {
+        const bool forward = (action == SearchReplaceAction::FindNext);
+        const bool found = textEdit->findFirst(findText, useRegExp, caseSensitive, wholeWords,
+                                                /*wrap=*/true, forward);
+        if (!found)
+            createStatusBarMessage(tr("\"%1\" not found.").arg(findText), 4000);
+        break;
+    }
 
+    case SearchReplaceAction::Replace:
+    {
+        const QString replaceText = lineEdit_replace->text();
+        const QString selected = textEdit->selectedText();
 
-        int end = docText.lastIndexOf(text);
-        int cur = -1;
+        // Only replace in place if the current selection already IS a
+        // match for the search text (i.e. it came from a previous
+        // find) - otherwise just find the first occurrence, same as
+        // most editors' "Replace" button on first use.
+        const bool selectionMatches = caseSensitive
+                ? (selected == findText)
+                : (selected.compare(findText, Qt::CaseInsensitive) == 0);
 
-        if(end != -1)
+        if (selectionMatches)
         {
-            textEdit->getCursorPosition(&line, &index);
-            qDebug() << "line: " << line << " index: " << index;
-            while(cur != end)
-            {
-                cur = docText.indexOf(text,cur + 1);
-                textEdit->SendScintilla(QsciScintillaBase::SCI_INDICATORFILLRANGE,cur, text.length());
-            }
+            textEdit->replace(replaceText);
+            // Move on to the next occurrence so repeated clicks step
+            // through the whole document.
+            if (!textEdit->findNext())
+                createStatusBarMessage(tr("No more occurrences of \"%1\".").arg(findText), 4000);
         }
-    } // END text.isEmpty(), END mark ALL
+        else
+        {
+            const bool found = textEdit->findFirst(findText, useRegExp, caseSensitive, wholeWords,
+                                                    /*wrap=*/true, /*forward=*/true);
+            if (!found)
+                createStatusBarMessage(tr("\"%1\" not found.").arg(findText), 4000);
+        }
+        break;
+    }
 
+    case SearchReplaceAction::ReplaceAll:
+    {
+        const QString replaceText = lineEdit_replace->text();
+
+        // Always work through the whole document, from the very start,
+        // regardless of where the caret currently sits.
+        textEdit->setCursorPosition(0, 0);
+
+        int count = 0;
+        // Deliberately wrap=false here: after each replace() below, the
+        // selection sits right after the freshly-inserted replacement
+        // text, so searching onward from there (without wrapping back
+        // to the start) can never re-match text this same pass already
+        // replaced - safe even if replaceText itself contains findText.
+        bool found = textEdit->findFirst(findText, useRegExp, caseSensitive, wholeWords,
+                                          /*wrap=*/false, /*forward=*/true);
+        while (found)
+        {
+            textEdit->replace(replaceText);
+            ++count;
+            found = textEdit->findNext();
+        }
+
+        if (count == 0)
+            createStatusBarMessage(tr("\"%1\" not found.").arg(findText), 4000);
+        else
+            createStatusBarMessage(count == 1
+                    ? tr("Replaced 1 occurrence of \"%1\".").arg(findText)
+                    : tr("Replaced %1 occurrences of \"%2\".").arg(count).arg(findText), 5000);
+        break;
+    }
+    }
 }
 
 //
@@ -8472,8 +8791,7 @@ void MainWindow::do_search_and_replace(QString action_str)
 //
 void MainWindow::on_btn_next()
 {
-    qDebug() <<  "on_btn_next()";
-    do_search_and_replace("2");
+    doSearchAndReplace(SearchReplaceAction::FindNext);
 }
 
 //
@@ -8482,8 +8800,7 @@ void MainWindow::on_btn_next()
 //
 void MainWindow::on_btn_previous()
 {
-    qDebug() <<  "on_btn_previous()";
-    do_search_and_replace("1");
+    doSearchAndReplace(SearchReplaceAction::FindPrevious);
 }
 
 //
@@ -8492,8 +8809,7 @@ void MainWindow::on_btn_previous()
 //
 void MainWindow::on_btn_replace()
 {
-    qDebug() <<  "on_btn_replace()";
-    do_search_and_replace("3");
+    doSearchAndReplace(SearchReplaceAction::Replace);
 }
 
 //
@@ -8502,8 +8818,7 @@ void MainWindow::on_btn_replace()
 //
 void MainWindow::on_btn_replace_all()
 {
-    qDebug() <<  "on_btn_replace_all()";
-    do_search_and_replace("4");
+    doSearchAndReplace(SearchReplaceAction::ReplaceAll);
 }
 
 //
@@ -8512,7 +8827,6 @@ void MainWindow::on_btn_replace_all()
 //
 void MainWindow::on_btn_hide()
 {
-    qDebug() <<  "on_btn_hide()";
     searchGroup->hide();
     p_search_is_open = false;
 }

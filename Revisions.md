@@ -50,6 +50,162 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
     (both likely work, but this matches confirmed-working code
     exactly rather than a plausible alternative).
 
+## rev.132
+- Both manuals (HTML - `help/manual_en.html`/`manual_de.html` - and PDF
+  - `DOC/AmigaED_Guide_EN.pdf`/`AmigaED_Anleitung_DE.pdf`) updated to
+  cover everything shipped since the last documentation pass: the
+  built-in program icon and its per-target stack sizes, File > Close
+  Project, the safer file-by-file Clean Project, Makefiles now also
+  regenerating before every build, case-insensitive FLOAT/DOUBLE
+  detection, the three themes (Dark/Workbench 1.3/Workbench 3.1) and
+  the View > Theme menu, the emulator "leave it open?" prompt and
+  external-process detection, and the Compiler Output pane's
+  colour-coded errors/warnings with click-to-jump.
+- New **Toolbar Reference** chapter: every one of the 19 toolbar
+  buttons, illustrated with the app's own real icon images (not a
+  mockup) pulled directly from its `images/` resources, each mapped to
+  its equivalent menu entry and a one-line description.
+- New **Quick Start: From Template to Clean Build** chapter: a
+  concrete, illustrated (4 new screenshots) walk-through of creating a
+  project from a template, writing code, building it, and cleaning it
+  up again - the same workflow Mode 2 already describes, made
+  concrete.
+- New **The Compiler Output Pane** chapter covering the colour-coding
+  and click-to-jump behaviour, with the two recognized VBCC/GCC
+  message formats.
+- The PDF manuals are now rendered directly from the same HTML source
+  (via `QTextDocument::print()`, `docbuild/render_pdf.py`) instead of
+  a separate, hand-maintained set of ReportLab scripts (one per
+  chapter) - a single source of truth for both formats, and no more
+  risk of the two silently drifting apart. See `docbuild/README.md`
+  for the full pipeline and how to regenerate everything after a
+  future change.
+
+## rev.131
+- **Fixed the Linux startup crash** (confirmed via a real backtrace:
+  `SIGSEGV` inside `QTabWidget::count()`, immediately after
+  `readSettings()`'s own debug output). Root cause: `tabWidget` and
+  `output` had no `= nullptr` default member initializer, so before
+  their own `new QTabWidget(this)`/`new QPlainTextEdit` lines run later
+  in the constructor, they held whatever indeterminate value happened
+  to already occupy that memory - not reliably null. `applyApplicationStyle()`
+  runs very early in the constructor (well before either of those
+  lines), and since rev.124 it also calls `reapplyEditorTheme()`/
+  `highlightOutputDiagnostics()`, both of which guard themselves with
+  `if (!tabWidget)`/`if (!output)` - a guard that only actually protects
+  anything if the pointer is guaranteed null beforehand, which these
+  weren't. Windows/MinGW's memory for that address apparently
+  happened to read back as zero, masking the bug entirely there;
+  Debian's didn't, causing a hard crash on every single startup. Both
+  now have an explicit `= nullptr` default, so their guards are
+  reliable regardless of what the pointer used to contain. Also
+  checked every other pointer given a similar `if (!ptr)` guard in
+  recent revisions (`themeMenue`, `themeActionGroup`, `myEmulator`) -
+  all three already had a proper `= nullptr` default and were never
+  at risk.
+
+## rev.130
+- **Serious fix**: "Clean Project" could wipe an entire project
+  directory on Windows - confirmed by a real test case: the .aep,
+  every source file, both other Makefiles, everything in the folder
+  was gone after clicking Clean Project once. Root cause: rev.128's
+  Windows fix for the generated Makefile's clean: rule
+  (`cmd /c del /Q $(OBJS) $(TARGET)`) - with $(TARGET) being an
+  extension-less filename (the normal case for an Amiga executable,
+  e.g. "ftest2", not "ftest2.exe"), something in the sh.exe/cmd.exe/
+  DEL interaction deleted far more than intended. The exact mechanism
+  wasn't pinned down with certainty even after reviewing the generated
+  Makefile line by line - reproducing the exact failure without a real
+  Windows machine to test against wasn't possible - so rather than
+  patch that shell command further and hope, this removes the risk
+  entirely instead of chasing it further:
+  - **AmigaED's own Clean Project button no longer runs "make clean"
+    at all.** It now computes the exact list of object files, the
+    target, and its .info icon (mirroring what
+    `regenerateProjectMakefiles()` itself computes) and deletes each
+    one directly via Qt (`QFile::remove()`, one exact path at a time) -
+    no shell, no wildcards, no multi-file command line of any kind.
+    Each removal (or failure) is listed in the output pane.
+  - The Makefile's own `clean:` rule (for anyone running `make clean`
+    directly from a shell, outside AmigaED) is hardened as a best-
+    effort second layer: one explicit, quoted, existence-checked
+    `if exist "file" del /Q "file"` line per object file and the
+    target individually, rather than a single multi-argument `del`
+    line - but AmigaED's own button above no longer depends on this
+    rule at all, and is the safe path to prefer.
+  - The SAS/C Makefile's own `clean:` (`delete $(TARGET)`, using the
+    Amiga Shell's own `delete` command) is unrelated to this - it runs
+    on a real Amiga/emulator, never on the host machine, and was never
+    part of this bug.
+
+## rev.129
+- Fixed one more leftover from the same "stuck on the previous theme"
+  bug class as rev.126/127: `initializeMargin()`'s light-theme branch
+  never called `setFoldMarginColors()` at all - only the dark branch
+  did - so the fold margin (the thin strip just left of the line-number
+  gutter) stayed black indefinitely after switching away from "Dark"
+  to any other theme, confirmed by screenshot. Swept the rest of the
+  file for the same pattern (an `isDarkTheme()` branch with no light-
+  theme counterpart setting the same property) - this was the last one
+  left.
+
+## rev.128
+- Fixed generated Makefiles always using `rm -f` for their "clean"
+  target, even on Windows, where it fails outright unless the
+  toolchain happens to have a real coreutils `rm.exe` on PATH (not
+  guaranteed). Windows now gets `cmd /c del /Q $(OBJS) $(TARGET)`
+  instead - the same sh.exe/cmd.exe handoff already established for
+  the icon-copy code (rev.94/98/105) applies here too: `del` is a
+  cmd.exe built-in, not a standalone executable, so a bare `del` in a
+  Makefile recipe fails the same way a bare `copy` did.
+- Fixed `projectUsesFloatingPoint()` (decides whether the generated
+  Makefiles add `-lm`/`-lmieee`/`MATH=IEEE`) missing floating-point
+  usage written with exec/types.h's own all-caps `FLOAT`/`DOUBLE`
+  typedefs - at least as common in idiomatic Amiga C as the plain
+  lowercase keywords, and confirmed against a real project using
+  `DOUBLE` that this case-sensitive check missed entirely, silently
+  generating Makefiles with no math library linked in at all. Now
+  case-insensitive.
+- Fixed `actionBuildProject()` never actually regenerating the
+  Makefiles before building - it only checked that one already existed
+  on disk from whenever it was last generated (project creation, or
+  the last time a file was added/removed), so a plain CONTENT change
+  to an already-tracked file (such as newly adding floating-point
+  usage) was never picked up by a build until something else also
+  happened to add or remove a file. Project builds now regenerate the
+  Makefiles fresh every time, immediately before checking for one -
+  matching what most other project actions already did.
+
+## rev.127
+- rev.126's editor-theme fix didn't actually work (confirmed by
+  screenshot: an already-open tab stayed fully dark after switching to
+  "Workbench 3.1") - it looped `QsciLexer::defaultColor(style)`/
+  `defaultPaper(style)` across style indices 0-127 regardless of
+  whether the lexer actually defines that many styles, which evidently
+  doesn't repaint an already-open tab reliably (and may well be the
+  cause of a separate report: AmigaED crashing with a memory access
+  violation on startup on Debian 13 - looping to arbitrary, possibly
+  undefined style indices is exactly the kind of thing that could
+  behave unpredictably depending on the local QScintilla build).
+  Replaced with the same explicit, bounded, named-style-constant
+  mechanism (dynamic_cast per lexer type, blanket setPaper()/setColor()
+  then individual re-tints) already proven to work for the dark
+  branch - just with light-appropriate colours instead - for all seven
+  lexer types (C/C++, Makefile, Batch, Pascal, and the three custom
+  Amiga-specific lexers). If the Debian crash was indeed caused by that
+  loop, this revision should also resolve it - please retest and let
+  me know either way, ideally with a backtrace (e.g. via `gdb
+  --args ./AmigaED`, then `run` and `bt` once it crashes) if it still
+  happens, since I can't otherwise tell it apart from an unrelated
+  cause.
+- Fixed a related, previously-unnoticed gap in the same area:
+  `initializeCaretLine()`'s light-theme branch only ever reset the
+  caret line's own background colour - selection background,
+  indentation guides, whitespace, and matched/unmatched brace colours
+  all stayed stuck showing dark-theme values indefinitely after
+  switching away from "Dark" too. All of them now have an explicit
+  light-theme counterpart, symmetric with the dark branch.
+
 ## rev.126
 - Fixed the editor sometimes staying in the previous theme's colours
   after switching themes: `applyLexerDarkColors()` and

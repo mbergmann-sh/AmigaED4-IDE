@@ -5058,33 +5058,104 @@ void MainWindow::applyLexerDarkColors(QsciLexer *lexer)
 
     if (!isDarkTheme())
     {
-        // Reset every style back to the lexer's own class defaults first
-        // (covers every style this app doesn't customize itself -
-        // QsciLexerCPP's own Comment/Keyword/Number/String/PreProcessor,
-        // for instance, and the custom Amiga-specific lexers' own
-        // light-theme colours), then reapply this app's own small set of
-        // additional customizations on top (currently just QsciLexerCPP's
-        // GlobalClass/KeywordSet2 - see initializeLexerCPP()). This
-        // mirrors exactly what a brand new tab gets, and is necessary
-        // for the same reason as this function's dark branch below is
-        // necessary in the first place: confirmed that switching AWAY
-        // from "Dark" to any other theme left already-open tabs' lexers
-        // stuck showing dark-theme colours indefinitely - this function
-        // used to only ever handle "make it dark", with nothing to undo
-        // that afterward.
-        for (int style = 0; style < 128; ++style)
-        {
-            lexer->setColor(lexer->defaultColor(style), style);
-            lexer->setPaper(lexer->defaultPaper(style), style);
-        }
+        // Mirrors the dark branch below exactly (same blanket-then-
+        // individual-retint mechanism, same named styles per lexer type)
+        // but with light-appropriate colours - deliberately NOT using
+        // QsciLexer::defaultColor()/defaultPaper() in a generic loop (an
+        // earlier version of this did): confirmed that didn't actually
+        // repaint already-open tabs correctly, whereas this exact
+        // pattern is already proven to work for the dark branch, just
+        // with different colour values. Necessary because switching
+        // AWAY from "Dark" to any other theme left already-open tabs'
+        // lexers stuck showing dark-theme colours indefinitely - this
+        // function used to only ever handle "make it dark", with
+        // nothing to undo that afterward.
+        lexer->setPaper(Qt::white);
+        lexer->setColor(Qt::black);
+
+        const QColor comment(0x00, 0x7f, 0x00);
+        const QColor keyword(0x00, 0x00, 0x7f);
+        const QColor number(0x00, 0x7f, 0x7f);
+        const QColor string(0x7f, 0x00, 0x7f);
+        const QColor preprocessor(0x80, 0x80, 0x00);
+        const QColor amigaType(0x4b, 0x00, 0x82);       // GlobalClass - indigo, matches initializeLexerCPP()'s own
+        const QColor amigaFunction(0xb2, 0x22, 0x22);   // KeywordSet2 - firebrick, matches initializeLexerCPP()'s own
 
         if (auto *cpp = dynamic_cast<QsciLexerCPP *>(lexer))
         {
-            cpp->setColor(QColor(0x4b, 0x00, 0x82), QsciLexerCPP::GlobalClass);
+            cpp->setColor(comment,       QsciLexerCPP::Comment);
+            cpp->setColor(comment,       QsciLexerCPP::CommentLine);
+            cpp->setColor(comment,       QsciLexerCPP::CommentDoc);
+            cpp->setColor(comment,       QsciLexerCPP::CommentLineDoc);
+            cpp->setColor(number,        QsciLexerCPP::Number);
+            cpp->setColor(keyword,       QsciLexerCPP::Keyword);
+            cpp->setColor(string,        QsciLexerCPP::DoubleQuotedString);
+            cpp->setColor(string,        QsciLexerCPP::SingleQuotedString);
+            cpp->setColor(string,        QsciLexerCPP::UnclosedString);
+            cpp->setColor(preprocessor,  QsciLexerCPP::PreProcessor);
+            cpp->setColor(amigaType,     QsciLexerCPP::GlobalClass);
             QFont typeFont = cpp->font(QsciLexerCPP::GlobalClass);
             typeFont.setBold(true);
             cpp->setFont(typeFont, QsciLexerCPP::GlobalClass);
-            cpp->setColor(QColor(0xb2, 0x22, 0x22), QsciLexerCPP::KeywordSet2);
+            cpp->setColor(amigaFunction, QsciLexerCPP::KeywordSet2);
+        }
+        else if (auto *mk = dynamic_cast<QsciLexerMakefile *>(lexer))
+        {
+            mk->setColor(comment,      QsciLexerMakefile::Comment);
+            mk->setColor(preprocessor, QsciLexerMakefile::Preprocessor);
+            mk->setColor(amigaType,    QsciLexerMakefile::Variable);
+            mk->setColor(keyword,      QsciLexerMakefile::Target);
+            mk->setColor(QColor(0xcc, 0x00, 0x00), QsciLexerMakefile::Error);
+        }
+        else if (auto *bat = dynamic_cast<QsciLexerBatch *>(lexer))
+        {
+            bat->setColor(comment,       QsciLexerBatch::Comment);
+            bat->setColor(keyword,       QsciLexerBatch::Keyword);
+            bat->setColor(amigaFunction, QsciLexerBatch::Label);
+            bat->setColor(preprocessor,  QsciLexerBatch::HideCommandChar);
+            bat->setColor(number,        QsciLexerBatch::ExternalCommand);
+            bat->setColor(amigaType,     QsciLexerBatch::Variable);
+        }
+        else if (auto *pas = dynamic_cast<QsciLexerPascal *>(lexer))
+        {
+            pas->setColor(comment,       QsciLexerPascal::Comment);
+            pas->setColor(comment,       QsciLexerPascal::CommentParenthesis);
+            pas->setColor(comment,       QsciLexerPascal::CommentLine);
+            pas->setColor(preprocessor,  QsciLexerPascal::PreProcessor);
+            pas->setColor(preprocessor,  QsciLexerPascal::PreProcessorParenthesis);
+            pas->setColor(number,        QsciLexerPascal::Number);
+            pas->setColor(number,        QsciLexerPascal::HexNumber);
+            pas->setColor(keyword,       QsciLexerPascal::Keyword);
+            pas->setColor(string,        QsciLexerPascal::SingleQuotedString);
+            pas->setColor(string,        QsciLexerPascal::UnclosedString);
+            pas->setColor(string,        QsciLexerPascal::Character);
+            pas->setColor(amigaFunction, QsciLexerPascal::Asm);
+        }
+        else if (auto *inst = dynamic_cast<AmigaInstallerLexer *>(lexer))
+        {
+            inst->setColor(comment,       AmigaInstallerLexer::Comment);
+            inst->setColor(string,        AmigaInstallerLexer::String);
+            inst->setColor(keyword,       AmigaInstallerLexer::Keyword);
+            inst->setColor(number,        AmigaInstallerLexer::Number);
+            inst->setColor(preprocessor,  AmigaInstallerLexer::Symbol);
+            inst->setColor(amigaFunction, AmigaInstallerLexer::Variable);
+        }
+        else if (auto *guide = dynamic_cast<AmigaGuideLexer *>(lexer))
+        {
+            guide->setColor(keyword,       AmigaGuideLexer::Command);
+            guide->setColor(string,        AmigaGuideLexer::String);
+            guide->setColor(preprocessor,  AmigaGuideLexer::Link);
+            guide->setColor(comment,       AmigaGuideLexer::Comment);
+        }
+        else if (auto *asmLexer = dynamic_cast<M68kAsmLexer *>(lexer))
+        {
+            asmLexer->setColor(comment,       M68kAsmLexer::Comment);
+            asmLexer->setColor(string,        M68kAsmLexer::String);
+            asmLexer->setColor(keyword,       M68kAsmLexer::Mnemonic);
+            asmLexer->setColor(preprocessor,  M68kAsmLexer::Directive);
+            asmLexer->setColor(amigaFunction, M68kAsmLexer::Register);
+            asmLexer->setColor(number,        M68kAsmLexer::Number);
+            asmLexer->setColor(amigaType,     M68kAsmLexer::Label);
         }
 
         return;
@@ -5307,8 +5378,10 @@ void MainWindow::initializeMargin(QsciScintilla *editor)
         // rgb: (175, 175, 175), hex: (#afafaf)
 #if !defined(__APPLE__)
         editor->setMarginsBackgroundColor(QColor("#afafaf"));
+        editor->setFoldMarginColors(QColor("#808080"), QColor("#afafaf"));
 #else
         editor->setMarginsBackgroundColor(QColor("#cccccccc"));
+        editor->setFoldMarginColors(QColor("#808080"), QColor("#cccccccc"));
 #endif
         editor->setMarginsForegroundColor(QColor("#ff0000ff"));
     }
@@ -5593,7 +5666,23 @@ void MainWindow::initializeCaretLine(QsciScintilla *editor)
     }
     else
     {
+        // Every property the dark branch above sets needs an explicit
+        // light-theme counterpart here too - confirmed this branch used
+        // to only reset setCaretLineBackgroundColor(), leaving selection
+        // background, indentation guides, whitespace, and matched/
+        // unmatched brace colours stuck showing dark-theme values
+        // indefinitely after switching away from "Dark".
         editor->setCaretLineBackgroundColor(QColor("#a7edfe"));
+        editor->setCaretForegroundColor(QColor("#000000"));
+        editor->setSelectionBackgroundColor(QColor("#add6ff"));
+        editor->setIndentationGuidesForegroundColor(QColor("#c0c0c0"));
+        editor->setIndentationGuidesBackgroundColor(QColor("#ffffff"));
+        editor->setWhitespaceForegroundColor(QColor("#c0c0c0"));
+        editor->setWhitespaceBackgroundColor(QColor("#ffffff"));
+        editor->setMatchedBraceForegroundColor(QColor("#0000ff"));
+        editor->setMatchedBraceBackgroundColor(QColor("#b4eeb4"));
+        editor->setUnmatchedBraceForegroundColor(QColor("#ff0000"));
+        editor->setUnmatchedBraceBackgroundColor(QColor("#ffffff"));
     }
 }
 
@@ -6134,12 +6223,19 @@ bool MainWindow::promptCompilerLinkerOptions(QString &compilerOpts, QString &lin
 // that only ever *mentions* float/double in a comment will still (mildly
 // over-cautiously) count as "uses floating point".
 //
+// Case-insensitive: exec/types.h's own FLOAT/DOUBLE typedefs (all caps)
+// are at least as common in idiomatic Amiga C as the plain lowercase
+// keywords - confirmed this heuristic missed a project using "DOUBLE"
+// entirely with a case-sensitive match, silently generating Makefiles
+// with no math library linked in at all.
+//
 bool MainWindow::projectUsesFloatingPoint() const
 {
     if (!currentProject)
         return false;
 
-    static const QRegularExpression floatRe(QStringLiteral("\\b(float|double)\\b"));
+    static const QRegularExpression floatRe(QStringLiteral("\\b(float|double)\\b"),
+                                              QRegularExpression::CaseInsensitiveOption);
 
     for (const ProjectFile &f : currentProject->files)
     {
@@ -6408,7 +6504,35 @@ void MainWindow::regenerateProjectMakefiles()
             }
         }
         out << "clean:\n";
+#if defined(Q_OS_WIN)
+        // Same sh.exe/cmd.exe handoff reasoning already established for
+        // the icon-copy code (see Revisions.md rev.94/98/105): "del" is a
+        // cmd.exe built-in, not a standalone executable, so a bare "del"
+        // in a Makefile recipe fails when mingw32-make's own sh.exe tries
+        // to run it directly - "cmd /c" gives sh an actual program
+        // (cmd.exe itself) to invoke.
+        //
+        // One explicit, quoted, existence-checked deletion PER FILE,
+        // rather than a single "del /Q $(OBJS) $(TARGET)" line: confirmed
+        // that single-line form could wipe an ENTIRE project directory
+        // instead of just the object files and target - $(TARGET) for a
+        // typical Amiga executable has no extension (e.g. "ftest2", not
+        // "ftest2.exe"), and that appears to be the trigger, but the
+        // exact sh.exe/cmd.exe/DEL interaction responsible wasn't pinned
+        // down with certainty even after reviewing this generated line by
+        // line - reproducing the exact failure without a real Windows
+        // machine to test against wasn't possible. AmigaED's own Clean
+        // Project button (actionCleanProject()) no longer uses this rule
+        // at all for exactly that reason - it deletes each file directly
+        // via Qt instead - so this rewritten version is a best-effort
+        // second layer for "make clean" run directly from a shell,
+        // outside AmigaED, not the primary safeguard.
+        for (const QString &o : (objs + asmObjs))
+            out << "\t-cmd /c if exist \"" << o << "\" del /Q \"" << o << "\"\n";
+        out << "\t-cmd /c if exist \"" << targetName << "\" del /Q \"" << targetName << "\"\n";
+#else
         out << "\t-rm -f $(OBJS) $(TARGET)\n";
+#endif
         out.flush();
 
         if (file.error() != QFile::NoError)
@@ -7544,6 +7668,17 @@ void MainWindow::actionBuildProject()
         return;
     }
 
+    // Regenerate before every build, not just when a file is added/
+    // removed - confirmed the Makefiles otherwise never picked up a
+    // CONTENT change (e.g. floating-point usage newly added to an
+    // existing, already-tracked file) until something ELSE happened to
+    // also add or remove a file and trigger a regeneration as a side
+    // effect. This also means projectUsesFloatingPoint()'s check (and
+    // therefore -lm/-lmieee) is now always evaluated against the file's
+    // current content on disk at build time, not whatever it was the
+    // last time the file list itself changed.
+    regenerateProjectMakefiles();
+
     QString makefileName = (p_defaultCompiler == 0) ? "Makefile.vbcc" : "Makefile.gcc";
     QString makefilePath = currentProject->projectDir() + QDir::separator() + makefileName;
 
@@ -7583,6 +7718,30 @@ void MainWindow::actionBuildProject()
     runCommand(makeExe, arguments);
 }
 
+//
+// Deletes each build artifact directly (QFile::remove(), one exact path
+// at a time) rather than invoking "make clean" through a shell.
+//
+// Confirmed (Windows): "-cmd /c del /Q $(OBJS) $(TARGET)" wiped an
+// ENTIRE project directory - the .aep, every source file, both other
+// Makefiles, everything - instead of just the object file(s) and
+// target it was supposed to remove. $(TARGET) for a typical Amiga
+// executable has no extension (e.g. "ftest2", not "ftest2.exe"), and
+// that appears to be the trigger, but the exact sh.exe/cmd.exe/DEL
+// interaction responsible wasn't pinned down with certainty even after
+// reviewing the generated Makefile line by line - reproducing the exact
+// failure without a real Windows machine to test against wasn't
+// possible. Rather than patch that shell command further and hope,
+// this sidesteps shell-based deletion for AmigaED's own Clean Project
+// entirely: every path deleted below is an exact, individually computed
+// filename, never a multi-file shell command line.
+//
+// "make clean" run directly from a shell, outside AmigaED, still goes
+// through the Makefile's own clean: rule - see the Windows-specific
+// rewrite of that rule (one explicit, quoted, existence-checked
+// deletion per file) in regenerateProjectMakefiles() for the same
+// reasoning applied there as a best-effort second layer.
+//
 void MainWindow::actionCleanProject()
 {
     if (!currentProject)
@@ -7591,39 +7750,49 @@ void MainWindow::actionCleanProject()
         return;
     }
 
-    QString makefileName = (p_defaultCompiler == 0) ? "Makefile.vbcc" : "Makefile.gcc";
-    QString makefilePath = currentProject->projectDir() + QDir::separator() + makefileName;
+    QString dir = currentProject->projectDir();
 
-    if (!QFileInfo::exists(makefilePath))
+    QString targetName = currentProject->name;
+    targetName.replace(QRegularExpression("[^A-Za-z0-9_\\-]"), "_");
+
+    QStringList toDelete;
+    for (const ProjectFile &f : currentProject->files)
     {
-        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
-                              tr("Makefile not found:\n%1").arg(makefilePath));
-        return;
+        if (f.type != ProjectFileType::CSource && f.type != ProjectFileType::Assembly)
+            continue;
+        toDelete << dir + QDir::separator() + QFileInfo(f.path).completeBaseName() + ".o";
     }
-
-    QString makeExe = resolveMakeExecutable();
-    if (!QFileInfo::exists(makeExe) && makeExe != QStringLiteral("make"))
-    {
-        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
-                              tr("Could not find a \"make\" executable at:\n%1").arg(makeExe));
-        return;
-    }
-    p_lastMakeExecutable = makeExe;
-
-    p_expectedProjectBuildTarget.clear();   // this run is "clean", not "all" - no executable is expected
-
-    cmd->setWorkingDirectory(currentProject->projectDir());
-    p_lastRunWasProjectBuild = true;
-    p_lastRunCompilerLabel = compilerDisplayLabel(p_defaultCompiler);
+    toDelete << dir + QDir::separator() + targetName;
+    toDelete << dir + QDir::separator() + targetName + ".info";   // the icon, if Prefs > Misc > "create icon" wrote one
 
     if(!(p_console_on_fail))
         actionShowOutputConsole();
 
-    createStatusBarMessage(tr("%1: Cleaning project \"%2\"...").arg(p_lastRunCompilerLabel, currentProject->name), 0);
+    createStatusBarMessage(tr("%1: Cleaning project \"%2\"...").arg(compilerDisplayLabel(p_defaultCompiler), currentProject->name), 0);
 
-    QStringList arguments;
-    arguments << "-f" << makefileName << "clean";
-    runCommand(makeExe, arguments);
+    output->clear();
+    int removedCount = 0;
+    for (const QString &path : toDelete)
+    {
+        if (!QFileInfo::exists(path))
+            continue;
+
+        if (QFile::remove(path))
+        {
+            output->appendPlainText(tr("Removed: %1").arg(QDir::toNativeSeparators(path)));
+            ++removedCount;
+        }
+        else
+        {
+            output->appendPlainText(tr("Could not remove: %1").arg(QDir::toNativeSeparators(path)));
+        }
+    }
+
+    if (removedCount == 0)
+        output->appendPlainText(tr("Nothing to clean - no build artifacts found."));
+
+    refreshProjectTree();   // the executable/icon just removed should disappear from the "Executable" category
+    createStatusBarMessage(tr("%1: Project \"%2\" cleaned.").arg(compilerDisplayLabel(p_defaultCompiler), currentProject->name), 4000);
 }
 
 //

@@ -505,7 +505,7 @@ private:
     // at whichever tab is currently active (see tabWidget/onTabChanged()).
     QsciScintilla *textEdit;
     // Hosts one QsciScintilla per open file (AmigaED v3.2 tabbed editor).
-    QTabWidget *tabWidget;
+    QTabWidget *tabWidget = nullptr;
 
     // --- Project management (AmigaED v3.3) -----------------------------
     Project *currentProject = nullptr;           // nullptr when no project is loaded
@@ -562,7 +562,7 @@ private:
     // Instances for Splitter
     QSplitter *splitter;
     QListView *lview;
-    QPlainTextEdit *output;
+    QPlainTextEdit *output = nullptr;
     QGroupBox *outputGroup;
     QGroupBox *searchGroup;
     QPushButton *btnCloseOutput;

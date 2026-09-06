@@ -50,6 +50,84 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
     (both likely work, but this matches confirmed-working code
     exactly rather than a plausible alternative).
 
+## rev.135
+- **Addressed a fundamental complaint, not just a symptom**: rev.134's
+  "Project Options..." dialog gave a proper way to change a project's
+  own stored compiler/linker options, but hand-editing a *generated
+  Makefile itself* (adding a line, changing a flag directly in
+  Makefile.gcc/.vbcc/.sc) was still always silently undone the very
+  next time regeneration ran - every file add/remove, and, since
+  rev.128, before every build too - making any direct edit to a
+  Makefile pointless. `regenerateProjectMakefiles()` now remembers a
+  hash of each Makefile's content exactly as AmigaED itself last wrote
+  it (`Project::lastWrittenGccMakefileHash`/`...VbccMakefileHash`/
+  `...ScMakefileHash`, persisted in the .aep). Before writing, it
+  compares the file's *current* on-disk content against that
+  remembered hash: unchanged since AmigaED's own last write → safe to
+  regenerate/overwrite freely, exactly as before; different → the user
+  has edited it by hand since, and it's left completely untouched
+  instead, with a status-bar note listing which file(s) were preserved
+  and how to hand a Makefile back to AmigaED's management (delete it -
+  it gets freshly generated next time, same as a brand new project).
+  Verified the comparison logic (fresh write, no-op re-regeneration,
+  detecting a hand-edit, and a hand-edited file correctly staying
+  preserved even across an unrelated project change like adding a new
+  source file) against a set of realistic scenarios before considering
+  this done.
+  - Comparison is by normalized text content, not raw file bytes -
+    Windows' CRLF line endings vs. this app's own LF-only generation
+    would otherwise register as a "hand edit" that never actually
+    happened.
+  - Updated the comment header AmigaED itself writes at the top of
+    every generated Makefile to explain this directly to anyone
+    reading the file, and the Project Options dialog's own note to
+    mention the interaction (a hand-edited Makefile stays preserved
+    even after changing Project Options, until it's deleted).
+  - A project's Makefiles from before this revision (no stored hash
+    yet) are treated as safe to overwrite on their very first
+    regeneration after upgrading, matching AmigaED's previous
+    always-overwrite behaviour for continuity - hand-edit protection
+    takes over from that point on, the same as for a brand new
+    project.
+
+## rev.134
+- **Fixed a genuine dead end**: a project's own extra compiler/linker
+  options (the ones entered when first creating it) had no way to be
+  changed afterward anywhere in the UI - `promptCompilerLinkerOptions()`
+  only ever ran once, at creation time. Since `regenerateProjectMakefiles()`
+  always rewrites the Makefiles from those same stored options
+  (automatically on every file add/remove, and - since rev.128 - before
+  every build too), hand-editing the generated Makefile directly (the
+  only workaround available until now) was silently undone the very
+  next time either happened, with no way through the UI to actually
+  make a change stick - confirmed as exactly this by a real report.
+  New **Build > Project Options...** dialog: edit all four stored
+  values (GCC/VBCC, each compiler and linker options) for the currently
+  loaded project directly, applied immediately (regenerates the
+  Makefiles right away, no need to add/remove a file or start a build
+  first) and persisted the next time the project is saved.
+- Also fixed `cleanProjectAct`'s status tip (and the German
+  translation) still describing the pre-rev.130 behaviour ("runs the
+  project's Makefile, target clean") - it hasn't invoked `make` at all
+  since rev.130's rewrite to direct, individual file deletion.
+
+## rev.133
+- Fixed the MUI template linking successfully with vbcc but failing
+  under gcc with "undefined reference to `MUI_NewObject'"/`MUI_Request'/
+  `MUI_MakeObject'" - confirmed against a real build. These functions
+  are only *declared* in `<clib/muimaster_protos.h>`; the actual glue
+  that calls into muimaster.library lives in a separate stub library
+  (`libmui.a`) gcc needs told to link explicitly via `-lmui`, unlike
+  vbcc's own SAS/C-style pragma-based calls, which need no such stub
+  and link fine without it. `regenerateProjectMakefiles()` now adds
+  `-lmui` to the gcc linker flags automatically for any project created
+  from the MUI template - nothing to add by hand. vbcc is unaffected
+  (already linked correctly without it); the ReAction template's own
+  functions (`NewObject`, `DoMethod`, `CreateMenusA`, ...) are core
+  intuition.library/gadtools.library calls already covered by the
+  existing `-lamiga`, so it isn't affected by this same category of
+  issue.
+
 ## rev.132
 - Both manuals (HTML - `help/manual_en.html`/`manual_de.html` - and PDF
   - `DOC/AmigaED_Guide_EN.pdf`/`AmigaED_Anleitung_DE.pdf`) updated to

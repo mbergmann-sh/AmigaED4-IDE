@@ -770,8 +770,12 @@ void MainWindow::createActions()
     connect(buildProjectAct, SIGNAL(triggered()), this, SLOT(actionBuildProject()));
 
     cleanProjectAct = new QAction(QIcon(":/images/clean_project.png"), tr("Clean Project"), this);
-    cleanProjectAct->setStatusTip(tr("Run the project's Makefile (target \"clean\") for the currently selected compiler"));
+    cleanProjectAct->setStatusTip(tr("Remove the project's build artifacts (object files, executable, icon)"));
     connect(cleanProjectAct, SIGNAL(triggered()), this, SLOT(actionCleanProject()));
+
+    projectOptionsAct = new QAction(tr("Project Options..."), this);
+    projectOptionsAct->setStatusTip(tr("Edit this project's own extra compiler/linker options"));
+    connect(projectOptionsAct, SIGNAL(triggered()), this, SLOT(actionProjectOptions()));
 
     saveAct = new QAction(QIcon(":/images/save.png"), tr("&Save"), this);
     saveAct->setShortcut(tr("Ctrl+S"));
@@ -1352,6 +1356,7 @@ void MainWindow::createMenus()
     buildMenue->addAction(compileAct);
     buildMenue->addAction(buildProjectAct);
     buildMenue->addAction(cleanProjectAct);
+    buildMenue->addAction(projectOptionsAct);
     buildMenue->addSeparator();
     buildMenue->addAction(toggleGccDefaultOptsAct);
     buildMenue->addAction(toggleVbccDefaultOptsAct);
@@ -1511,6 +1516,7 @@ void MainWindow::retranslateUi()
     addFilesToProjectAct->setText(tr("Add files to Project..."));
     buildProjectAct->setText(tr("Build Project"));
     cleanProjectAct->setText(tr("Clean Project"));
+    projectOptionsAct->setText(tr("Project Options..."));
     saveAct->setText(tr("&Save"));
     saveAsAct->setText(tr("Save &As..."));
     prefsAct->setText(tr("Global prefs..."));
@@ -1596,7 +1602,8 @@ void MainWindow::retranslateUi()
     closeProjectAct->setStatusTip(tr("Close the current project and all of its open tabs"));
     addFilesToProjectAct->setStatusTip(tr("Add one or more existing files to the current project"));
     buildProjectAct->setStatusTip(tr("Run the project's Makefile (target \"all\") for the currently selected compiler"));
-    cleanProjectAct->setStatusTip(tr("Run the project's Makefile (target \"clean\") for the currently selected compiler"));
+    cleanProjectAct->setStatusTip(tr("Remove the project's build artifacts (object files, executable, icon)"));
+    projectOptionsAct->setStatusTip(tr("Edit this project's own extra compiler/linker options"));
     saveAct->setStatusTip(tr("Save the document to disk"));
     saveAsAct->setStatusTip(tr("Save the document under a new name"));
     prefsAct->setStatusTip(tr("Open global preferences..."));
@@ -6324,6 +6331,29 @@ void MainWindow::regenerateProjectMakefiles()
 
     bool writeFailed = false;
     QStringList failedFiles;
+    QStringList preservedFiles;   // Makefiles left untouched because they were hand-edited since AmigaED last wrote them
+
+    // Hashes the exact text content of a Makefile (not raw file bytes -
+    // avoids Windows CRLF vs. Unix LF ever registering as a "manual edit"
+    // that never actually happened) for comparison against
+    // Project::lastWrittenXxxMakefileHash.
+    auto contentHash = [](const QString &s) {
+        return QString::fromLatin1(QCryptographicHash::hash(s.toUtf8(), QCryptographicHash::Sha1).toHex());
+    };
+
+    // Reads an existing Makefile back the same way it was written (Text
+    // mode + Latin1) so its line endings are normalized identically
+    // before comparing/hashing - returns a null QString if the file
+    // doesn't exist or can't be read (both treated as "nothing to
+    // preserve" by the caller).
+    auto readExistingContent = [](const QString &path) -> QString {
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+            return QString();
+        QTextStream in(&f);
+        in.setEncoding(QStringConverter::Latin1);
+        return in.readAll();
+    };
 
     // vbcc's "vc" frontend accepts only ONE '+config' switch, and it must
     // be the very first argument on every invocation. Strip out any other
@@ -6425,22 +6455,28 @@ void MainWindow::regenerateProjectMakefiles()
         vbccLDFlags = dedupTokens(vbccLDFlags + QStringLiteral(" -lmieee"));
     }
 
+    // MUI-specific, gcc only: MUI_NewObject()/MUI_Request()/MUI_MakeObject()/
+    // etc. are only DECLARED in <clib/muimaster_protos.h> - the actual glue
+    // that calls into muimaster.library lives in a separate stub library
+    // (libmui.a) gcc needs told to link explicitly via -lmui, unlike vbcc
+    // (whose SAS/C-style pragma-based calls need no such stub and link
+    // fine without it). Confirmed: a generated MUI project linked cleanly
+    // with vbcc but failed under gcc with "undefined reference to
+    // `MUI_NewObject'"/`MUI_Request'/`MUI_MakeObject'" without this.
+    if (currentProject->templateKind == 5)
+        gccLDFlags = dedupTokens(gccLDFlags + QStringLiteral(" -lmui"));
+
     auto writeMakefile = [&](const QString &fileBaseName, const QString &toolchainLabel, const QString &ccPath,
                               const QString &alwaysFirstArgs, const QString &cflags, const QString &ldflags,
-                              bool useSeparateAssembler, const QString &asPath)
+                              bool useSeparateAssembler, const QString &asPath, QString *lastWrittenHash)
     {
-        QFile file(dir + QDir::separator() + fileBaseName);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-        {
-            writeFailed = true;
-            failedFiles << fileBaseName;
-            return;
-        }
-
-        QTextStream out(&file);
-        out.setEncoding(QStringConverter::Latin1);
+        QString content;
+        QTextStream out(&content);
         out << "# Auto-generated by AmigaED - regenerated automatically whenever a\n";
-        out << "# file is added to or removed from the project \"" << currentProject->name << "\".\n";
+        out << "# file is added to or removed from the project \"" << currentProject->name << "\", and\n";
+        out << "# immediately before every build. Hand-edit this freely: AmigaED detects\n";
+        out << "# changes made outside itself and leaves this file untouched from then on -\n";
+        out << "# delete it to let AmigaED generate and manage it again.\n";
         out << "# Toolchain: " << toolchainLabel << "\n";
         if (currentProject->templateKind == 2 && toolchainLabel.startsWith("vbcc"))
             out << "# AmigaOS 1.3 project - '+kick13' is fixed and other '+' switches are stripped.\n";
@@ -6535,6 +6571,50 @@ void MainWindow::regenerateProjectMakefiles()
 #endif
         out.flush();
 
+        QString targetPath = dir + QDir::separator() + fileBaseName;
+        QString newHash = contentHash(content);
+
+        // Preserve a hand-edited Makefile rather than silently overwriting
+        // it: only true once this exact file has actually been written by
+        // AmigaED before (lastWrittenHash non-empty) AND its current,
+        // on-disk content no longer matches what was written then -
+        // confirmed a real, repeated complaint otherwise: ANY manual edit
+        // to a generated Makefile was undone the very next time this
+        // function ran (every file add/remove, and - since rev.128 -
+        // before every build too), with no way to make a change stick.
+        QString existingContent = readExistingContent(targetPath);
+        if (!existingContent.isNull())
+        {
+            if (!lastWrittenHash->isEmpty() && contentHash(existingContent) != *lastWrittenHash)
+            {
+                preservedFiles << fileBaseName;
+                return;
+            }
+            if (existingContent == content)
+            {
+                // Already exactly what we'd write anyway.
+                if (*lastWrittenHash != newHash)
+                {
+                    *lastWrittenHash = newHash;
+                    markProjectModified();
+                }
+                return;
+            }
+        }
+
+        QFile file(targetPath);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        {
+            writeFailed = true;
+            failedFiles << fileBaseName;
+            return;
+        }
+
+        QTextStream fileOut(&file);
+        fileOut.setEncoding(QStringConverter::Latin1);
+        fileOut << content;
+        fileOut.flush();
+
         if (file.error() != QFile::NoError)
         {
             writeFailed = true;
@@ -6542,18 +6622,21 @@ void MainWindow::regenerateProjectMakefiles()
         }
         else
         {
-            reloadEditorFromDiskIfOpen(dir + QDir::separator() + fileBaseName);
+            *lastWrittenHash = newHash;
+            markProjectModified();   // the new hash needs saving to the .aep too, or it's stale next session (see comment above the lambda)
+            reloadEditorFromDiskIfOpen(targetPath);
         }
     };
 
     writeMakefile("Makefile.gcc", "m68k-amigaos-gcc",
                    p_compiler_gcc.isEmpty() ? QStringLiteral("m68k-amigaos-gcc") : p_compiler_gcc,
                    gccAlwaysFirstArgs, gccCFlags, gccLDFlags,
-                   false, QString());
+                   false, QString(), &currentProject->lastWrittenGccMakefileHash);
     writeMakefile("Makefile.vbcc", "vbcc (vc)",
                    p_compiler_vc.isEmpty() ? QStringLiteral("vc") : p_compiler_vc,
                    vbccAlwaysFirstArgs, vbccCFlags, vbccLDFlags,
-                   true, p_compiler_vasm.isEmpty() ? QStringLiteral("vasmm68k_mot") : p_compiler_vasm);
+                   true, p_compiler_vasm.isEmpty() ? QStringLiteral("vasmm68k_mot") : p_compiler_vasm,
+                   &currentProject->lastWrittenVbccMakefileHash);
 
     // SAS/C (Makefile.sc): only for the project's plain .c files (SAS/C
     // doesn't support C++) - skip entirely if there are none (e.g. a pure
@@ -6574,13 +6657,14 @@ void MainWindow::regenerateProjectMakefiles()
         if (usesFloatingPoint && !scOpts.contains(QStringLiteral("MATH="), Qt::CaseInsensitive))
             scOpts = scOpts.isEmpty() ? QStringLiteral("MATH=IEEE") : (scOpts + QStringLiteral(" MATH=IEEE"));
 
-        QFile scFile(dir + QDir::separator() + "Makefile.sc");
-        if (scFile.open(QIODevice::WriteOnly | QIODevice::Text))
+        QString scContent;
         {
-            QTextStream out(&scFile);
-            out.setEncoding(QStringConverter::Latin1);
+            QTextStream out(&scContent);
             out << "# Auto-generated by AmigaED - regenerated automatically whenever a\n";
-            out << "# file is added to or removed from the project \"" << currentProject->name << "\".\n";
+            out << "# file is added to or removed from the project \"" << currentProject->name << "\", and\n";
+            out << "# immediately before every build. Hand-edit this freely: AmigaED detects\n";
+            out << "# changes made outside itself and leaves this file untouched from then on -\n";
+            out << "# delete it to let AmigaED generate and manage it again.\n";
             out << "# Toolchain: SAS/C (sc)\n";
             out << "#\n";
             out << "# SAS/C only runs on a real Amiga (or emulator) - AmigaED never runs\n";
@@ -6595,22 +6679,59 @@ void MainWindow::regenerateProjectMakefiles()
             out << "\tsc $(SCOPTS) $(SRCS) LINK TO $(TARGET)\n\n";
             out << "clean:\n";
             out << "\tdelete $(TARGET)\n";
-            out.flush();
+        }
 
-            if (scFile.error() != QFile::NoError)
+        QString scTargetPath = dir + QDir::separator() + "Makefile.sc";
+        QString scNewHash = contentHash(scContent);
+        QString scExistingContent = readExistingContent(scTargetPath);
+        bool scNeedsWrite = true;
+
+        if (!scExistingContent.isNull())
+        {
+            if (!currentProject->lastWrittenScMakefileHash.isEmpty()
+                && contentHash(scExistingContent) != currentProject->lastWrittenScMakefileHash)
+            {
+                preservedFiles << "Makefile.sc";
+                scNeedsWrite = false;
+            }
+            else if (scExistingContent == scContent)
+            {
+                if (currentProject->lastWrittenScMakefileHash != scNewHash)
+                {
+                    currentProject->lastWrittenScMakefileHash = scNewHash;
+                    markProjectModified();
+                }
+                scNeedsWrite = false;
+            }
+        }
+
+        if (scNeedsWrite)
+        {
+            QFile scFile(scTargetPath);
+            if (scFile.open(QIODevice::WriteOnly | QIODevice::Text))
+            {
+                QTextStream out(&scFile);
+                out.setEncoding(QStringConverter::Latin1);
+                out << scContent;
+                out.flush();
+
+                if (scFile.error() != QFile::NoError)
+                {
+                    writeFailed = true;
+                    failedFiles << "Makefile.sc";
+                }
+                else
+                {
+                    currentProject->lastWrittenScMakefileHash = scNewHash;
+                    markProjectModified();
+                    reloadEditorFromDiskIfOpen(scTargetPath);
+                }
+            }
+            else
             {
                 writeFailed = true;
                 failedFiles << "Makefile.sc";
             }
-            else
-            {
-                reloadEditorFromDiskIfOpen(dir + QDir::separator() + "Makefile.sc");
-            }
-        }
-        else
-        {
-            writeFailed = true;
-            failedFiles << "Makefile.sc";
         }
     }
 
@@ -6619,6 +6740,11 @@ void MainWindow::regenerateProjectMakefiles()
         QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
                               tr("Could not write the following Makefile(s) in\n%1:\n\n%2")
                                   .arg(dir, failedFiles.join("\n")));
+    }
+    else if (!preservedFiles.isEmpty())
+    {
+        createStatusBarMessage(tr("Makefiles updated (left unchanged - edited by hand: %1. Delete a file to let AmigaED manage it again.)")
+                                    .arg(preservedFiles.join(", ")), 8000);
     }
     else
     {
@@ -7793,6 +7919,76 @@ void MainWindow::actionCleanProject()
 
     refreshProjectTree();   // the executable/icon just removed should disappear from the "Executable" category
     createStatusBarMessage(tr("%1: Project \"%2\" cleaned.").arg(compilerDisplayLabel(p_defaultCompiler), currentProject->name), 4000);
+}
+
+//
+// Build > Project Options...: the ONLY way to change a project's own
+// extra compiler/linker options once it exists - promptCompilerLinkerOptions()
+// only ever ran once, at project creation time, with nothing afterward
+// to revisit what was entered there. Confirmed this was a real dead
+// end: hand-editing the generated Makefile directly seems like the
+// obvious workaround, but regenerateProjectMakefiles() (run
+// automatically before every build, and whenever a file is added/
+// removed) always rewrites it from the project's own stored options -
+// so a hand edit is silently undone the next time either happens, with
+// no way through the UI to actually make a change stick.
+//
+// Both toolchains' options are edited together in one dialog (rather
+// than the creation flow's two separate popups) since there's no
+// per-template default to pre-fill outside of creation - the user is
+// just looking at/changing whatever is already stored for each.
+//
+void MainWindow::actionProjectOptions()
+{
+    if (!currentProject)
+    {
+        QMessageBox::information(this, tr(AMIGAED_VERSION_STRING), tr("No project is currently loaded."));
+        return;
+    }
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Project Options - \"%1\"").arg(currentProject->name));
+
+    QLineEdit *gccCompilerEdit = new QLineEdit(currentProject->extraGccCompilerOptions, &dlg);
+    QLineEdit *gccLinkerEdit   = new QLineEdit(currentProject->extraGccLinkerOptions, &dlg);
+    QLineEdit *vbccCompilerEdit = new QLineEdit(currentProject->extraVbccCompilerOptions, &dlg);
+    QLineEdit *vbccLinkerEdit   = new QLineEdit(currentProject->extraVbccLinkerOptions, &dlg);
+
+    QFormLayout *form = new QFormLayout();
+    form->addRow(tr("GCC/G++ extra compiler options:"), gccCompilerEdit);
+    form->addRow(tr("GCC/G++ extra linker options:"), gccLinkerEdit);
+    form->addRow(tr("VBCC extra compiler options:"), vbccCompilerEdit);
+    form->addRow(tr("VBCC extra linker options:"), vbccLinkerEdit);
+
+    QLabel *note = new QLabel(tr("These are added on top of the toolchain baseline configured in Prefs "
+                                  "(and any auto-detected additions, such as a floating-point math library) - "
+                                  "they do not replace it. Applied the next time this project's Makefiles are "
+                                  "regenerated (immediately, and automatically before every build) - unless a "
+                                  "Makefile has since been hand-edited, in which case it's left untouched; "
+                                  "delete it to let AmigaED manage it again."), &dlg);
+    note->setWordWrap(true);
+
+    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    QVBoxLayout *layout = new QVBoxLayout(&dlg);
+    layout->addLayout(form);
+    layout->addWidget(note);
+    layout->addWidget(buttons);
+    dlg.setMinimumWidth(480);
+
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    currentProject->extraGccCompilerOptions = gccCompilerEdit->text();
+    currentProject->extraGccLinkerOptions = gccLinkerEdit->text();
+    currentProject->extraVbccCompilerOptions = vbccCompilerEdit->text();
+    currentProject->extraVbccLinkerOptions = vbccLinkerEdit->text();
+
+    markProjectModified();
+    regenerateProjectMakefiles();
+    createStatusBarMessage(tr("Project options updated."), 3000);
 }
 
 //

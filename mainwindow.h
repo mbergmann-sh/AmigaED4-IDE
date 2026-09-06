@@ -86,6 +86,8 @@
 #include <QSpacerItem>
 
 #include <QDialog>
+#include <QDialogButtonBox>
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QTranslator>
 #include <QDragEnterEvent>
@@ -290,6 +292,7 @@ public slots:
     void openRecentProject();
     void actionBuildProject();
     void actionCleanProject();
+    void actionProjectOptions();     // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
     void onProjectTreeDoubleClicked(QTreeWidgetItem *item, int column);
     void onFunctionsTreeDoubleClicked(QTreeWidgetItem *item, int column);
     void onProjectTreeContextMenu(const QPoint &pos);
@@ -657,6 +660,7 @@ private:
     QAction *addFilesToProjectAct;    // "Add files to Project..." menu entry - same slot as the project panel's "Add..." button (actionAddFileToProject())
     QAction *buildProjectAct;
     QAction *cleanProjectAct;
+    QAction *projectOptionsAct;      // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
     QAction *saveAct;               // save file
     QAction *saveAsAct;             // save file as...
     QAction *prefsAct;              // open prefs dialog

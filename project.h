@@ -55,6 +55,22 @@ public:
     QString extraGccLinkerOptions;      // appended to Makefile.gcc's LDFLAGS
     QString extraVbccCompilerOptions;   // appended to Makefile.vbcc's CFLAGS
     QString extraVbccLinkerOptions;     // appended to Makefile.vbcc's LDFLAGS
+
+    // SHA-1 (hex) of each Makefile's content exactly as AmigaED itself
+    // last wrote it - NOT of whatever is currently on disk. Lets
+    // MainWindow::regenerateProjectMakefiles() tell "unchanged since we
+    // last wrote it" (safe to regenerate/overwrite freely) apart from
+    // "the user has hand-edited it since" (must NOT be silently
+    // overwritten) - confirmed a real need: with no such check, ANY
+    // manual edit to a generated Makefile was always undone the very
+    // next time regeneration ran (every file add/remove, and - since
+    // rev.128 - before every build too), with no way to make a change
+    // stick. Empty until the corresponding Makefile has actually been
+    // (re)written at least once.
+    QString lastWrittenGccMakefileHash;
+    QString lastWrittenVbccMakefileHash;
+    QString lastWrittenScMakefileHash;
+
     QList<ProjectFile> files;
 
     // Which "New Project" template this was created from (see MainWindow's

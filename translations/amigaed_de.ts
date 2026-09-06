@@ -196,16 +196,63 @@
         <translation>Das Makefile des Projekts ausführen (Ziel &quot;all&quot;) für den aktuell gewählten Compiler</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="631"/>
-        <location filename="../mainwindow.cpp" line="1388"/>
+        <location filename="../mainwindow.cpp" line="772"/>
+        <location filename="../mainwindow.cpp" line="1518"/>
         <source>Clean Project</source>
         <translation>Projekt bereinigen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="632"/>
-        <location filename="../mainwindow.cpp" line="1477"/>
-        <source>Run the project&apos;s Makefile (target &quot;clean&quot;) for the currently selected compiler</source>
-        <translation>Das Makefile des Projekts ausführen (Ziel &quot;clean&quot;) für den aktuell gewählten Compiler</translation>
+        <location filename="../mainwindow.cpp" line="773"/>
+        <location filename="../mainwindow.cpp" line="1605"/>
+        <source>Remove the project's build artifacts (object files, executable, icon)</source>
+        <translation>Entfernt die Build-Artefakte des Projekts (Objektdateien, ausführbares Programm, Icon)</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="776"/>
+        <location filename="../mainwindow.cpp" line="1519"/>
+        <source>Project Options...</source>
+        <translation>Projekt-Optionen...</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="777"/>
+        <location filename="../mainwindow.cpp" line="1606"/>
+        <source>Edit this project's own extra compiler/linker options</source>
+        <translation>Bearbeitet die projekteigenen zusätzlichen Compiler-/Linker-Optionen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7845"/>
+        <source>Project Options - "%1"</source>
+        <translation>Projekt-Optionen - "%1"</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7849"/>
+        <source>GCC/G++ extra compiler options:</source>
+        <translation>GCC/G++ zusätzliche Compiler-Optionen:</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7850"/>
+        <source>GCC/G++ extra linker options:</source>
+        <translation>GCC/G++ zusätzliche Linker-Optionen:</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7851"/>
+        <source>VBCC extra compiler options:</source>
+        <translation>VBCC zusätzliche Compiler-Optionen:</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7852"/>
+        <source>VBCC extra linker options:</source>
+        <translation>VBCC zusätzliche Linker-Optionen:</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7854"/>
+        <source>These are added on top of the toolchain baseline configured in Prefs (and any auto-detected additions, such as a floating-point math library) - they do not replace it. Applied the next time this project's Makefiles are regenerated (immediately, and automatically before every build) - unless a Makefile has since been hand-edited, in which case it's left untouched; delete it to let AmigaED manage it again.</source>
+        <translation>Diese werden zusätzlich zur in Prefs konfigurierten Basis der Toolchain angewendet (und zu automatisch erkannten Ergänzungen wie einer Gleitkomma-Mathe-Bibliothek) - sie ersetzen sie nicht. Wirksam beim nächsten Neuerzeugen der Makefiles dieses Projekts (sofort, und automatisch vor jedem Build) - außer eine Makefile wurde inzwischen von Hand bearbeitet; in dem Fall bleibt sie unangetastet. Lösche sie, damit AmigaED sie wieder verwaltet.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7875"/>
+        <source>Project options updated.</source>
+        <translation>Projekt-Optionen aktualisiert.</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="635"/>
@@ -1946,6 +1993,11 @@ Trotzdem eine weitere Instanz starten?</translation>
         <location filename="../mainwindow.cpp" line="6033"/>
         <source>Makefiles updated.</source>
         <translation>Makefiles aktualisiert.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="6739"/>
+        <source>Makefiles updated (left unchanged - edited by hand: %1. Delete a file to let AmigaED manage it again.)</source>
+        <translation>Makefiles aktualisiert (unverändert gelassen - von Hand bearbeitet: %1. Datei löschen, damit AmigaED sie wieder verwaltet.)</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="6344"/>

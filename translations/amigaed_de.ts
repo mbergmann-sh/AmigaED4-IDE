@@ -2300,6 +2300,26 @@ Bitte den Quelltext auf Fehler prüfen und erneut compilieren.</translation>
         <translation>%1: Projekt &quot;%2&quot; wird bereinigt...</translation>
     </message>
     <message>
+        <location filename="../mainwindow.cpp" line="7742"/>
+        <source>Removed: %1</source>
+        <translation>Entfernt: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7746"/>
+        <source>Could not remove: %1</source>
+        <translation>Konnte nicht entfernt werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7751"/>
+        <source>Nothing to clean - no build artifacts found.</source>
+        <translation>Nichts zu bereinigen - keine Build-Artefakte gefunden.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7754"/>
+        <source>%1: Project &quot;%2&quot; cleaned.</source>
+        <translation>%1: Projekt &quot;%2&quot; bereinigt.</translation>
+    </message>
+    <message>
         <location filename="../mainwindow.cpp" line="7794"/>
         <source>Emulator is no longer running.</source>
         <translation>Der Emulator läuft nicht mehr.</translation>

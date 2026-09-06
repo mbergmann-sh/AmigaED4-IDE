@@ -50,5 +50,8 @@
         <file alias="manual_en.html">help/manual_en.html</file>
         <file alias="manual_de.html">help/manual_de.html</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file alias="amigaed_tool.info">resources/amigaed_tool.info</file>
+    </qresource>
 </RCC>
 

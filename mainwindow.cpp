@@ -351,6 +351,22 @@ MainWindow::MainWindow(QString cmdFileName)
     // disable Emulator kill menu entry by default
     killEmulatorAct->setDisabled(true);
 
+    // If an emulator process is already running (e.g. left open on
+    // purpose from a previous AmigaED session - see closeEvent()'s "do
+    // you want to leave it open?" prompt, or started outside AmigaED
+    // entirely), reflect that in the toolbar/menu right away rather than
+    // only discovering it once the user clicks Start and gets asked
+    // there (see actionEmulator()'s own, interactive version of this
+    // same check). No dialog here, unlike that one - this only ever
+    // adjusts the UI to match reality, it never launches anything.
+    if (isEmulatorProcessRunningExternally())
+    {
+        p_externalEmulatorTracked = true;
+        emulatorAct->setDisabled(true);
+        emulatorMenue->setDisabled(true);
+        killEmulatorAct->setEnabled(true);
+    }
+
     // react on buttons of searchGroup:
     connect(btn_hide, SIGNAL(clicked(bool)), this, SLOT(on_btn_hide()));
     connect(btn_next, SIGNAL(clicked(bool)), this, SLOT(on_btn_next()));
@@ -432,11 +448,46 @@ MainWindow::MainWindow(QString cmdFileName)
 //
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    actionKillEmulator();
-    if (maybeSaveAll()) {
+    if (maybeSaveAll())
+    {
+        // Only ask about (and possibly touch) the emulator once the app is
+        // actually committed to closing - asking earlier, or unconditionally
+        // killing it beforehand (the previous behaviour here), meant a
+        // close the user then cancelled (e.g. via "Cancel" on an
+        // unsaved-changes prompt in maybeSaveAll() above) could still have
+        // needlessly killed a running emulator.
+        if ((myEmulator && myEmulator->state() != QProcess::NotRunning) || p_externalEmulatorTracked)
+        {
+            QMessageBox::StandardButton reply = QMessageBox::question(
+                this, tr(AMIGAED_VERSION_STRING),
+                tr("AmigaED is shutting down while your Amiga Emulator is up and "
+                   "running. Do you want me to leave the Emulator open?"),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+
+            if (reply == QMessageBox::No)
+            {
+                // Routes correctly either way: to the owned-QProcess
+                // terminate()/kill() path, or (if p_externalEmulatorTracked)
+                // to killExternalEmulatorProcess() instead - see
+                // actionKillEmulator() itself.
+                actionKillEmulator();
+            }
+            // else ("Yes", leave it open): deliberately do NOT touch
+            // myEmulator at all here - not even disconnect its signals.
+            // It's a heap-allocated QProcess with no QObject parent (see
+            // its declaration in mainwindow.h) specifically so that
+            // simply leaving it alone lets the emulator survive AmigaED's
+            // own exit intact, rather than being killed by QProcess's own
+            // destructor. (p_externalEmulatorTracked's process was never
+            // AmigaED's own to begin with, so there's nothing to leave
+            // alone there beyond simply not calling killExternalEmulatorProcess().)
+        }
+
         writeSettings();
         event->accept();    // OK: Quit the app!
-    } else {
+    }
+    else
+    {
         event->ignore();    // CANCEL: just stay where we are... ;)
     }
 }
@@ -704,6 +755,10 @@ void MainWindow::createActions()
     saveProjectAct->setStatusTip(tr("Save the current project's file list and settings to its .aep, if it has unsaved changes"));
     saveProjectAct->setEnabled(false);   // nothing unsaved yet - see markProjectModified()/saveCurrentProject()
     connect(saveProjectAct, SIGNAL(triggered()), this, SLOT(actionSaveProject()));
+
+    closeProjectAct = new QAction(tr("Close Project"), this);
+    closeProjectAct->setStatusTip(tr("Close the current project and all of its open tabs"));
+    connect(closeProjectAct, SIGNAL(triggered()), this, SLOT(actionCloseProject()));
 
     addFilesToProjectAct = new QAction(tr("Add files to Project..."), this);
     addFilesToProjectAct->setStatusTip(tr("Add one or more existing files to the current project"));
@@ -1147,7 +1202,7 @@ void MainWindow::createActions()
     fileheaderAct->setStatusTip(tr("insert Fileheader comment"));
     connect(fileheaderAct, SIGNAL(triggered()), this, SLOT(actionInsertFileheaderComment()));
 
-    toggleCommentBlockAct = new QAction(tr("Comment/Uncomment Block"), this); // inserts into insertMenue => commentsMenue
+    toggleCommentBlockAct = new QAction(tr("Comment/Uncomment Block"), this); // standalone top-level entry in insertMenue AND the context menu (not nested in commentsMenue - see rev.101)
     toggleCommentBlockAct->setShortcut(tr("Ctrl+/"));
     toggleCommentBlockAct->setStatusTip(tr("Comment out the selected lines with \"// \", or remove it if they're already commented"));
     connect(toggleCommentBlockAct, SIGNAL(triggered()), this, SLOT(actionToggleCommentBlock()));
@@ -1206,6 +1261,7 @@ void MainWindow::createMenus()
     newProjectMenue->addAction(newProjectMUIAct);
     fileMenue->addAction(loadProjectAct);
     fileMenue->addAction(saveProjectAct);
+    fileMenue->addAction(closeProjectAct);
     fileMenue->addAction(addFilesToProjectAct);
     recentProjectsMenue = fileMenue->addMenu(tr("Recent Projects"));
     updateRecentProjectsMenu();   // populate with whatever was loaded from settings in readSettings()
@@ -1237,6 +1293,8 @@ void MainWindow::createMenus()
 
     // Inserts menue
     insertMenue = menuBar()->addMenu(tr("&Inserts"));
+    insertMenue->addAction(toggleCommentBlockAct);
+    insertMenue->addSeparator();
     preprocessorMenue = insertMenue->addMenu(tr("Preprocessor..."));
     preprocessorMenue->addAction(includeAct);
     preprocessorMenue->addAction(defineAct);
@@ -1271,8 +1329,6 @@ void MainWindow::createMenus()
     insertMenue->addAction(consoleDebugAct);
     insertMenue->addSeparator();
     commentsMenue = insertMenue->addMenu(tr("Comments..."));
-    commentsMenue->addAction(toggleCommentBlockAct);
-    commentsMenue->addSeparator();
     commentsMenue->addAction(fileheaderAct);
     commentsMenue->addSeparator();
     commentsMenue->addAction(c_singleAct);
@@ -1297,9 +1353,6 @@ void MainWindow::createMenus()
     buildMenue->addAction(buildProjectAct);
     buildMenue->addAction(cleanProjectAct);
     buildMenue->addSeparator();
-    buildMenue->addAction(showOutputAct);
-    buildMenue->addAction(hideOutputAct);
-    buildMenue->addSeparator();
     buildMenue->addAction(toggleGccDefaultOptsAct);
     buildMenue->addAction(toggleVbccDefaultOptsAct);
 
@@ -1321,9 +1374,13 @@ void MainWindow::createMenus()
     guiLanguageMenue = viewMenue->addMenu(tr("GUI Language"));
     guiLanguageMenue->addAction(guiLanguageEnglishAct);
     guiLanguageMenue->addAction(guiLanguageGermanAct);
+    buildThemeMenu();
     viewMenue->addSeparator();
     viewMenue->addAction(showFunctionsBrowserAct);
     viewMenue->addAction(hideFunctionsBrowserAct);
+    viewMenue->addSeparator();
+    viewMenue->addAction(showOutputAct);
+    viewMenue->addAction(hideOutputAct);
     viewMenue->addSeparator();
     viewMenue->addAction(showLineNumbersAct);
     viewMenue->addSeparator();
@@ -1450,6 +1507,7 @@ void MainWindow::retranslateUi()
     importExistingProjectAct->setStatusTip(tr("Import an existing C/C++ project folder that AmigaED doesn't know yet"));
     loadProjectAct->setText(tr("Load Project..."));
     saveProjectAct->setText(tr("Save Project"));
+    closeProjectAct->setText(tr("Close Project"));
     addFilesToProjectAct->setText(tr("Add files to Project..."));
     buildProjectAct->setText(tr("Build Project"));
     cleanProjectAct->setText(tr("Clean Project"));
@@ -1535,6 +1593,7 @@ void MainWindow::retranslateUi()
     openAct->setStatusTip(tr("Open an existing file"));
     loadProjectAct->setStatusTip(tr("Load an AmigaED project (.aep)"));
     saveProjectAct->setStatusTip(tr("Save the current project's file list and settings to its .aep, if it has unsaved changes"));
+    closeProjectAct->setStatusTip(tr("Close the current project and all of its open tabs"));
     addFilesToProjectAct->setStatusTip(tr("Add one or more existing files to the current project"));
     buildProjectAct->setStatusTip(tr("Run the project's Makefile (target \"all\") for the currently selected compiler"));
     cleanProjectAct->setStatusTip(tr("Run the project's Makefile (target \"clean\") for the currently selected compiler"));
@@ -1690,6 +1749,14 @@ void MainWindow::retranslateUi()
     guiLanguageEnglishAct->setText(tr("English"));
     guiLanguageGermanAct->setText(tr("Deutsch"));
 
+    // -- Theme menu (View menu, added separately - see buildThemeMenu()) --
+    // Only the submenu's own title is translatable - its entries (native
+    // style names, plus "Dark"/"Workbench 1.3"/"Workbench 3.1") are kept
+    // untranslated on purpose, same as Prefs > Misc's matching combo box -
+    // see buildThemeMenu()'s own comment for why.
+    if (themeMenue)
+        themeMenue->setTitle(tr("Theme"));
+
     // -- Functions Browser visibility menu (View menu, added separately - see createMenus()) --
     showFunctionsBrowserAct->setText(tr("Show Functions Browser"));
     showFunctionsBrowserAct->setStatusTip(tr("Show the Functions panel"));
@@ -1727,7 +1794,6 @@ void MainWindow::readSettings()
     p_email = (settings.value("Project/Email").toString());
     p_website = (settings.value("Project/Website").toString());
     p_projectsRootDir = (settings.value("Project/ProjectRootDir").toString());
-    p_default_icon = (settings.value("Project/DefaultIcon").toString());
 
     // TAB: GCC
     p_compiler_gcc = (settings.value("GCC/GccPath").toString());
@@ -1800,8 +1866,7 @@ void MainWindow::readSettings()
     // pointer - see its declaration for why.
     if (defaultStyleChanged && p_styleInitialized)
     {
-        applyApplicationStyle();
-        reapplyEditorTheme();
+        applyApplicationStyle();   // also re-applies editor tab colours and output-pane highlighting - see its own end for why
     }
     p_show_indentation = (settings.value("MISC/ShowIndentGuide").toBool());
     p_mydebug = (settings.value("MISC/ShowDebugOutput").toBool());
@@ -3952,20 +4017,26 @@ void MainWindow::actionInsertConsoleDebugMessage()
 
     // ...now insert the first line of text!
     textEdit->insert("\n");
-    // next, we need to continue printing at a certain location:
-    textEdit->insertAt("if (myDebug)\n", ++line, 0);
-    textEdit->insertAt("{\n", ++line, 0);
-    textEdit->insertAt("\t/* --- Insert debugging messages here: --- */\n", ++line, 0);
-    textEdit->insertAt("\t\n", ++line, 0);
-    textEdit->insertAt("}\n", ++line, 0);
+    // Every line of the block starts at 'index' - the cursor's own
+    // original column - not a hardcoded 0: confirmed the whole block
+    // always landed flush against the start of the line regardless of
+    // where the cursor actually was, breaking the visual indentation of
+    // whatever code it was inserted into (e.g. inside an already-indented
+    // function body).
+    textEdit->insertAt("if (myDebug)\n", ++line, index);
+    textEdit->insertAt("{\n", ++line, index);
+    textEdit->insertAt("\t/* --- Insert debugging messages here: --- */\n", ++line, index);
+    textEdit->insertAt("\t\n", ++line, index);
+    textEdit->insertAt("}\n", ++line, index);
 
     // unlike most other insertMenue templates, the caret lands INSIDE
     // the block - on the blank (indented) line right after the comment,
     // ready for the user to start typing debug output calls - rather
     // than after the whole block. 'line' was last incremented for the
     // "}\n" insertion above, so the blank line sits one line before it;
-    // column 1 lands right after that line's leading tab.
-    textEdit->setCursorPosition(line - 1, 1);
+    // column 'index + 1' lands right after that line's own leading tab
+    // (itself right after the 'index' columns of base indentation).
+    textEdit->setCursorPosition(line - 1, index + 1);
 }
 
 //
@@ -4196,24 +4267,112 @@ void MainWindow::actionInsertAmigaVersionString()
 
 //
 // Start UAE emulation
+//
+// True if a process matching the configured emulator's executable name
+// (Prefs > Emulator) is currently running anywhere on this system -
+// whether AmigaED itself started it (in a previous session, then left
+// it open - see closeEvent()) or it was launched some other way
+// entirely. Used by actionEmulator() to warn before starting a second,
+// likely-redundant instance - starting an emulator is slow enough that
+// avoiding an unnecessary second one is worth the check.
+//
+// Matches by executable filename only (via the platform's own process
+// listing, not AmigaED's own bookkeeping - myEmulator->state() already
+// covers "did WE start it and is it still running", which this
+// complements rather than replaces): it can't distinguish two different
+// configs of the same emulator (e.g. separate OS 1.3 / OS 3.x WinUAE
+// setups) from each other, so this asks rather than silently refusing -
+// running two on purpose is a legitimate thing to do here.
+//
+bool MainWindow::isEmulatorProcessRunningExternally() const
+{
+    const QString exeName = QFileInfo(p_emulator).fileName();
+    if (exeName.isEmpty())
+        return false;
+
+    QProcess probe;
+#if defined(Q_OS_WIN)
+    // "/NH" (no header) keeps the output to just matching rows (or
+    // none) - if nothing matches, tasklist prints an "INFO:" line
+    // instead of a row, which won't contain exeName, so the
+    // contains() check below still comes out false correctly either
+    // way.
+    probe.start(QStringLiteral("tasklist"),
+                QStringList() << "/FI" << QStringLiteral("IMAGENAME eq %1").arg(exeName) << "/NH");
+#else
+    // pgrep -x matches the process name exactly (not a substring of the
+    // full command line), same spirit as tasklist's IMAGENAME filter
+    // above. Available by default on every mainstream Linux distro
+    // (part of procps/procps-ng).
+    probe.start(QStringLiteral("pgrep"), QStringList() << "-x" << exeName);
+#endif
+
+    if (!probe.waitForStarted(2000))
+        return false;   // tasklist/pgrep itself unavailable - can't tell, so don't block starting
+
+    probe.waitForFinished(3000);
+
+#if defined(Q_OS_WIN)
+    const QString output = QString::fromLocal8Bit(probe.readAllStandardOutput());
+    return output.contains(exeName, Qt::CaseInsensitive);
+#else
+    return probe.exitCode() == 0 && !probe.readAllStandardOutput().trimmed().isEmpty();
+#endif
+}
+
 // CHANGE Programm Prefs according to your installation path and UAE flavour!
 //
 // Refuses to start a second instance while one is already running - UAE
 // (and emulators generally) don't support being launched twice against
-// the same config, and there's no reliable, cross-platform way to
-// detect/reuse an already-running instance afterwards. QProcess::state()
-// reflects "starting" synchronously, the moment start() is called below
-// (well before the OS process has actually spawned), so this guard also
-// closes the small window where a rapid double-click on the toolbar
-// button could otherwise slip a second start() in before the UI had a
-// chance to disable it.
+// the same config. QProcess::state() reflects "starting" synchronously,
+// the moment start() is called below (well before the OS process has
+// actually spawned), so this guard also closes the small window where a
+// rapid double-click on the toolbar button could otherwise slip a second
+// start() in before the UI had a chance to disable it.
+//
+// myEmulator->state() alone only catches an instance THIS AmigaED process
+// itself started and is still tracking - it says nothing about one left
+// running by a PREVIOUS AmigaED session (see closeEvent()'s "leave the
+// emulator open?" prompt) or started outside AmigaED entirely.
+// isEmulatorProcessRunningExternally() below covers that gap by asking
+// the OS directly (by process name), rather than relying on AmigaED's
+// own bookkeeping.
 //
 bool MainWindow::actionEmulator()
 {
-    if (myEmulator.state() != QProcess::NotRunning)
+    if ((myEmulator && myEmulator->state() != QProcess::NotRunning) || p_externalEmulatorTracked)
     {
         createStatusBarMessage(tr("An emulator instance is already running - stop it first."), 4000);
         return false;
+    }
+
+    if (isEmulatorProcessRunningExternally())
+    {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this, tr(AMIGAED_VERSION_STRING),
+            tr("An emulator process (%1) already appears to be running - "
+               "possibly left open from a previous AmigaED session, or "
+               "started outside AmigaED entirely.\n\n"
+               "Start another instance anyway?").arg(QFileInfo(p_emulator).fileName()),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+
+        if (reply == QMessageBox::No)
+        {
+            // Keep going with the SAME emulator process rather than
+            // starting a second one - Stop Emulator needs to be able to
+            // end it despite AmigaED never having launched it itself
+            // (myEmulator stays NotRunning/null throughout), and Start
+            // needs to stay disabled meanwhile, exactly as if AmigaED
+            // had started it - see actionKillEmulator() and
+            // checkEmulatorStillRunning().
+            p_externalEmulatorTracked = true;
+            emulatorAct->setDisabled(true);
+            emulatorMenue->setDisabled(true);
+            killEmulatorAct->setEnabled(true);
+
+            createStatusBarMessage(tr("Not starting a second emulator instance."), 4000);
+            return false;
+        }
     }
 
     QString command = p_emulator;
@@ -4268,16 +4427,23 @@ bool MainWindow::actionEmulator()
 
     createStatusBarMessage(tr("Attempting to start UAE..."), 0);
 
+    // Created once (if not already), then reused across every subsequent
+    // start/stop cycle for the lifetime of the app - EXCEPT if a previous
+    // session's closeEvent() ever left one running on purpose, which
+    // can't happen mid-session, only at actual app exit.
+    if (!myEmulator)
+        myEmulator = new QProcess();   // no parent - see its declaration in mainwindow.h for why
+
     // Qt::UniqueConnection matters here: actionEmulator() runs again on
     // every subsequent start (once per stop/restart cycle, for the
     // lifetime of the app) - without it, each restart stacked another
     // set of connections on top of the previous ones, so finished()/
     // started()/output signals would each fire multiple times per real
     // event after the second start.
-    QObject::connect(&myEmulator, SIGNAL(errorOccurred(QProcess::ProcessError)), this, SLOT(error(QProcess::ProcessError)), Qt::UniqueConnection);
-    QObject::connect(&myEmulator, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(emu_finished(int,QProcess::ExitStatus)), Qt::UniqueConnection);
-    QObject::connect(&myEmulator, SIGNAL(readyReadStandardOutput()), this, SLOT(emu_readyReadStandardOutput()), Qt::UniqueConnection);
-    QObject::connect(&myEmulator, SIGNAL(started()), this, SLOT(emu_started()), Qt::UniqueConnection);
+    QObject::connect(myEmulator, SIGNAL(errorOccurred(QProcess::ProcessError)), this, SLOT(error(QProcess::ProcessError)), Qt::UniqueConnection);
+    QObject::connect(myEmulator, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(emu_finished(int,QProcess::ExitStatus)), Qt::UniqueConnection);
+    QObject::connect(myEmulator, SIGNAL(readyReadStandardOutput()), this, SLOT(emu_readyReadStandardOutput()), Qt::UniqueConnection);
+    QObject::connect(myEmulator, SIGNAL(started()), this, SLOT(emu_started()), Qt::UniqueConnection);
 
     // Reflected immediately rather than only once the asynchronous
     // started() signal arrives - emu_started() re-applies the same
@@ -4287,10 +4453,10 @@ bool MainWindow::actionEmulator()
     emulatorMenue->setDisabled(true);
     killEmulatorAct->setEnabled(true);
 
-    myEmulator.start(command, arguments);
+    myEmulator->start(command, arguments);
 
     if(p_mydebug)
-        qDebug() << "process pid: " << myEmulator.processId();
+        qDebug() << "process pid: " << myEmulator->processId();
 
     return (true);
 }
@@ -4338,20 +4504,67 @@ void MainWindow::actionEmuOS30()
 //
 void MainWindow::actionKillEmulator()
 {
-    if (myEmulator.state() == QProcess::NotRunning)
+    if (p_externalEmulatorTracked)
+    {
+        // Not a process AmigaED itself started (myEmulator stays
+        // NotRunning/null throughout this case) - terminate it by name
+        // via the platform's own tools instead (killExternalEmulatorProcess()),
+        // then resync the toolbar/menu state here directly, since
+        // emu_finished() (which normally does that once a QProcess
+        // AmigaED itself started actually exits) never fires for a
+        // process that was never started via QProcess in the first place.
+        createStatusBarMessage(tr("Stopping emulator..."), 0);
+        killExternalEmulatorProcess();
+        p_externalEmulatorTracked = false;
+        emulatorMenue->setEnabled(true);
+        emulatorAct->setEnabled(true);
+        killEmulatorAct->setDisabled(true);
+        return;
+    }
+
+    if (!myEmulator || myEmulator->state() == QProcess::NotRunning)
         return;
 
     createStatusBarMessage(tr("Stopping emulator..."), 0);
 
-    myEmulator.terminate();
+    myEmulator->terminate();
 
-    if (!myEmulator.waitForFinished(3000))
+    if (!myEmulator->waitForFinished(3000))
     {
         if(p_mydebug)
             qDebug() << "Emulator did not terminate gracefully within 3s - forcing kill().";
-        myEmulator.kill();
-        myEmulator.waitForFinished(3000);
+        myEmulator->kill();
+        myEmulator->waitForFinished(3000);
     }
+}
+
+//
+// Terminates a matching emulator process AmigaED did not itself start
+// (see p_externalEmulatorTracked / actionEmulator()'s "start another
+// instance anyway?" prompt) - by executable name, via the platform's
+// own process-management tools, since there's no QProcess object (and
+// therefore no terminate()/kill()) for a process AmigaED never
+// launched. The Windows/Linux counterpart to
+// isEmulatorProcessRunningExternally()'s own tasklist/pgrep detection.
+//
+void MainWindow::killExternalEmulatorProcess()
+{
+    const QString exeName = QFileInfo(p_emulator).fileName();
+    if (exeName.isEmpty())
+        return;
+
+    QProcess killer;
+#if defined(Q_OS_WIN)
+    // /F forces termination (SIGTERM-less platforms don't get a
+    // "please shut down gracefully" option here the way QProcess::
+    // terminate() gives an owned process) - matches actionKillEmulator()'s
+    // own eventual kill() fallback for an owned process that didn't
+    // respond to terminate() in time.
+    killer.start(QStringLiteral("taskkill"), QStringList() << "/IM" << exeName << "/F");
+#else
+    killer.start(QStringLiteral("pkill"), QStringList() << "-x" << exeName);
+#endif
+    killer.waitForFinished(3000);
 }
 
 //
@@ -4507,6 +4720,21 @@ bool MainWindow::isDarkTheme() const
 }
 
 //
+// true if p_default_style selects one of the two nostalgic Workbench
+// themes - see workbench13ApplicationPalette()/workbench31ApplicationPalette()
+// below and buildThemeMenu()/View menu > Theme.
+//
+bool MainWindow::isWorkbench13Theme() const
+{
+    return p_default_style == QLatin1String("Workbench 1.3");
+}
+
+bool MainWindow::isWorkbench31Theme() const
+{
+    return p_default_style == QLatin1String("Workbench 3.1");
+}
+
+//
 // Builds the dark QPalette used together with the "Fusion" style for the
 // "Dark" application style. Native styles (e.g. "windowsvista" on
 // Windows) mostly ignore a custom QPalette for their own chrome - Fusion
@@ -4544,6 +4772,92 @@ QPalette MainWindow::darkApplicationPalette() const
 }
 
 //
+// Evokes the classic Workbench 1.3 (Kickstart 1.2/1.3, 1985-1988) look:
+// the iconic solid BLUE desktop background with white icon-label text,
+// and white title bars/gadgets with blue text - colours measured
+// directly from a real Workbench 1.3 screenshot (#0055AA blue desktop,
+// white title bar, white icon-label text on the blue, black-on-white
+// everywhere else), not guessed. Orange is kept as the selection accent
+// (no direct screenshot evidence either way, but a well-established,
+// historically accurate choice - also the accent AmigaED's own built-in
+// tool icon uses, for a consistent "Amiga" identity). Deliberately flat
+// (no gradients/3D shading) to match 1.3's own pre-bevel era look.
+//
+QPalette MainWindow::workbench13ApplicationPalette() const
+{
+    QPalette palette;
+
+    const QColor blue(0x00, 0x55, 0xAA);
+    const QColor orange(0xFF, 0x88, 0x00);
+
+    palette.setColor(QPalette::Window,            blue);
+    palette.setColor(QPalette::WindowText,        Qt::white);
+    palette.setColor(QPalette::Base,              Qt::white);
+    palette.setColor(QPalette::AlternateBase,     blue.lighter(130));
+    palette.setColor(QPalette::ToolTipBase,       Qt::white);
+    palette.setColor(QPalette::ToolTipText,       Qt::black);
+    palette.setColor(QPalette::Text,              Qt::black);
+    palette.setColor(QPalette::Button,            Qt::white);
+    palette.setColor(QPalette::ButtonText,        blue);
+    palette.setColor(QPalette::BrightText,        orange);
+    palette.setColor(QPalette::Link,              Qt::white);
+    palette.setColor(QPalette::LinkVisited,       QColor(0xDD, 0xDD, 0xDD));
+    palette.setColor(QPalette::Highlight,         orange);
+    palette.setColor(QPalette::HighlightedText,   Qt::black);
+
+    palette.setColor(QPalette::Disabled, QPalette::WindowText,      QColor(0x99, 0xBB, 0xDD));
+    palette.setColor(QPalette::Disabled, QPalette::Text,            QColor(0x99, 0x99, 0x99));
+    palette.setColor(QPalette::Disabled, QPalette::ButtonText,      QColor(0x99, 0xBB, 0xDD));
+    palette.setColor(QPalette::Disabled, QPalette::Highlight,       QColor(0xCC, 0xAA, 0x77));
+    palette.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(0x66, 0x66, 0x66));
+
+    return palette;
+}
+
+//
+// Evokes the classic Workbench 3.1 (Kickstart 3.1, 1994) look: a plain,
+// flat, NEUTRAL GRAY desktop (no blue tint at all) with white title
+// bars/gadgets and black text throughout - colours measured directly
+// from a real Workbench 3.1 screenshot (#AAAAAA gray desktop, white
+// title bar, black text/labels everywhere), not guessed - it's
+// considerably plainer than Workbench 1.3's blue desktop above, exactly
+// as the real thing is. The classic Amiga blue is kept as the selection
+// accent (consistent with 1.3's own dominant colour, just demoted here
+// from "the whole desktop" to "just the highlight"), giving the two
+// themes a family resemblance while staying clearly distinguishable.
+//
+QPalette MainWindow::workbench31ApplicationPalette() const
+{
+    QPalette palette;
+
+    const QColor gray(0xAA, 0xAA, 0xAA);
+    const QColor blue(0x00, 0x55, 0xAA);
+
+    palette.setColor(QPalette::Window,            gray);
+    palette.setColor(QPalette::WindowText,        Qt::black);
+    palette.setColor(QPalette::Base,              Qt::white);
+    palette.setColor(QPalette::AlternateBase,     gray.lighter(115));
+    palette.setColor(QPalette::ToolTipBase,       Qt::white);
+    palette.setColor(QPalette::ToolTipText,       Qt::black);
+    palette.setColor(QPalette::Text,              Qt::black);
+    palette.setColor(QPalette::Button,            Qt::white);
+    palette.setColor(QPalette::ButtonText,        Qt::black);
+    palette.setColor(QPalette::BrightText,        QColor(0xCC, 0x33, 0x22));
+    palette.setColor(QPalette::Link,              blue);
+    palette.setColor(QPalette::LinkVisited,       blue.darker(120));
+    palette.setColor(QPalette::Highlight,         blue);
+    palette.setColor(QPalette::HighlightedText,   Qt::white);
+
+    palette.setColor(QPalette::Disabled, QPalette::WindowText,      QColor(0x77, 0x77, 0x77));
+    palette.setColor(QPalette::Disabled, QPalette::Text,            QColor(0x77, 0x77, 0x77));
+    palette.setColor(QPalette::Disabled, QPalette::ButtonText,      QColor(0x77, 0x77, 0x77));
+    palette.setColor(QPalette::Disabled, QPalette::Highlight,       QColor(0x99, 0x99, 0x99));
+    palette.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(0xDD, 0xDD, 0xDD));
+
+    return palette;
+}
+
+//
 // Applies the configured "Default application style" (Prefs > Misc) to
 // the running application. Called once from the constructor (initial
 // startup style) and again, live, from readSettings() whenever the value
@@ -4557,23 +4871,164 @@ void MainWindow::applyApplicationStyle()
         QApplication::setStyle(QStyleFactory::create("Fusion"));
         QApplication::setPalette(darkApplicationPalette());
     }
+    else if (isWorkbench13Theme())
+    {
+        QApplication::setStyle(QStyleFactory::create("Fusion"));
+        QApplication::setPalette(workbench13ApplicationPalette());
+    }
+    else if (isWorkbench31Theme())
+    {
+        QApplication::setStyle(QStyleFactory::create("Fusion"));
+        QApplication::setPalette(workbench31ApplicationPalette());
+    }
     else
     {
         QApplication::setStyle(p_default_style);
-        // Undo a previously applied dark palette (if any) - go back to
-        // the newly chosen style's own standard palette, rather than
-        // leaving a stale dark one in place after switching away from
-        // "Dark".
+        // Undo a previously applied dark/Workbench palette (if any) - go
+        // back to the newly chosen style's own standard palette, rather
+        // than leaving a stale one in place after switching away from one
+        // of the three synthetic themes above.
         if (QApplication::style())
             QApplication::setPalette(QApplication::style()->standardPalette());
     }
 
-    this->setStyleSheet(QString());   // clear any stale stylesheet override, e.g. after switching away from "Dark"
+    if (isWorkbench13Theme())
+    {
+        // Fusion's own menu bar rendering synthesizes a shading gradient
+        // from a single QPalette::Window colour - against this theme's
+        // saturated blue, that washed out badly enough to make the
+        // (white, per the palette above) menu text unreadable in places.
+        // An explicit stylesheet for just the menu bar/menus sidesteps
+        // that gradient synthesis entirely, rather than fighting it.
+        this->setStyleSheet(
+            "QMenuBar { background-color: #0055AA; color: white; }"
+            "QMenuBar::item { background-color: #0055AA; color: white; }"
+            "QMenuBar::item:selected, QMenuBar::item:pressed { background-color: #FF8800; color: black; }"
+            "QMenu { background-color: white; color: black; border: 1px solid #0055AA; }"
+            "QMenu::item:selected { background-color: #FF8800; color: black; }"
+        );
+    }
+    else
+    {
+        this->setStyleSheet(QString());   // clear any stale stylesheet override, e.g. after switching away from "Workbench 1.3"/"Dark"
+    }
+
+    syncThemeMenuCheckedState();      // keep View > Theme's checkmark in sync, however the style just changed (Prefs, this menu itself, or Shift+F12 reload)
+
+    // Re-colour everything else that's theme-dependent but isn't part of
+    // the QPalette/stylesheet above: every open editor tab's margin/
+    // caret-line/lexer colours, and the output pane's error/warning
+    // highlighting. Centralized here rather than left to each individual
+    // caller (Prefs dialog, View > Theme menu, Shift+F12 reload) so all
+    // three stay in sync automatically - confirmed missing for the
+    // View > Theme menu specifically before this: it called
+    // applyApplicationStyle() directly, never reapplyEditorTheme(), so
+    // switching to/from "Dark" through that menu left already-open tabs'
+    // colours stale, and the output pane's highlighting wouldn't move to
+    // the newly selected theme's colours either.
+    reapplyEditorTheme();
+    highlightOutputDiagnostics();
 }
 
 //
-// Recolors an already-created lexer's styles for the dark theme - a
-// no-op unless isDarkTheme(). Called right after every lexer is created
+// Populates View > Theme with one checkable entry per style available on
+// this platform (QStyleFactory::keys() - e.g. "Fusion", "Windows",
+// "windowsvista" on Windows; "Fusion", "Breeze" etc. on Linux, depending
+// on what's installed), followed by a separator and the three synthetic
+// entries (Dark, Workbench 1.3, Workbench 3.1 - see is/applyXxxTheme()
+// above) that aren't real QStyleFactory keys. All of them share one
+// QActionGroup (themeActionGroup) for mutual exclusion - Qt shows this
+// as a bullet/checkmark per platform convention, exactly one at a time -
+// and one shared slot (actionSelectTheme()), which reads whichever
+// action actually fired via sender() rather than needing a separate
+// slot per entry. Called once from the constructor, after p_default_style
+// itself has already been loaded (readSettings()) and applied
+// (applyApplicationStyle()) - see their call sites for the ordering.
+//
+void MainWindow::buildThemeMenu()
+{
+    themeMenue = viewMenue->addMenu(tr("Theme"));
+    themeActionGroup = new QActionGroup(this);
+    themeActionGroup->setExclusive(true);
+
+    const QStringList nativeStyles = QStyleFactory::keys();
+    for (const QString &styleName : nativeStyles)
+    {
+        QAction *act = themeMenue->addAction(styleName);
+        act->setCheckable(true);
+        themeActionGroup->addAction(act);
+        connect(act, SIGNAL(triggered()), this, SLOT(actionSelectTheme()));
+    }
+
+    themeMenue->addSeparator();
+
+    // Kept untranslated, like the native style names above (Qt style
+    // keys aren't translated either, and neither is Prefs > Misc's own
+    // matching combo-box entry - MISC/DefaultStyle is saved/restored as
+    // plain text via that combo box's currentText(), which this menu
+    // must keep matching exactly).
+    const QStringList syntheticThemes = { QStringLiteral("Dark"),
+                                           QStringLiteral("Workbench 1.3"),
+                                           QStringLiteral("Workbench 3.1") };
+    for (const QString &name : syntheticThemes)
+    {
+        QAction *act = themeMenue->addAction(name);
+        act->setCheckable(true);
+        themeActionGroup->addAction(act);
+        connect(act, SIGNAL(triggered()), this, SLOT(actionSelectTheme()));
+    }
+
+    syncThemeMenuCheckedState();
+}
+
+//
+// View > Theme entry clicked: applies the clicked action's own text as
+// the new p_default_style, persists it (matching Prefs > Misc's own
+// MISC/DefaultStyle key exactly, so either place shows the other's
+// change), and applies it immediately.
+//
+void MainWindow::actionSelectTheme()
+{
+    QAction *act = qobject_cast<QAction *>(sender());
+    if (!act)
+        return;
+
+    p_default_style = act->text();
+
+    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    settings.setValue("MISC/DefaultStyle", p_default_style);
+
+    applyApplicationStyle();
+}
+
+//
+// Ensures the entry matching the current p_default_style is checked (and,
+// via themeActionGroup's exclusivity, every other entry isn't) - called
+// after buildThemeMenu() and every time applyApplicationStyle() runs, so
+// this menu stays in sync no matter where the style was actually changed
+// (this menu itself, the Prefs dialog, or Shift+F12 "Reload settings").
+// A no-op if the menu hasn't been built yet (see buildThemeMenu()'s call
+// site in the constructor vs. applyApplicationStyle()'s own, earlier one).
+//
+void MainWindow::syncThemeMenuCheckedState()
+{
+    if (!themeMenue)
+        return;
+
+    const QList<QAction *> actions = themeMenue->actions();
+    for (QAction *act : actions)
+    {
+        if (act->isCheckable())
+            act->setChecked(act->text() == p_default_style);
+    }
+}
+
+//
+// Recolors an already-created lexer's styles for the CURRENT theme -
+// dark colours for "Dark", or a reset back to this app's own light-theme
+// colours for every other theme (native styles, Workbench 1.3,
+// Workbench 3.1) - see the reset branch's own comment for why that
+// second half exists at all. Called right after every lexer is created
 // (initializeLexerCPP()/.../initializeLexerPascal()) AND, unchanged, from
 // reapplyEditorTheme() to recolor an existing tab's lexer IN PLACE when
 // the style is switched live: it deliberately never recreates the lexer
@@ -4582,7 +5037,7 @@ void MainWindow::applyApplicationStyle()
 // had deliberately set to a different lexer (e.g. Makefile) back to
 // whatever that lexer's own initializeLexerXxx() defaults to.
 //
-// Base approach: paint every style of the lexer with one dark
+// Dark-branch approach: paint every style of the lexer with one dark
 // background/light foreground pair first - QsciLexer::setColor()/
 // setPaper() apply to ALL styles when no explicit style index is given,
 // exactly like the existing lexer->setFont(myfont) calls elsewhere in
@@ -4598,8 +5053,42 @@ void MainWindow::applyApplicationStyle()
 //
 void MainWindow::applyLexerDarkColors(QsciLexer *lexer)
 {
-    if (!lexer || !isDarkTheme())
+    if (!lexer)
         return;
+
+    if (!isDarkTheme())
+    {
+        // Reset every style back to the lexer's own class defaults first
+        // (covers every style this app doesn't customize itself -
+        // QsciLexerCPP's own Comment/Keyword/Number/String/PreProcessor,
+        // for instance, and the custom Amiga-specific lexers' own
+        // light-theme colours), then reapply this app's own small set of
+        // additional customizations on top (currently just QsciLexerCPP's
+        // GlobalClass/KeywordSet2 - see initializeLexerCPP()). This
+        // mirrors exactly what a brand new tab gets, and is necessary
+        // for the same reason as this function's dark branch below is
+        // necessary in the first place: confirmed that switching AWAY
+        // from "Dark" to any other theme left already-open tabs' lexers
+        // stuck showing dark-theme colours indefinitely - this function
+        // used to only ever handle "make it dark", with nothing to undo
+        // that afterward.
+        for (int style = 0; style < 128; ++style)
+        {
+            lexer->setColor(lexer->defaultColor(style), style);
+            lexer->setPaper(lexer->defaultPaper(style), style);
+        }
+
+        if (auto *cpp = dynamic_cast<QsciLexerCPP *>(lexer))
+        {
+            cpp->setColor(QColor(0x4b, 0x00, 0x82), QsciLexerCPP::GlobalClass);
+            QFont typeFont = cpp->font(QsciLexerCPP::GlobalClass);
+            typeFont.setBold(true);
+            cpp->setFont(typeFont, QsciLexerCPP::GlobalClass);
+            cpp->setColor(QColor(0xb2, 0x22, 0x22), QsciLexerCPP::KeywordSet2);
+        }
+
+        return;
+    }
 
     lexer->setPaper(QColor(0x1e, 0x1e, 0x1e));
     lexer->setColor(QColor(0xd4, 0xd4, 0xd4));
@@ -4694,11 +5183,9 @@ void MainWindow::applyLexerDarkColors(QsciLexer *lexer)
 //
 // Re-applies margin/caret-line/selection/lexer colors to every currently
 // open tab. Used when the "Default application style" changes at runtime
-// (Prefs closed / Shift+F12 "Reload settings") so already-open tabs
-// don't keep looking like the OLD theme until reopened or the app is
-// restarted - see applyApplicationStyle()/readSettings(). A no-op for
-// every tab (nothing actually changes) unless isDarkTheme() - see
-// applyLexerDarkColors()/initializeMargin()/initializeCaretLine() for why.
+// (Prefs closed / Shift+F12 "Reload settings", or the View > Theme menu)
+// so already-open tabs don't keep looking like the OLD theme until
+// reopened or the app is restarted - see applyApplicationStyle().
 //
 void MainWindow::reapplyEditorTheme()
 {
@@ -4870,11 +5357,22 @@ void MainWindow::initializeLexerNone(QsciScintilla *editor, bool announceChange)
     // With no lexer attached, Scintilla's low-level STYLE_DEFAULT governs
     // the editor's own colours directly - apply the dark theme here too,
     // the same background/foreground pair used as the base for every
-    // actual lexer in applyLexerDarkColors().
+    // actual lexer in applyLexerDarkColors(). The "else" branch resetting
+    // back to plain white/black is just as necessary as the dark one:
+    // confirmed a plain-text tab stayed stuck showing dark colours
+    // indefinitely after switching away from "Dark" to any other theme -
+    // this function used to only ever handle "make it dark", with
+    // nothing to undo that afterward.
     if (isDarkTheme())
     {
         editor->SendScintilla(QsciScintilla::SCI_STYLESETBACK, QsciScintilla::STYLE_DEFAULT, QColor(0x1e, 0x1e, 0x1e));
         editor->SendScintilla(QsciScintilla::SCI_STYLESETFORE, QsciScintilla::STYLE_DEFAULT, QColor(0xd4, 0xd4, 0xd4));
+        editor->SendScintilla(QsciScintilla::SCI_STYLECLEARALL);
+    }
+    else
+    {
+        editor->SendScintilla(QsciScintilla::SCI_STYLESETBACK, QsciScintilla::STYLE_DEFAULT, QColor(Qt::white));
+        editor->SendScintilla(QsciScintilla::SCI_STYLESETFORE, QsciScintilla::STYLE_DEFAULT, QColor(Qt::black));
         editor->SendScintilla(QsciScintilla::SCI_STYLECLEARALL);
     }
 
@@ -4938,6 +5436,19 @@ void MainWindow::initializeLexerCPP()
     // the "Dark" application style is active (Prefs > Misc).
     applyLexerDarkColors(lexer);
 
+    // Unlike every other initializeLexerXxx() function, this one was
+    // missing its own initializeMargin() call - harmless for a brand new
+    // tab (newEditorTab() already calls it once, right after creating
+    // the tab's own initial C/C++ lexer), but setLexer() below runs a
+    // SECOND time for any .c/.h/.cpp file actually opened afterward (via
+    // applyLexerForFileExtension(), called from openFileInTab()) -
+    // replacing that first lexer with a fresh one here reset the margin
+    // to its own un-dark default colours, which nothing afterward ever
+    // corrected back. Confirmed: a project's .c files opened this way
+    // showed a light-gray line-number gutter even with the "Dark" style
+    // active, while a freshly created blank tab (never re-lexed) did not.
+    initializeMargin();
+
     createStatusBarMessage(tr("Syntax changed to C/C++"), 0);
 }
 
@@ -4951,7 +5462,7 @@ void MainWindow::initializeLexerMakefile()
     textEdit->setLexer(lexer);
     lexer->setFont(myfont);
     textEdit->SendScintilla(textEdit->QsciScintilla::SCI_STYLESETCHARACTERSET, 1, QsciScintilla::SC_CHARSET_ANSI);
-    applyLexerDarkColors(lexer);   // no-op unless "Dark" application style is active
+    applyLexerDarkColors(lexer);   // applies dark-theme colours, or resets to this app's own light-theme ones - see its own comment
 
     textEdit->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     initializeMargin();
@@ -4968,7 +5479,7 @@ void MainWindow::initializeLexerBatch()
     textEdit->setLexer(lexer);
     lexer->setFont(myfont);
     textEdit->SendScintilla(textEdit->QsciScintilla::SCI_STYLESETCHARACTERSET, 1, QsciScintilla::SC_CHARSET_ANSI);
-    applyLexerDarkColors(lexer);   // no-op unless "Dark" application style is active
+    applyLexerDarkColors(lexer);   // applies dark-theme colours, or resets to this app's own light-theme ones - see its own comment
 
     textEdit->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     initializeMargin();
@@ -4984,7 +5495,7 @@ void MainWindow::initializeLexerInstaller()
     textEdit->setLexer(lexer);
     lexer->setFont(myfont);
     textEdit->SendScintilla(textEdit->QsciScintilla::SCI_STYLESETCHARACTERSET, 1, QsciScintilla::SC_CHARSET_ANSI);
-    applyLexerDarkColors(lexer);   // no-op unless "Dark" application style is active
+    applyLexerDarkColors(lexer);   // applies dark-theme colours, or resets to this app's own light-theme ones - see its own comment
 
     // The Installer language is fully parenthesized (LISP-style), so
     // brace/paren matching is far more useful here than the C-style
@@ -5005,7 +5516,7 @@ void MainWindow::initializeLexerAmigaGuide()
     textEdit->setLexer(lexer);
     lexer->setFont(myfont);
     textEdit->SendScintilla(textEdit->QsciScintilla::SCI_STYLESETCHARACTERSET, 1, QsciScintilla::SC_CHARSET_ANSI);
-    applyLexerDarkColors(lexer);   // no-op unless "Dark" application style is active
+    applyLexerDarkColors(lexer);   // applies dark-theme colours, or resets to this app's own light-theme ones - see its own comment
 
     // Like the Installer lexer above, AmigaGuideLexer doesn't provide
     // Scintilla fold points (its '@node'/'@endnode' pairing isn't
@@ -5025,7 +5536,7 @@ void MainWindow::initializeLexerM68kAsm()
     textEdit->setLexer(lexer);
     lexer->setFont(myfont);
     textEdit->SendScintilla(textEdit->QsciScintilla::SCI_STYLESETCHARACTERSET, 1, QsciScintilla::SC_CHARSET_ANSI);
-    applyLexerDarkColors(lexer);   // no-op unless "Dark" application style is active
+    applyLexerDarkColors(lexer);   // applies dark-theme colours, or resets to this app's own light-theme ones - see its own comment
 
     // No Scintilla fold points here either (see AmigaGuideLexer above) -
     // assembler source isn't brace-delimited the way C/C++ is.
@@ -5044,7 +5555,7 @@ void MainWindow::initializeLexerPascal()
     textEdit->setLexer(lexer);
     lexer->setFont(myfont);
     textEdit->SendScintilla(textEdit->QsciScintilla::SCI_STYLESETCHARACTERSET, 1, QsciScintilla::SC_CHARSET_ANSI);
-    applyLexerDarkColors(lexer);   // no-op unless "Dark" application style is active
+    applyLexerDarkColors(lexer);   // applies dark-theme colours, or resets to this app's own light-theme ones - see its own comment
 
     textEdit->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     initializeMargin();
@@ -5818,10 +6329,6 @@ void MainWindow::regenerateProjectMakefiles()
         vbccLDFlags = dedupTokens(vbccLDFlags + QStringLiteral(" -lmieee"));
     }
 
-    if (p_create_icon && p_default_icon.isEmpty())
-        createStatusBarMessage(tr("\"create icon\" is enabled in Prefs, but no default icon file is set - Makefiles won't copy one."), 4000);
-
-
     auto writeMakefile = [&](const QString &fileBaseName, const QString &toolchainLabel, const QString &ccPath,
                               const QString &alwaysFirstArgs, const QString &cflags, const QString &ldflags,
                               bool useSeparateAssembler, const QString &asPath)
@@ -5863,65 +6370,15 @@ void MainWindow::regenerateProjectMakefiles()
         out << "all: $(TARGET)\n\n";
         out << "$(TARGET): $(OBJS)\n";
         out << "\t$(CC) $(CCARGS) $(OBJS) $(LDFLAGS) -o $(TARGET)\n";
-        if (p_create_icon && !p_default_icon.isEmpty())
-        {
-            // Same default-icon file Prefs > Misc > "create icon" already
-            // copies after a successful SINGLE-FILE compile (see
-            // stopCommand()) - baked into the Makefile itself here so a
-            // project BUILD gets the same ".info" icon too, and so it
-            // still happens when "make" is run directly in a shell,
-            // outside AmigaED entirely.
-            //
-            // The copy command is chosen by whatever platform THIS
-            // AmigaED (generating the Makefile right now) is running on -
-            // not the target Amiga, and not necessarily whoever ends up
-            // running "make": copy/robocopy on Windows, cp on Linux/macOS.
-            // That matches the source path itself (p_default_icon), which
-            // is already a path on the developer's own machine, not
-            // something portable to a different host OS anyway.
-#if defined(Q_OS_WIN)
-            // Confirmed by testing: mingw32-make runs recipe lines through
-            // an sh.exe it finds via the Amiga cross-compiler toolchain's
-            // own PATH entries, not cmd.exe directly (see the
-            // AppImage/.deb build script comments for the same issue
-            // elsewhere) - "copy" is a cmd.exe built-in, not a standalone
-            // program, so sh can't find it on its own; "cmd /c" gives sh an
-            // actual executable (cmd.exe itself) to run. copy's
-            // forward-slash support also turns out unreliable for a path
-            // this deep (confirmed: the identical backslash path works
-            // fine, the forward-slash version doesn't), so native
-            // backslashes are used.
-            //
-            // Single backslashes only - NOT doubled. An earlier version of
-            // this code doubled them ("so sh's own escape handling doesn't
-            // strip them"), but that assumption turned out wrong in
-            // practice (reported: "Syntaxfehler" from cmd.exe for some
-            // icon paths) and was never actually consistent with the
-            // proven-working pattern already used elsewhere in this same
-            // project for the exact same sh/cmd handoff - see
-            // AmigaED.pro's DESTDIR_WIN/INSTALL_SRC_DIR_WIN, built via
-            // qmake's $$replace(..., /, \\) - in a qmake string, two
-            // backslashes together mean one literal backslash - and
-            // passed to install_stage.bat with single backslashes, no
-            // doubling.
-            //
-            // Deliberately NO quotes around either path here (also
-            // confirmed by testing): with sh handing the whole line to
-            // "cmd /c" as ITS OWN single quoted argument, cmd.exe's
-            // famously quirky quote-stripping rules for /c collide with
-            // that extra layer and produce a syntax error. Since
-            // $(TARGET) is already sanitized to be space-free (see
-            // targetName above) and a default icon path with a space in
-            // it isn't a case actually hit yet, omitting quotes entirely
-            // sidesteps the whole nested-quoting problem rather than
-            // fighting it further.
-            QString iconSrc = p_default_icon;
-            iconSrc.replace(QLatin1Char('/'), QLatin1Char('\\'));
-            out << "\tcmd /c copy /Y " << iconSrc << " $(TARGET).info\n";
-#else
-            out << "\tcp \"" << p_default_icon << "\" \"$(TARGET).info\"\n";
-#endif
-        }
+        // Icon creation (Prefs > Misc > "create icon") no longer happens
+        // here: AmigaED writes its own built-in tool icon directly, in
+        // Qt/C++, right after a successful build (single-file compile or
+        // project build - see stopCommand()/writeProgramIcon()). Doing it
+        // in the app itself instead of via a shell command embedded in
+        // this Makefile sidesteps the recurring Windows sh.exe/cmd.exe
+        // quoting breakage that approach kept running into (rev.94,
+        // rev.98) - at the cost of the icon no longer appearing when
+        // "make" is run directly outside AmigaED.
         out << "\n";
         out << "%.o: %.c\n";
         out << "\t$(CC) $(CCARGS) $(CFLAGS) -c $< -o $@\n\n";
@@ -6194,53 +6651,297 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
 
     case 4: // ReAction Project
         return header +
-            "/* ReAction GUI skeleton - a STARTING POINT only: it opens the\n"
-            " * libraries a typical ReAction app needs, but does not yet build any\n"
-            " * window or gadgets. Add window.class/*.gadget as needed. */\n"
+            "/* ReAction skeleton, matching the library-opening, menu-layout and\n"
+            " * window-creation sequence of a confirmed-working ReAction/vbcc\n"
+            " * program (window.class + gadtools.library menu + requester.class),\n"
+            " * builds a File menu (About/Quit) and a small window, then runs the\n"
+            " * standard ReAction event loop. Add further gadgets to the window's\n"
+            " * WINDOW_ParentGroup layout as your program grows. */\n"
             "#include <exec/types.h>\n"
+            "#include <dos/dos.h>\n"
+            "#include <clib/alib_protos.h>\n"
             "#include <proto/exec.h>\n"
             "#include <proto/dos.h>\n"
             "#include <proto/intuition.h>\n"
-            "#include <proto/utility.h>\n\n"
+            "#include <proto/gadtools.h>\n"
+            "#include <proto/window.h>\n"
+            "#include <proto/layout.h>\n"
+            "#include <proto/label.h>\n"
+            "#include <proto/requester.h>\n"
+            "#include <libraries/gadtools.h>\n"
+            "#include <reaction/reaction.h>\n"
+            "#include <reaction/reaction_macros.h>\n"
+            "#include <intuition/gadgetclass.h>\n"
+            "#include <intuition/icclass.h>\n"
+            "#include <classes/window.h>\n"
+            "#include <classes/requester.h>\n\n"
             "#define myDebug TRUE\n\n"
-            "struct Library *IntuitionBase;\n"
-            "struct Library *UtilityBase;\n\n"
+            "#define MENU_ABOUT 1\n"
+            "#define MENU_QUIT  2\n\n"
+            "/* IntuitionBase is NOT declared here: <proto/intuition.h> already\n"
+            " * declares it itself, as \"struct IntuitionBase *\" (intuition.library's\n"
+            " * own extended library-base type) rather than a plain \"struct\n"
+            " * Library *\" - declaring it again here with that more generic type\n"
+            " * conflicts (confirmed: \"redeclaration of var IntuitionBase with new\n"
+            " * type\"). None of the other libraries opened below have such a\n"
+            " * library-specific base type, so declaring those ourselves is fine. */\n"
+            "struct Library *GadToolsBase;\n"
+            "struct Library *WindowBase;\n"
+            "struct Library *LayoutBase;\n"
+            "struct Library *LabelBase;\n"
+            "struct Library *RequesterBase;\n\n"
+            "struct Screen *pubScreen;\n"
+            "APTR visualInfo;\n\n"
             "int main(int argc, char *argv[])\n"
             "{\n"
             "\tint rc = 0;\n\n"
-            "\tIntuitionBase = OpenLibrary(\"intuition.library\", 39);\n"
-            "\tUtilityBase   = OpenLibrary(\"utility.library\", 39);\n\n"
-            "\tif (IntuitionBase && UtilityBase)\n"
+            "\t/* Version 0L (\"any version will do\") for everything except\n"
+            "\t * layout.gadget, which needs at least v47 here - both confirmed\n"
+            "\t * against a real, working ReAction/vbcc program. */\n"
+            "\tIntuitionBase = (struct IntuitionBase *)OpenLibrary(\"intuition.library\", 0L);\n"
+            "\tGadToolsBase  = OpenLibrary(\"gadtools.library\", 0L);\n"
+            "\tWindowBase    = OpenLibrary(\"window.class\", 0L);\n"
+            "\t/* layout.gadget/label.image (unlike window.class/requester.class)\n"
+            "\t * live under LIBS:Gadgets/ and LIBS:Images/ respectively, not\n"
+            "\t * directly under LIBS: itself - the \"gadgets/\"/\"images/\" prefixes\n"
+            "\t * here are required, not optional. */\n"
+            "\tLayoutBase    = OpenLibrary(\"gadgets/layout.gadget\", 47L);\n"
+            "\tLabelBase     = OpenLibrary(\"images/label.image\", 0L);\n"
+            "\tRequesterBase = OpenLibrary(\"requester.class\", 0L);\n\n"
+            "\tif (IntuitionBase && GadToolsBase && WindowBase && LayoutBase && LabelBase && RequesterBase)\n"
             "\t{\n"
-            "\t\t/* TODO: open window.class, build your gadgets, run the event loop */\n"
+            "\t\tpubScreen  = LockPubScreen(NULL);\n"
+            "\t\tvisualInfo = pubScreen ? GetVisualInfo(pubScreen, TAG_DONE) : NULL;\n\n"
+            "\t\tif (pubScreen && visualInfo)\n"
+            "\t\t{\n"
+            "\t\t\t/* Classic Intuition NewMenu array - still how ReAction apps build\n"
+            "\t\t\t * their menu strip too, via gadtools.library's CreateMenusA()/\n"
+            "\t\t\t * LayoutMenus(), attached to the window below via SetMenuStrip()\n"
+            "\t\t\t * AFTER opening it (not a WINDOW_MenuStrip tag at creation time). */\n"
+            "\t\t\tstruct NewMenu nm[] =\n"
+            "\t\t\t{\n"
+            "\t\t\t\t{ NM_TITLE, (STRPTR)\"File\",     NULL,        0, 0, NULL },\n"
+            "\t\t\t\t{  NM_ITEM, (STRPTR)\"About...\", NULL,        0, 0, (APTR)MENU_ABOUT },\n"
+            "\t\t\t\t{  NM_ITEM, (STRPTR)\"Quit\",     (STRPTR)\"Q\", 0, 0, (APTR)MENU_QUIT },\n"
+            "\t\t\t\t{ NM_END,   NULL,               NULL,        0, 0, NULL }\n"
+            "\t\t\t};\n\n"
+            "\t\t\tstruct Menu *menuStrip;\n"
+            "\t\t\tObject *textLabel;\n"
+            "\t\t\tObject *layoutObj;\n"
+            "\t\t\tObject *winObj;\n\n"
+            "\t\t\tmenuStrip = CreateMenusA(nm, TAG_END);\n"
+            "\t\t\tif (menuStrip)\n"
+            "\t\t\t\tLayoutMenus(menuStrip, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE);\n\n"
+            "\t\t\t/* A window with no content at all (no WINDOW_ParentGroup) may fail\n"
+            "\t\t\t * to open, or open with nothing usable in it, without window.class\n"
+            "\t\t\t * reporting any error for it anywhere - the same underlying problem\n"
+            "\t\t\t * the MUI template's window had before a placeholder Text object\n"
+            "\t\t\t * was added there. This placeholder label.image, inside a minimal\n"
+            "\t\t\t * single-child layout.gadget, is the ReAction equivalent - replace\n"
+            "\t\t\t * both with your actual gadgets as the program grows. label.image\n"
+            "\t\t\t * (a plain, non-interactive IMAGE, added via LAYOUT_AddImage, not\n"
+            "\t\t\t * LAYOUT_AddChild) is used here rather than a string.gadget forced\n"
+            "\t\t\t * read-only: that took two separate rounds to get wrong - GA_ReadOnly\n"
+            "\t\t\t * doesn't exist at all (SAS/C: \"undefined identifier\"), and\n"
+            "\t\t\t * STRINGA_Editable, despite being genuinely documented elsewhere,\n"
+            "\t\t\t * isn't defined in this particular NDK/vbcc header set either\n"
+            "\t\t\t * (\"unknown identifier\") - label.image sidesteps the whole question\n"
+            "\t\t\t * by using the class actually meant for static text in the first\n"
+            "\t\t\t * place, exactly as the reference program's own CHILD_Label entries\n"
+            "\t\t\t * do (just attached directly via LAYOUT_AddImage here, rather than\n"
+            "\t\t\t * as another gadget's CHILD_Label).\n"
+            "\t\t\t * *_GetClass() (from <proto/window.h>/<proto/layout.h>/<proto/\n"
+            "\t\t\t * label.h>/<proto/requester.h>) is the confirmed-correct way to get\n"
+            "\t\t\t * each class's Class* for NewObject() - passing NULL plus a\n"
+            "\t\t\t * \"xxx.class\"/\"xxx.gadget\"/\"xxx.image\" string instead (an earlier\n"
+            "\t\t\t * version of this template did) also runs, but *_GetClass() is what\n"
+            "\t\t\t * a real, confirmed-working ReAction program actually uses throughout.\n"
+            "\t\t\t * All four declarations above are deliberately grouped together,\n"
+            "\t\t\t * ahead of any statement in this block (the CreateMenusA() call\n"
+            "\t\t\t * right below is an assignment, not a declaration) - unlike C99\n"
+            "\t\t\t * (vbcc, gcc), C89 (SAS/C) rejects a declaration once even one\n"
+            "\t\t\t * statement has already appeared earlier in the same block\n"
+            "\t\t\t * (confirmed: SAS/C errors 218/77/90/... on exactly that). */\n"
+            "\t\t\ttextLabel = NewObject(LABEL_GetClass(), NULL,\n"
+            "\t\t\t\tLABEL_Text, (ULONG)\"Hello from ReAction!\",\n"
+            "\t\t\t\tTAG_DONE);\n\n"
+            "\t\t\tlayoutObj = NewObject(LAYOUT_GetClass(), NULL,\n"
+            "\t\t\t\tLAYOUT_Orientation, LAYOUT_ORIENT_VERT,\n"
+            "\t\t\t\tLAYOUT_AddImage,    (ULONG)textLabel,\n"
+            "\t\t\t\tTAG_DONE);\n\n"
+            "\t\t\twinObj = NewObject(WINDOW_GetClass(), NULL,\n"
+            "\t\t\t\tWA_Title,             (ULONG)\"" + baseName + "\",\n"
+            "\t\t\t\tWA_Activate,          TRUE,\n"
+            "\t\t\t\tWA_DepthGadget,       TRUE,\n"
+            "\t\t\t\tWA_DragBar,           TRUE,\n"
+            "\t\t\t\tWA_CloseGadget,       TRUE,\n"
+            "\t\t\t\tWA_SizeGadget,        TRUE,\n"
+            "\t\t\t\tWA_Width,             320,\n"
+            "\t\t\t\tWA_Height,            120,\n"
+            "\t\t\t\t/* Without WA_IDCMP explicitly requesting these, the window\n"
+            "\t\t\t\t * never actually receives menu-pick or close-gadget events at\n"
+            "\t\t\t\t * all - confirmed: an earlier version of this template omitted\n"
+            "\t\t\t\t * WA_IDCMP entirely, and neither About nor Quit ever fired from\n"
+            "\t\t\t\t * the menu, even with the WMHI_MENUMASK fix below already in\n"
+            "\t\t\t\t * place - RA_HandleInput() simply never reported WMHI_MENUPICK/\n"
+            "\t\t\t\t * WMHI_CLOSEWINDOW in the first place. Add more flags here\n"
+            "\t\t\t\t * (IDCMP_GADGETUP, IDCMP_NEWSIZE, ...) as you add more gadgets. */\n"
+            "\t\t\t\tWA_IDCMP,             IDCMP_CLOSEWINDOW | IDCMP_MENUPICK,\n"
+            "\t\t\t\tWINDOW_Position,      WPOS_CENTERSCREEN,\n"
+            "\t\t\t\tWINDOW_ParentGroup,   (ULONG)layoutObj,\n"
+            "\t\t\t\tWINDOW_IconifyGadget, FALSE,\n"
+            "\t\t\t\tTAG_DONE);\n\n"
+            "\t\t\tif (winObj)\n"
+            "\t\t\t{\n"
+            "\t\t\t\t/* RA_OpenWindow()/RA_HandleInput()/RA_CloseWindow() (from\n"
+            "\t\t\t\t * <reaction/reaction_macros.h>) are the confirmed-correct,\n"
+            "\t\t\t\t * idiomatic way to drive a window.class object - thin wrappers\n"
+            "\t\t\t\t * around DoMethod(obj, WM_OPEN)/WM_HANDLEINPUT/WM_CLOSE. */\n"
+            "\t\t\t\tstruct Window *win = RA_OpenWindow(winObj);\n\n"
+            "\t\t\t\tif (win)\n"
+            "\t\t\t\t{\n"
+            "\t\t\t\t\tBOOL running = TRUE;\n"
+            "\t\t\t\t\tULONG winSig = 0;\n\n"
+            "\t\t\t\t\tGetAttr(WINDOW_SigMask, winObj, &winSig);\n"
+            "\t\t\t\t\tif (menuStrip)\n"
+            "\t\t\t\t\t\tSetMenuStrip(win, menuStrip);\n\n"
+            "\t\t\t\t\twhile (running)\n"
+            "\t\t\t\t\t{\n"
+            "\t\t\t\t\t\tULONG sigs = Wait(winSig | SIGBREAKF_CTRL_C);\n"
+            "\t\t\t\t\t\tULONG result;\n"
+            "\t\t\t\t\t\tUWORD code;\n\n"
+            "\t\t\t\t\t\tif (sigs & SIGBREAKF_CTRL_C)\n"
+            "\t\t\t\t\t\t\tbreak;\n\n"
+            "\t\t\t\t\t\twhile ((result = RA_HandleInput(winObj, &code)) != WMHI_LASTMSG)\n"
+            "\t\t\t\t\t\t{\n"
+            "\t\t\t\t\t\t\tswitch (result & WMHI_CLASSMASK)\n"
+            "\t\t\t\t\t\t\t{\n"
+            "\t\t\t\t\t\t\tcase WMHI_CLOSEWINDOW:\n"
+            "\t\t\t\t\t\t\t\trunning = FALSE;\n"
+            "\t\t\t\t\t\t\t\tbreak;\n\n"
+            "\t\t\t\t\t\t\tcase WMHI_MENUPICK:\n"
+            "\t\t\t\t\t\t\t{\n"
+            "\t\t\t\t\t\t\t\t/* result & WMHI_MENUMASK (NOT a raw (UWORD)result cast, which\n"
+            "\t\t\t\t\t\t\t\t * an earlier version of this template used - confirmed wrong:\n"
+            "\t\t\t\t\t\t\t\t * neither MENU_ABOUT nor MENU_QUIT ever fired) extracts the\n"
+            "\t\t\t\t\t\t\t\t * packed MENUNUM/ITEMNUM back out of result; ItemAddress() +\n"
+            "\t\t\t\t\t\t\t\t * GTMENUITEM_USERDATA() then resolve that to the NewMenu entry's\n"
+            "\t\t\t\t\t\t\t\t * own nm_UserData (MENU_ABOUT/MENU_QUIT above) - the standard\n"
+            "\t\t\t\t\t\t\t\t * gadtools.library way to identify which item was picked. */\n"
+            "\t\t\t\t\t\t\t\tstruct MenuItem *item = ItemAddress(menuStrip, result & WMHI_MENUMASK);\n\n"
+            "\t\t\t\t\t\t\t\tif (item)\n"
+            "\t\t\t\t\t\t\t\t{\n"
+            "\t\t\t\t\t\t\t\t\tswitch ((ULONG)GTMENUITEM_USERDATA(item))\n"
+            "\t\t\t\t\t\t\t\t\t{\n"
+            "\t\t\t\t\t\t\t\t\tcase MENU_ABOUT:\n"
+            "\t\t\t\t\t\t\t\t\t{\n"
+            "\t\t\t\t\t\t\t\t\t\t/* requester.class - ReAction's own BOOPSI requester,\n"
+            "\t\t\t\t\t\t\t\t\t\t * used here instead of the older Intuition EasyRequest()\n"
+            "\t\t\t\t\t\t\t\t\t\t * for a look consistent with the rest of the ReAction GUI.\n"
+            "\t\t\t\t\t\t\t\t\t\t * RM_OPENREQ opens it modally over 'win' and blocks until\n"
+            "\t\t\t\t\t\t\t\t\t\t * the user picks the (single, \"OK\") gadget. */\n"
+            "\t\t\t\t\t\t\t\t\t\tObject *reqObj = NewObject(REQUESTER_GetClass(), NULL,\n"
+            "\t\t\t\t\t\t\t\t\t\t\tREQ_TitleText,  (ULONG)\"About this Program\",\n"
+            "\t\t\t\t\t\t\t\t\t\t\tREQ_BodyText,   (ULONG)\"This Programm was created with the help of AmigaED 4.0\",\n"
+            "\t\t\t\t\t\t\t\t\t\t\tREQ_GadgetText, (ULONG)\"OK\",\n"
+            "\t\t\t\t\t\t\t\t\t\t\tREQ_Image,      REQIMAGE_INFO,\n"
+            "\t\t\t\t\t\t\t\t\t\t\tTAG_DONE);\n\n"
+            "\t\t\t\t\t\t\t\t\t\tif (reqObj)\n"
+            "\t\t\t\t\t\t\t\t\t\t{\n"
+            "\t\t\t\t\t\t\t\t\t\t\tDoMethod(reqObj, RM_OPENREQ, NULL, win, NULL);\n"
+            "\t\t\t\t\t\t\t\t\t\t\tDisposeObject(reqObj);\n"
+            "\t\t\t\t\t\t\t\t\t\t}\n"
+            "\t\t\t\t\t\t\t\t\t\tbreak;\n"
+            "\t\t\t\t\t\t\t\t\t}\n\n"
+            "\t\t\t\t\t\t\t\t\tcase MENU_QUIT:\n"
+            "\t\t\t\t\t\t\t\t\t\trunning = FALSE;\n"
+            "\t\t\t\t\t\t\t\t\t\tbreak;\n"
+            "\t\t\t\t\t\t\t\t\t}\n"
+            "\t\t\t\t\t\t\t\t}\n"
+            "\t\t\t\t\t\t\t\tbreak;\n"
+            "\t\t\t\t\t\t\t}\n"
+            "\t\t\t\t\t\t\t}\n"
+            "\t\t\t\t\t\t}\n"
+            "\t\t\t\t\t}\n\n"
+            "\t\t\t\t\tRA_CloseWindow(winObj);\n"
+            "\t\t\t\t}\n"
+            "\t\t\t\telse\n"
+            "\t\t\t\t{\n"
+            "\t\t\t\t\tPrintf(\"Failed to open the window (RA_OpenWindow returned NULL).\\n\");\n"
+            "\t\t\t\t}\n\n"
+            "\t\t\t\tDisposeObject(winObj);\n"
+            "\t\t\t}\n"
+            "\t\t\telse\n"
+            "\t\t\t{\n"
+            "\t\t\t\tPrintf(\"Failed to create the window object (NewObject returned NULL).\\n\");\n"
+            "\t\t\t}\n\n"
+            "\t\t\tif (menuStrip) FreeMenus(menuStrip);\n"
+            "\t\t}\n"
+            "\t\telse\n"
+            "\t\t{\n"
+            "\t\t\tPrintf(\"Failed to lock the screen / get VisualInfo.\\n\");\n"
+            "\t\t}\n\n"
+            "\t\tif (visualInfo) FreeVisualInfo(visualInfo);\n"
+            "\t\tif (pubScreen)  UnlockPubScreen(NULL, pubScreen);\n"
             "\t}\n"
             "\telse\n"
             "\t{\n"
+            "\t\tPrintf(\"Failed to open one or more required libraries:\\n\");\n"
+            "\t\tif (!IntuitionBase) Printf(\" - intuition.library\\n\");\n"
+            "\t\tif (!GadToolsBase)  Printf(\" - gadtools.library\\n\");\n"
+            "\t\tif (!WindowBase)    Printf(\" - window.class\\n\");\n"
+            "\t\tif (!LayoutBase)    Printf(\" - gadgets/layout.gadget\\n\");\n"
+            "\t\tif (!LabelBase)     Printf(\" - images/label.image\\n\");\n"
+            "\t\tif (!RequesterBase) Printf(\" - requester.class\\n\");\n"
             "\t\trc = 20;\n"
             "\t}\n\n"
-            "\tif (UtilityBase)   CloseLibrary(UtilityBase);\n"
-            "\tif (IntuitionBase) CloseLibrary(IntuitionBase);\n\n"
+            "\tif (RequesterBase) CloseLibrary(RequesterBase);\n"
+            "\tif (LabelBase)     CloseLibrary(LabelBase);\n"
+            "\tif (LayoutBase)    CloseLibrary(LayoutBase);\n"
+            "\tif (WindowBase)    CloseLibrary(WindowBase);\n"
+            "\tif (GadToolsBase)  CloseLibrary(GadToolsBase);\n"
+            "\tif (IntuitionBase) CloseLibrary((struct Library *)IntuitionBase);\n\n"
             "\treturn rc;\n"
             "}\n";
 
     case 5: // MUI Project
         return header +
-            "/* MUI 5 (Stephan Stuntz) skeleton - a STARTING POINT only: it opens\n"
-            " * muimaster.library and creates an empty Application object. Add\n"
-            " * windows/gadgets to the application object as needed. */\n"
+            "/* MUI 5 (Stephan Stuntz) skeleton: opens muimaster.library, builds an\n"
+            " * Application object with a File menu (About/Quit) and a small window,\n"
+            " * and runs the standard MUI event loop. Add further gadgets to the\n"
+            " * window's MUIA_Window_RootObject as your program grows.\n"
+            " * <libraries/gadtools.h> is needed here purely for struct NewMenu and\n"
+            " * the NM_TITLE/NM_ITEM/NM_END constants below - gadtools.library\n"
+            " * itself is never opened/called, MUI_MakeObject(MUIO_MenustripNM, ...)\n"
+            " * converts that classic NewMenu array into a MUI menustrip object. */\n"
             "#include <exec/types.h>\n"
+            "#include <dos/dos.h>\n"
+            "#include <libraries/mui.h>\n"
+            "#include <libraries/gadtools.h>\n"
             "#include <proto/exec.h>\n"
-            "#include <proto/muimaster.h>\n"
-            "#include <libraries/mui.h>\n\n"
+            "#include <proto/dos.h>\n"
+            "#include <proto/muimaster.h>\n\n"
             "#define myDebug TRUE\n\n"
+            "#define MENU_ABOUT 1\n"
+            "#define MENU_QUIT  2\n\n"
             "struct Library *MUIMasterBase;\n\n"
             "int main(int argc, char *argv[])\n"
             "{\n"
-            "\tAPTR app;\n"
+            "\tAPTR app, win, menustrip;\n"
             "\tint rc = 0;\n\n"
+            "\t/* Classic Intuition NewMenu array - MUI_MakeObject(MUIO_MenustripNM, ...)\n"
+            "\t * below turns this into a proper MUI menustrip object. */\n"
+            "\tstruct NewMenu nm[] =\n"
+            "\t{\n"
+            "\t\t{ NM_TITLE, (STRPTR)\"File\",     NULL,         0, 0, NULL },\n"
+            "\t\t{  NM_ITEM, (STRPTR)\"About...\", NULL,         0, 0, (APTR)MENU_ABOUT },\n"
+            "\t\t{  NM_ITEM, (STRPTR)\"Quit\",     (STRPTR)\"Q\", 0, 0, (APTR)MENU_QUIT },\n"
+            "\t\t{ NM_END,   NULL,               NULL,         0, 0, NULL }\n"
+            "\t};\n\n"
             "\tMUIMasterBase = OpenLibrary(MUIMASTER_NAME, MUIMASTER_VMIN);\n"
             "\tif (!MUIMasterBase)\n"
             "\t\treturn 20;\n\n"
+            "\tmenustrip = MUI_MakeObject(MUIO_MenustripNM, nm, 0);\n\n"
             "\tapp = MUI_NewObject(MUIC_Application,\n"
             "\t\tMUIA_Application_Title,       (ULONG)\"" + baseName + "\",\n"
             "\t\tMUIA_Application_Version,     (ULONG)\"$VER: " + baseName + " 1.0\",\n"
@@ -6248,17 +6949,63 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             "\t\tMUIA_Application_Author,      (ULONG)\"You\",\n"
             "\t\tMUIA_Application_Description, (ULONG)\"An MUI application\",\n"
             "\t\tMUIA_Application_Base,        (ULONG)\"" + baseName.toUpper() + "\",\n"
+            "\t\tMUIA_Application_Menustrip,   (ULONG)menustrip,\n"
+            "\t\tMUIA_Application_Window,      win = MUI_NewObject(MUIC_Window,\n"
+            "\t\t\tMUIA_Window_Title,      (ULONG)\"" + baseName + "\",\n"
+            "\t\t\tMUIA_Window_Width,      320,\n"
+            "\t\t\tMUIA_Window_Height,     120,\n"
+            "\t\t\t/* A window with no content (no RootObject at all) is not a\n"
+            "\t\t\t * valid, functioning MUI window - it may fail to open, or open\n"
+            "\t\t\t * with nothing visible, without MUI reporting any error for it\n"
+            "\t\t\t * anywhere. Replace this placeholder Text object with your\n"
+            "\t\t\t * actual gadgets/groups as the program grows. */\n"
+            "\t\t\tMUIA_Window_RootObject, MUI_NewObject(MUIC_Text,\n"
+            "\t\t\t\tMUIA_Text_Contents, (ULONG)\"Hello from MUI!\",\n"
+            "\t\t\t\tMUIA_Frame,         MUIV_Frame_Text,\n"
+            "\t\t\t\tMUIA_Background,    MUII_TextBack,\n"
+            "\t\t\t\tTAG_DONE),\n"
+            "\t\t\tTAG_DONE),\n"
             "\t\tTAG_DONE);\n\n"
-            "\tif (app)\n"
+            "\tif (app && win)\n"
             "\t{\n"
-            "\t\t/* TODO: add a window via MUIA_Application_Window, then run the\n"
-            "\t\t * event loop: DoMethod(app, MUIM_Application_Execute) */\n"
-            "\t\tMUI_DisposeObject(app);\n"
+            "\t\tBOOL running = TRUE;\n"
+            "\t\tULONG sigs = 0;\n\n"
+            "\t\t/* Both the window's close gadget and the Quit menu item feed into\n"
+            "\t\t * the same Application_ReturnID mechanism, so the event loop below\n"
+            "\t\t * only has to check for MUIV_Application_ReturnID_Quit once. */\n"
+            "\t\tDoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,\n"
+            "\t\t\t(ULONG)app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);\n\n"
+            "\t\tset(win, MUIA_Window_Open, TRUE);\n\n"
+            "\t\twhile (running)\n"
+            "\t\t{\n"
+            "\t\t\tULONG id = DoMethod(app, MUIM_Application_NewInput, &sigs);\n\n"
+            "\t\t\tswitch (id)\n"
+            "\t\t\t{\n"
+            "\t\t\tcase MENU_ABOUT:\n"
+            "\t\t\t\t/* MUI_Request() - the standard MUI way to pop up a simple modal\n"
+            "\t\t\t\t * info requester (like EasyRequest(), but MUI-native/themeable). */\n"
+            "\t\t\t\tMUI_Request(app, win, 0, \"About this Program\", \"OK\",\n"
+            "\t\t\t\t\t\"This Programm was created with the help of AmigaED 4.0\");\n"
+            "\t\t\t\tbreak;\n\n"
+            "\t\t\tcase MENU_QUIT:\n"
+            "\t\t\tcase (ULONG)MUIV_Application_ReturnID_Quit:\n"
+            "\t\t\t\trunning = FALSE;\n"
+            "\t\t\t\tbreak;\n"
+            "\t\t\t}\n\n"
+            "\t\t\tif (running && sigs)\n"
+            "\t\t\t\tsigs = Wait(sigs | SIGBREAKF_CTRL_C);\n\n"
+            "\t\t\tif (sigs & SIGBREAKF_CTRL_C)\n"
+            "\t\t\t\trunning = FALSE;\n"
+            "\t\t}\n\n"
+            "\t\tset(win, MUIA_Window_Open, FALSE);\n"
             "\t}\n"
             "\telse\n"
             "\t{\n"
+            "\t\tPrintf(\"Failed to create the Application/Window objects.\\n\");\n"
             "\t\trc = 20;\n"
             "\t}\n\n"
+            "\tif (app)\n"
+            "\t\tMUI_DisposeObject(app);\n"
             "\tCloseLibrary(MUIMasterBase);\n"
             "\treturn rc;\n"
             "}\n";
@@ -6266,7 +7013,9 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
     case 0: // Empty Amiga C Project
     default:
         return header +
-            "#include <stdio.h>\n\n"
+            "#include <stdio.h>\n"
+            "#include <dos/dos.h>\n"
+            "#include <proto/dos.h>\n\n"
             "#define myDebug TRUE\n\n"
             "int main(int argc, char *argv[])\n"
             "{\n"
@@ -6278,18 +7027,68 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
 }
 
 //
+// Writes AmigaED's own built-in Amiga tool icon (a small, multi-coloured
+// classic Workbench icon - see resources/amigaed_tool.info, and
+// iconbuild/make_icon.py in the AmigaED source tree for exactly how it was
+// built byte-for-byte) to "<executablePath>.info", with its do_StackSize
+// field patched to the given value.
+//
+// Replaces the old approach (a user-selected "default icon" file, copied
+// into place by a shell command embedded in the generated Makefile) - that
+// copy command was a recurring source of Windows-specific breakage (sh.exe/
+// cmd.exe quoting/escaping quirks - see rev.94/rev.98's fixes for the same
+// underlying issue). Writing the icon directly from within AmigaED itself,
+// in Qt/C++, sidesteps the whole shell-quoting problem entirely, and means
+// there's no per-user "default icon" file to configure or lose track of.
+//
+// do_StackSize sits at a fixed byte offset (74) within the classic
+// DiskObject-format .info file - see make_icon.py's own on-disk layout
+// comments for the full structure this offset comes from.
+//
+bool MainWindow::writeProgramIcon(const QString &executablePath, long stackSize) const
+{
+    QFile templateFile(QStringLiteral(":/icons/amigaed_tool.info"));
+    if (!templateFile.open(QIODevice::ReadOnly))
+        return false;
+
+    QByteArray bytes = templateFile.readAll();
+    templateFile.close();
+
+    const int stackSizeOffset = 74;
+    if (bytes.size() < stackSizeOffset + 4)
+        return false;   // the embedded template is corrupt/truncated - shouldn't happen
+
+    bytes[stackSizeOffset + 0] = static_cast<char>((stackSize >> 24) & 0xFF);
+    bytes[stackSizeOffset + 1] = static_cast<char>((stackSize >> 16) & 0xFF);
+    bytes[stackSizeOffset + 2] = static_cast<char>((stackSize >> 8) & 0xFF);
+    bytes[stackSizeOffset + 3] = static_cast<char>(stackSize & 0xFF);
+
+    QFile out(executablePath + QStringLiteral(".info"));
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        return false;
+
+    bool ok = (out.write(bytes) == bytes.size());
+    out.close();
+    return ok;
+}
+
+//
 // Shared implementation behind all six "New Project" menu entries:
 // choose a directory + name, ask for extra compiler/linker options, write
 // the main file's skeleton, save the .aep, and generate its Makefiles.
 //
-// Close every open tab that either belongs to the currently loaded project
-// (i.e. its file path is tracked in currentProject->files) or is still an
-// untitled, never-saved buffer ("untitled.c") - with the usual per-tab
-// save confirmation (see maybeSave()). Tabs open on unrelated, already-
-// saved files that are NOT part of the project are left untouched, so
-// unrelated work in progress never gets closed just because a different
-// project is being opened. Returns false (and leaves everything as-is) if
-// the user cancelled a save prompt partway through.
+// Close every open tab that belongs to the currently loaded project - either
+// tracked in currentProject->files, OR simply sitting in the project's own
+// directory (this also catches its auto-generated Makefiles, which are
+// deliberately NOT tracked in currentProject->files - see
+// actionRemoveFileFromProject() - but are still very much part of the
+// project if a tab happens to have one open) - or is still an untitled,
+// never-saved buffer ("untitled.c"), with the usual per-tab save
+// confirmation (see maybeSave()). Tabs open on unrelated, already-saved
+// files that are NOT part of the project are left untouched, so unrelated
+// work in progress never gets closed just because a different project is
+// being opened. Returns false (and leaves everything as-is) if the user
+// cancelled a save prompt partway through.
 //
 bool MainWindow::closeProjectTabs()
 {
@@ -6306,7 +7105,12 @@ bool MainWindow::closeProjectTabs()
 
         QString path = editor->property("amigaed_filePath").toString();
         bool isUntitled = path.isEmpty();
-        bool belongsToOldProject = currentProject && !isUntitled && currentProject->contains(path);
+        bool belongsToOldProject = false;
+        if (currentProject && !isUntitled)
+        {
+            belongsToOldProject = currentProject->contains(path) ||
+                    QFileInfo(path).absolutePath() == currentProject->projectDir();
+        }
 
         if (!isUntitled && !belongsToOldProject)
             continue;   // an unrelated, already-saved file - leave it open
@@ -6885,6 +7689,41 @@ void MainWindow::actionSaveProject()
     }
 
     createStatusBarMessage(tr("Project \"%1\" saved.").arg(currentProject->name), 2000);
+}
+
+//
+// File/Close Project: closes every tab belonging to the current project
+// (prompting to save any with unsaved changes first, via the same
+// closeProjectTabs() used when loading a different project - see
+// loadProjectFile()) and returns to the "no project loaded" state.
+// Cancelling any one of those save prompts aborts the whole thing,
+// leaving the project and all its tabs open exactly as they were.
+//
+void MainWindow::actionCloseProject()
+{
+    if (!currentProject)
+    {
+        QMessageBox::information(this, tr(AMIGAED_VERSION_STRING), tr("No project is currently loaded."));
+        return;
+    }
+
+    const QString projectName = currentProject->name;
+
+    if (!closeProjectTabs())
+        return;   // user cancelled a save prompt - leave the project and its tabs open
+
+    delete currentProject;
+    currentProject = nullptr;
+    p_projectModified = false;
+    saveProjectAct->setEnabled(false);
+
+    refreshProjectTree();
+    refreshFunctionsList();
+
+    if (tabWidget->count() == 0)
+        newEditorTab();   // safety net - always leave at least one tab open
+
+    createStatusBarMessage(tr("Project \"%1\" closed.").arg(projectName), 3000);
 }
 
 //
@@ -7592,10 +8431,20 @@ void MainWindow::showCustomContextMenue(const QPoint &pos)
     // name the context menue
     QMenu contextMenu(tr("Inserts"), this);
 
-    // Search and Replace - topmost entry, ahead of (and separated from)
-    // the "Inserts" section below. Not part of that mirrored section
-    // (see the comment on contextMenu.addAction(&pseudo_action) further
-    // down) since searching/replacing isn't a code-insertion template.
+    // Comment/Uncomment Block - the very topmost entry, ahead of even
+    // Search and Replace below. Deliberately promoted out of the
+    // "Comments..." submenu it still sits in on the main Inserts menu:
+    // as a quick, frequently-reached-for test/debug tool, one that
+    // needed a submenu hover to reach here was a real usability
+    // complaint - a plain top-level entry needs just one click.
+    contextMenu.addAction(toggleCommentBlockAct);
+    contextMenu.addSeparator();
+
+    // Search and Replace - also topmost (just below Comment/Uncomment
+    // Block), ahead of (and separated from) the "Inserts" section below.
+    // Not part of that mirrored section (see the comment on
+    // contextMenu.addAction(&pseudo_action) further down) since
+    // searching/replacing isn't a code-insertion template.
     contextMenu.addAction(contextSearchReplaceAct);
     contextMenu.addSeparator();
 
@@ -7813,7 +8662,31 @@ void MainWindow::emu_finished(int exitCode, QProcess::ExitStatus exitStatus)
 //
 void MainWindow::checkEmulatorStillRunning()
 {
-    if (myEmulator.state() == QProcess::NotRunning && killEmulatorAct->isEnabled())
+    if (p_externalEmulatorTracked)
+    {
+        // A process AmigaED itself didn't start (myEmulator stays
+        // NotRunning/null throughout this case) - re-check by name
+        // periodically instead, since there's no QProcess::finished()
+        // signal to tell us the moment it exits. Handled as an early
+        // return of its own: myEmulator being NotRunning/null here too
+        // would otherwise also satisfy the plain-old-tracking check
+        // below and reset the UI immediately, even while this
+        // externally-tracked process is still very much running.
+        if (!isEmulatorProcessRunningExternally())
+        {
+            if(p_mydebug)
+                qDebug() << "checkEmulatorStillRunning(): externally-tracked emulator no longer running - resyncing.";
+
+            p_externalEmulatorTracked = false;
+            emulatorMenue->setEnabled(true);
+            emulatorAct->setEnabled(true);
+            killEmulatorAct->setDisabled(true);
+            createStatusBarMessage(tr("Emulator is no longer running."), 4000);
+        }
+        return;
+    }
+
+    if ((!myEmulator || myEmulator->state() == QProcess::NotRunning) && killEmulatorAct->isEnabled())
     {
         if(p_mydebug)
             qDebug() << "checkEmulatorStillRunning(): emulator no longer running, but toolbar still showed it as active - resyncing.";
@@ -8012,6 +8885,7 @@ void MainWindow::readCommand()
     // buffer at process end, so streamed and final output are now
     // handled consistently.
     output->appendPlainText(cmd->readAll());
+    highlightOutputDiagnostics();
 }
 
 
@@ -8021,6 +8895,7 @@ void MainWindow::readCommand()
 int MainWindow::stopCommand(int exitCode, QProcess::ExitStatus exitStatus)
 {
     output->appendPlainText(cmd->readAll());
+    highlightOutputDiagnostics();
 
     if(p_mydebug)
         qDebug() << "In stopCommand()\nexitCode: " << QString::number(exitCode);
@@ -8067,6 +8942,23 @@ int MainWindow::stopCommand(int exitCode, QProcess::ExitStatus exitStatus)
         {
             createStatusBarMessage(tr("%1: Project build finished successfully.").arg(p_lastRunCompilerLabel), 0);
             refreshProjectTree();   // pick up the freshly built executable - see the "Executable" category scan there
+
+            if (p_create_icon && currentProject)
+            {
+                // OS 1.3 needs the least stack of the four; MUI's own
+                // overhead needs considerably more than a plain console
+                // program or even a ReAction one - see createNewProject()
+                // for what each numeric templateKind means.
+                long stackSize;
+                switch (currentProject->templateKind)
+                {
+                case 2:  stackSize = 4096;  break;   // AmigaOS 1.3
+                case 4:  stackSize = 16000; break;   // ReAction
+                case 5:  stackSize = 34000; break;   // MUI
+                default: stackSize = 8192;  break;   // Empty C / Shell / AmigaOS 3.x
+                }
+                writeProgramIcon(expectedTarget, stackSize);
+            }
         }
 
         return exitCode;
@@ -8124,49 +9016,27 @@ int MainWindow::stopCommand(int exitCode, QProcess::ExitStatus exitStatus)
             // create icon for this app?
             if(p_create_icon)
             {
-                if(p_default_icon.isEmpty())    // if no icon file is set...
-                {
-                    (void)QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
-                                                tr("Default Amiga icon file not defined!\n"
-                                                   "You may now wset its location in preferences editor.\n\n"
-                                                   "Don't forget to restart Amiga Cross Editor afterwards!"),
-                                                QMessageBox::Ok);
+                // Single-file (ad-hoc) compiles have no Project/templateKind
+                // to go by, so the OS 1.3 vs 3.x stack size split falls
+                // back to the toolbar's own target-OS selection (the same
+                // one that already picks OS 1.3 vs OS 3.x compiler/linker
+                // options for this very compile) - MUI/ReAction sizes only
+                // apply to their own "New Project" templates, never here.
+                long stackSize = (p_compiler_vc_default_target == 0) ? 4096 : 8192;
 
-                    actionPrefsDialog(0);   // ...call prefsDialog's first TAB and exit this method!
-                    return 1;
+                if (!writeProgramIcon(p_compiledFile, stackSize))
+                {
+                    if(p_mydebug)
+                        qDebug() << "Icon could not be written!";
+
+                    (void)QMessageBox::information(this, tr(AMIGAED_VERSION_STRING),
+                                                    tr("Sorry - icon file could not be created!\n"),
+                                                    QMessageBox::Ok);
                 }
                 else
                 {
-                    // get executable path and build icon filename
-                    QString iconcopyfile = p_compiledFile + ".info";
-                    bool fileExists = QFileInfo::exists(iconcopyfile) && QFileInfo(iconcopyfile).isFile();
-
-                    // check if icon is allready there and delete it in that case!
-                    if(fileExists)
-                    {
-                        if(p_mydebug)
-                            qDebug() << "Icon allready exists. Now trying to delete!";
-                        if(!(QFile::remove(iconcopyfile)))
-                            // delete icon file first!
-                            if(p_mydebug)
-                                qDebug() << "Icon could not be deleted!";
-                    }
-
-                    // copy icon file to that path..
-                    if(!(QFile::copy(p_default_icon, iconcopyfile)))
-                    {
-                        if(p_mydebug)
-                            qDebug() << "Icon could not be copied!";
-
-                        (void)QMessageBox::information(this, tr(AMIGAED_VERSION_STRING),
-                                                        tr("Sorry - icon file could not bee created!\n"),
-                                                        QMessageBox::Ok);
-                    }
-                    else
-                    {
-                        if(p_mydebug)
-                            qDebug() << "Icon was successfully copied!";
-                    }
+                    if(p_mydebug)
+                        qDebug() << "Icon was successfully written!";
                 }
             }
         }
@@ -8381,34 +9251,23 @@ void MainWindow::finished(int exitCode, QProcess::ExitStatus exitStatus)
 //
 void MainWindow::on_output_cursorPositionChanged()
 {
-
     QString text_to_search;                         // keeps the line of text to parse
-    text_to_search.clear();
 
     QTextCursor txtCursor = output->textCursor();
-    QTextBlockFormat t_format;                      // for higlighting...
 
-    QString data = output->toPlainText();
-    QStringList strList = data.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
-
-    if(txtCursor.blockNumber() <= (strList.count()) -1 )
-    {
-        QString content = strList[txtCursor.blockNumber()];
-        if(!(content.isEmpty()))
-        {
-            if(p_mydebug)
-            {
-                qDebug() << "Line accepted. ";
-                qDebug() << "now looking for warnings and errors...";
-            }
-            // set search string for regEX checkup:
-            text_to_search = strList[txtCursor.blockNumber()];
-        }
-        else
-        {
-            text_to_search.clear();
-        }
-    }
+    // Read the clicked line directly from the document's own block
+    // structure - NOT via output->toPlainText().split('\n',
+    // Qt::SkipEmptyParts) (the previous approach): SkipEmptyParts
+    // removes blank lines from that list, but txtCursor.blockNumber()
+    // still counts them, so the two fell out of sync the moment the
+    // build output contained so much as one blank line before the
+    // clicked one - confirmed to be why clicking a line didn't always
+    // jump to the right place (or anywhere at all). findBlockByNumber()
+    // reads the exact block the cursor is actually in, with no
+    // re-splitting or index bookkeeping to get out of sync.
+    QTextBlock block = output->document()->findBlockByNumber(txtCursor.blockNumber());
+    if (block.isValid())
+        text_to_search = block.text();
 
     // Now let's do all the work for jumping to error/warning!
     if (!(text_to_search.isEmpty()))
@@ -8437,6 +9296,80 @@ void MainWindow::on_output_cursorPositionChanged()
         qDebug() << "//--- END on_outputCursorPositionChanged() DEBUG --------//";
 }
 
+//
+// Colours every error/warning line currently in the output pane -
+// errors and warnings each get their own colour (bold text + a tinted
+// background), chosen to stay readable against both a dark and a light
+// Base colour, since that's what actually differs between AmigaED's
+// themes (Dark uses a dark Base; every other theme - native styles,
+// Workbench 1.3, Workbench 3.1 - uses a plain white one). Reuses
+// checkVBCC()/checkGCC() themselves (selected by p_defaultCompiler, the
+// same as on_output_cursorPositionChanged()) to classify each line, so
+// a line is only ever coloured if it would also actually be clickable -
+// the two are deliberately kept driven by the exact same parse.
+//
+// Called after every batch of new compiler output is appended
+// (readCommand()/stopCommand()) - re-scans the whole pane each time
+// rather than trying to track incrementally-appended positions, which
+// is simpler and, for the size of output a single build/compile
+// produces, in practice instant.
+//
+void MainWindow::highlightOutputDiagnostics()
+{
+    if (!output)
+        return;
+
+    QColor errorBg, errorFg, warningBg, warningFg;
+    if (isDarkTheme())
+    {
+        errorBg   = QColor(0x5A, 0x1A, 0x1A);
+        errorFg   = QColor(0xFF, 0x6B, 0x6B);
+        warningBg = QColor(0x5A, 0x46, 0x14);
+        warningFg = QColor(0xFF, 0xCC, 0x66);
+    }
+    else
+    {
+        // Shared by every other theme (native styles, Workbench 1.3,
+        // Workbench 3.1) - all of them use a plain white output-pane
+        // background, so one light-appropriate scheme covers all three.
+        errorBg   = QColor(0xFF, 0xDD, 0xDD);
+        errorFg   = QColor(0xAA, 0x00, 0x00);
+        warningBg = QColor(0xFF, 0xF3, 0xCD);
+        warningFg = QColor(0x99, 0x66, 0x00);
+    }
+
+    QTextCharFormat errorFmt;
+    errorFmt.setBackground(errorBg);
+    errorFmt.setForeground(errorFg);
+    errorFmt.setFontWeight(QFont::Bold);
+
+    QTextCharFormat warningFmt;
+    warningFmt.setBackground(warningBg);
+    warningFmt.setForeground(warningFg);
+    warningFmt.setFontWeight(QFont::Bold);
+
+    QTextCharFormat plainFmt;   // clears background/bold on non-matching lines
+
+    QTextCursor cursor(output->document());
+    QTextBlock block = output->document()->begin();
+    while (block.isValid())
+    {
+        const QString lineText = block.text();
+        bool matched = (p_defaultCompiler == 0) ? checkVBCC(lineText) : checkGCC(lineText);
+
+        cursor.setPosition(block.position());
+        cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+
+        if (matched && errortype.contains(QStringLiteral("error"), Qt::CaseInsensitive))
+            cursor.setCharFormat(errorFmt);
+        else if (matched && errortype.contains(QStringLiteral("warning"), Qt::CaseInsensitive))
+            cursor.setCharFormat(warningFmt);
+        else
+            cursor.setCharFormat(plainFmt);
+
+        block = block.next();
+    }
+}
 
 //
 // RegEx parse VBCC output
@@ -8510,8 +9443,23 @@ bool MainWindow::checkGCC(QString str_to_search)
     // message contained any other number - e.g. a project folder
     // literally named "gcctest3", or a message like "expected 3
     // arguments, have 4".
-    static const QRegularExpression rx_gcc_with_col("^(.+?):(\\d+):(\\d+):\\s*(\\w+):\\s*(.*)$");
-    static const QRegularExpression rx_gcc_no_col("^(.+?):(\\d+):\\s*(\\w+):\\s*(.*)$");
+    // (\w+(?:\s+\w+)?) instead of a plain (\w+): GCC's most serious
+    // diagnostic level is literally two words, "fatal error:" - a bare
+    // \w+ can't match that at all (there's a space before "error", not
+    // the colon the rest of the pattern expects next), so those lines
+    // fell through as unrecognized entirely. Still matches plain single-
+    // word "error"/"warning"/"note" exactly as before.
+    // [A-Za-z]+, not \w+: \w+ also matches pure digits, which produced a
+    // confirmed false-positive match on GCC's own "In file included
+    // from foo.c:12:0:" lines (no message after the *first* colon-less
+    // form's pattern point, but "0" alone still satisfied a bare \w+ as
+    // if it were a diagnostic keyword) - silently making that line
+    // clickable (though never coloured, since "0" contains neither
+    // "error" nor "warning"). A real diagnostic keyword is always
+    // letters only, so this excludes that case structurally rather than
+    // trying to special-case "In file included from" by name.
+    static const QRegularExpression rx_gcc_with_col("^(.+?):(\\d+):(\\d+):\\s*([A-Za-z]+(?:\\s+[A-Za-z]+)?):\\s*(.*)$");
+    static const QRegularExpression rx_gcc_no_col("^(.+?):(\\d+):\\s*([A-Za-z]+(?:\\s+[A-Za-z]+)?):\\s*(.*)$");
 
     QRegularExpressionMatch match = rx_gcc_with_col.match(str_to_search);
     bool matched = match.hasMatch();
@@ -8534,6 +9482,19 @@ bool MainWindow::checkGCC(QString str_to_search)
             column_nr     = 0;                       // this form doesn't report a column
             errortype     = match.captured(3);
         }
+    }
+
+    if (matched)
+    {
+        // Belt-and-suspenders on top of the [A-Za-z]+ fix above: only
+        // GCC's own actual diagnostic keywords count as a real match -
+        // guards against any other coincidental "word before a colon"
+        // text structurally matching the pattern without actually being
+        // a compiler diagnostic.
+        static const QRegularExpression rx_known_type("^(error|warning|note|fatal\\s+error)$",
+                                                        QRegularExpression::CaseInsensitiveOption);
+        if (!rx_known_type.match(errortype).hasMatch())
+            matched = false;
     }
 
     if (!matched)
@@ -8723,21 +9684,22 @@ void MainWindow::doSearchAndReplace(SearchReplaceAction action)
     case SearchReplaceAction::Replace:
     {
         const QString replaceText = lineEdit_replace->text();
-        const QString selected = textEdit->selectedText();
 
-        // Only replace in place if the current selection already IS a
-        // match for the search text (i.e. it came from a previous
-        // find) - otherwise just find the first occurrence, same as
-        // most editors' "Replace" button on first use.
-        const bool selectionMatches = caseSensitive
-                ? (selected == findText)
-                : (selected.compare(findText, Qt::CaseInsensitive) == 0);
-
-        if (selectionMatches)
+        // Rewritten (rev.101): the previous version only replaced when
+        // the CURRENT selection's text compared exactly equal to the
+        // search term (case/whole-word aware) - reported (and
+        // reproduced) as needing the button pressed multiple times
+        // before it ever actually replaced anything, apparently only
+        // "waking up" after a Replace All had already run once. Rather
+        // than chase that exact comparison's failure mode further, this
+        // now simply trusts that ANY current selection is the match
+        // Find/Next just left behind - the same assumption virtually
+        // every editor's single "Replace" button makes - and replaces
+        // it outright, then advances to the next occurrence so repeated
+        // clicks step through the document one at a time.
+        if (textEdit->hasSelectedText())
         {
             textEdit->replace(replaceText);
-            // Move on to the next occurrence so repeated clicks step
-            // through the whole document.
             if (!textEdit->findNext())
                 createStatusBarMessage(tr("No more occurrences of \"%1\".").arg(findText), 4000);
         }

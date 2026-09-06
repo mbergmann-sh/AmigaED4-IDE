@@ -65,6 +65,9 @@
 #include <QTextEdit>
 #include <QPlainTextEdit>
 #include <QTextCursor>
+#include <QTextBlock>
+#include <QTextCharFormat>
+#include <QTextDocument>
 #include <QGroupBox>
 #include <QPair>
 #include <QVBoxLayout>
@@ -167,7 +170,6 @@ public:
     QString p_website;
     QString p_version = "1.0";
     QString p_revision = "0";
-    QString p_default_icon;
     QString p_compiler ;                     // C-Compiler to call...
     QString p_compiler_call;
     QString p_compiler_gcc;             // Path to gcc executable
@@ -272,6 +274,7 @@ public slots:
     bool checkVBCC(QString str_to_search);              // RegEX VBCC messages : jump to line x - returns true if the line actually matched a diagnostic
     bool checkGCC(QString str_to_search);               // RegEX GCC/G++ messages : jump to line x - returns true if the line actually matched a diagnostic
     void jumpToError(int error_line, int error_column); // set cursor to error line and column, switching file if needed
+    void highlightOutputDiagnostics();                  // colours every error/warning line in the output pane (theme-aware) - called after new compiler output is appended
     QString resolveDebugFilePath(const QString &fileName); // resolve a compiler-reported filename to a loadable path
 
     // --- Project management (AmigaED v3.3) --------------------------
@@ -293,6 +296,7 @@ public slots:
     void actionAddFileToProject();
     void actionRemoveFileFromProject();
     void actionSaveProject();
+    void actionCloseProject();     // closes the current project's tabs (with save prompts) and returns to the "no project loaded" state
     void actionSetAsMainFile();
 
     // --- Tabbed editor (AmigaED v3.2) -------------------------------
@@ -356,6 +360,8 @@ private slots:
     int actionCompile();                // calls compilation of current file
     // Emulator
     bool actionEmulator();              // starts default UAE
+    bool isEmulatorProcessRunningExternally() const;   // true if an emulator process is already running on the system, whether or not AmigaED itself started it - see actionEmulator()
+    void killExternalEmulatorProcess();                // terminates a matching emulator process AmigaED didn't itself start (see p_externalEmulatorTracked) - used by actionKillEmulator()
     void actionEmuOS13();               // sets UAE default to Workbench 1.3 and calls actionEmulator()
     void actionEmuOS30();               // sets UAE default to Workbench 3.x and calls actionEmulator()
 
@@ -364,6 +370,7 @@ private slots:
     // viewMenue and submenue actions
     void actionShowLineNumbers();         // show or hide line numbers
     void actionShowCaretLine();           // show or hide caret line
+    void actionSelectTheme();             // View/Theme entry clicked - applies the clicked action's own text as the new p_default_style
     void actionShowDebug();               // sets showing or hideing for debugging informations
     void actionShowEOL();                 // show or hide EOL character
     void actionShowUnprintable();         // show or hide unprintable characters
@@ -421,7 +428,31 @@ private:
     QProcess *cmd;
     QProcess proc;
     QProcess myProcess;                                                 // we need a QProcess to run a compiler...
-    QProcess myEmulator;
+    // Heap-allocated (not a plain value member) and deliberately given NO
+    // QObject parent, precisely so that when the user chooses to leave
+    // the emulator running while AmigaED exits (see closeEvent()), we can
+    // simply not touch it at all: QProcess's own destructor kills the
+    // child process if it's still running when destroyed (confirmed: this
+    // produced a spurious "CrashExit - UAE has a problem!!" report right
+    // as AmigaED closed, even after choosing "leave it open" - the
+    // destructor's kill()+waitForFinished() synchronously triggers
+    // finished() with CrashExit before returning), and a QObject parented
+    // to MainWindow would be destroyed automatically right along with it
+    // for the same reason. Left un-deleted at exit, on purpose, it simply
+    // survives - the OS reclaims the (harmless, one-time, only-at-actual-
+    // process-exit) memory regardless of whether our own destructor ran.
+    QProcess *myEmulator = nullptr;
+
+    // True once the user has been told a matching emulator process is
+    // already running externally (see actionEmulator()'s "start another
+    // instance anyway?" prompt) and chose not to start a second one -
+    // Start/Stop then need to apply to THAT process instead of
+    // myEmulator (which stays NotRunning/null in this case, since
+    // AmigaED never actually launched anything itself). Reset back to
+    // false once that process is confirmed gone, whether by
+    // killExternalEmulatorProcess() or by checkEmulatorStillRunning()'s
+    // periodic poll noticing it ended on its own.
+    bool p_externalEmulatorTracked = false;
 
     // GUI creation...
     void createActions();                                               // defines actions for menues and toolbars
@@ -458,10 +489,16 @@ private:
     // (paper/text colours per lexer, margins, caret line, selection, ...)
     // so the whole application looks consistent, not just the app chrome.
     bool isDarkTheme() const;                     // true if p_default_style == "Dark"
+    bool isWorkbench13Theme() const;               // true if p_default_style == "Workbench 1.3"
+    bool isWorkbench31Theme() const;               // true if p_default_style == "Workbench 3.1"
     void applyApplicationStyle();                 // applies p_default_style to QApplication (called from the constructor and, live, from readSettings() when the style changed)
     QPalette darkApplicationPalette() const;       // the dark QPalette used together with "Fusion" for "Dark"
-    void applyLexerDarkColors(QsciLexer *lexer);   // recolors an already-created lexer's styles for the dark theme; no-op unless isDarkTheme()
+    QPalette workbench13ApplicationPalette() const; // the QPalette used together with "Fusion" for "Workbench 1.3"
+    QPalette workbench31ApplicationPalette() const; // the QPalette used together with "Fusion" for "Workbench 3.1"
+    void applyLexerDarkColors(QsciLexer *lexer);   // recolors an already-created lexer's styles for the current theme - dark colours for "Dark", or a reset back to this app's own light-theme colours otherwise
     void reapplyEditorTheme();                     // re-applies margin/caret/selection/lexer colors to every currently open tab - used when the style changes at runtime (Prefs closed / Shift+F12)
+    void buildThemeMenu();                         // populates View/Theme with one checkable, mutually-exclusive entry per available style (native styles + Dark/Workbench 1.3/Workbench 3.1) - called once from the constructor
+    void syncThemeMenuCheckedState();              // ensures the entry matching p_default_style is checked - called after buildThemeMenu() and whenever the style changes elsewhere (e.g. Prefs dialog)
 
 
     // Qscintila Editor widget instance - since AmigaED v3.2, always points
@@ -509,6 +546,7 @@ private:
     bool isDragDropAcceptableProjectFile(const QString &path) const;       // true for .c/.h/.cpp (and common variants incl. .c++/.h++), .guide, .txt/.readme (or a bare "README"), .asm/.s, .pas, or a Makefile - see eventFilter()
     bool projectUsesFloatingPoint() const;   // heuristic scan for "float"/"double" in the project's own C/C++ sources - see regenerateProjectMakefiles()
     QString mainFileTemplateContent(int templateKind, const QString &baseName) const; // skeleton content for a new project's main file
+    bool writeProgramIcon(const QString &executablePath, long stackSize) const;   // writes AmigaED's own built-in tool icon (see resources/amigaed_tool.info) to "<executablePath>.info", with do_StackSize patched to the given value
     void maybeOfferAddToProject(const QString &fileName); // called after a successful save - offers to add an untracked file
 
     // --- Functions panel (AmigaED v3.4) ---------------------------------
@@ -556,6 +594,8 @@ private:
     QMenu *buildMenue;          // holds compiler / build actions
     QMenu *navigationMenue;     // holds actions to move around in text
     QMenu *viewMenue;           // holds actions to change editors view
+    QMenu *themeMenue = nullptr;         // View/Theme - one checkable entry per available style, mutually exclusive (see buildThemeMenu())
+    QActionGroup *themeActionGroup = nullptr;   // enforces the mutual exclusion (radio-button behaviour) for themeMenue's entries
     QMenu *tabwidthMenue;       // Submenu of viewMenu, holds different values for tab width
     QMenu *syntaxMenue;         // holds actions to change syntax lexers
     QMenu *toolsMenue;          // holds misc actions
@@ -613,6 +653,7 @@ private:
     QAction *importExistingProjectAct;
     QAction *loadProjectAct;
     QAction *saveProjectAct;
+    QAction *closeProjectAct;
     QAction *addFilesToProjectAct;    // "Add files to Project..." menu entry - same slot as the project panel's "Add..." button (actionAddFileToProject())
     QAction *buildProjectAct;
     QAction *cleanProjectAct;

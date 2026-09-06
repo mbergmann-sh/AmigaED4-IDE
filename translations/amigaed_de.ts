@@ -150,6 +150,23 @@
         <translation>Speichert die Dateiliste und Einstellungen des aktuellen Projekts in dessen .aep, sofern es ungespeicherte Änderungen gibt</translation>
     </message>
     <message>
+        <location filename="../mainwindow.cpp" line="708"/>
+        <location filename="../mainwindow.cpp" line="1458"/>
+        <source>Close Project</source>
+        <translation>Projekt schließen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="709"/>
+        <location filename="../mainwindow.cpp" line="1544"/>
+        <source>Close the current project and all of its open tabs</source>
+        <translation>Schließt das aktuelle Projekt und alle dazugehörigen offenen Tabs</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="6935"/>
+        <source>Project "%1" closed.</source>
+        <translation>Projekt "%1" geschlossen.</translation>
+    </message>
+    <message>
         <location filename="../mainwindow.cpp" line="622"/>
         <location filename="../mainwindow.cpp" line="1386"/>
         <source>Add files to Project...</source>
@@ -1215,8 +1232,8 @@
         <translation>if(myDebug){...}-Debug-Block einfügen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="1126"/>
-        <location filename="../mainwindow.cpp" line="1490"/>
+        <location filename="../mainwindow.cpp" line="1154"/>
+        <location filename="../mainwindow.cpp" line="1528"/>
         <source>Comment/Uncomment Block</source>
         <translation>Block kommentieren/entkommentieren</translation>
     </message>
@@ -1449,6 +1466,12 @@
         <location filename="../mainwindow.cpp" line="1635"/>
         <source>GUI Language</source>
         <translation>Oberflächensprache</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1361"/>
+        <location filename="../mainwindow.cpp" line="1738"/>
+        <source>Theme</source>
+        <translation>Design</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="1275"/>
@@ -1766,6 +1789,25 @@ Anschließend müssen Sie Amiga Cross Editor neu starten!</translation>
         <translation>Es läuft bereits eine Emulator-Instanz - bitte zuerst stoppen.</translation>
     </message>
     <message>
+        <location filename="../mainwindow.cpp" line="4306"/>
+        <source>An emulator process (%1) already appears to be running - possibly left open from a previous AmigaED session, or started outside AmigaED entirely.
+
+Start another instance anyway?</source>
+        <translation>Es scheint bereits ein Emulator-Prozess (%1) zu laufen - möglicherweise aus einer früheren AmigaED-Sitzung offengelassen, oder ganz unabhängig von AmigaED gestartet.
+
+Trotzdem eine weitere Instanz starten?</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="4313"/>
+        <source>Not starting a second emulator instance.</source>
+        <translation>Es wird keine zweite Emulator-Instanz gestartet.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="452"/>
+        <source>AmigaED is shutting down while your Amiga Emulator is up and running. Do you want me to leave the Emulator open?</source>
+        <translation>AmigaED wird beendet, während dein Amiga-Emulator noch läuft. Soll ich den Emulator geöffnet lassen?</translation>
+    </message>
+    <message>
         <location filename="../mainwindow.cpp" line="4302"/>
         <source>There seems to be &lt;i&gt;&lt;b&gt;NO path to the emulator executable&lt;/b&gt;&lt;/i&gt; configured (UAE path)!&lt;br&gt;Please revisit the Prefs editor, Emulator tab, and set it.&lt;br&gt;&lt;br&gt;This helps, ya know?!</source>
         <translation>Es scheint &lt;i&gt;&lt;b&gt;KEIN Pfad zur Emulator-Programmdatei&lt;/b&gt;&lt;/i&gt; konfiguriert zu sein (UAE-Pfad)!&lt;br&gt;Bitte öffnen Sie die Einstellungen, Reiter Emulator, und tragen Sie ihn ein.&lt;br&gt;&lt;br&gt;Das hilft ungemein!</translation>
@@ -2016,6 +2058,7 @@ Overwrite it?</source>
         <location filename="../mainwindow.cpp" line="6722"/>
         <location filename="../mainwindow.cpp" line="6769"/>
         <location filename="../mainwindow.cpp" line="6853"/>
+        <location filename="../mainwindow.cpp" line="6912"/>
         <source>No project is currently loaded.</source>
         <translation>Aktuell ist kein Projekt geladen.</translation>
     </message>
@@ -2124,11 +2167,6 @@ Soll sie mit der hinzuzufügenden Datei überschrieben werden?</translation>
         <location filename="../mainwindow.cpp" line="5684"/>
         <source>No C/C++/assembler source file in the project yet - Makefiles not (re)generated.</source>
         <translation>Noch keine C/C++/Assembler-Quelldatei im Projekt - Makefiles wurden nicht (neu) erzeugt.</translation>
-    </message>
-    <message>
-        <location filename="../mainwindow.cpp" line="5822"/>
-        <source>&quot;create icon&quot; is enabled in Prefs, but no default icon file is set - Makefiles won&apos;t copy one.</source>
-        <translation>&quot;create icon&quot; ist in den Einstellungen aktiviert, aber es ist keine Standard-Icon-Datei festgelegt - die Makefiles kopieren keine.</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="7239"/>
@@ -2313,19 +2351,8 @@ Die Compilierung dauerte %1 Millisekunden.
 Sie können Ihr Programm jetzt in UAE testen.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="8100"/>
-        <source>Default Amiga icon file not defined!
-You may now wset its location in preferences editor.
-
-Don&apos;t forget to restart Amiga Cross Editor afterwards!</source>
-        <translation>Keine Standard-Amiga-Icon-Datei festgelegt!
-Sie können den Pfad jetzt in den Einstellungen setzen.
-
-Vergessen Sie nicht, Amiga Cross Editor anschließend neu zu starten!</translation>
-    </message>
-    <message>
-        <location filename="../mainwindow.cpp" line="8132"/>
-        <source>Sorry - icon file could not bee created!
+        <location filename="../mainwindow.cpp" line="8366"/>
+        <source>Sorry - icon file could not be created!
 </source>
         <translation>Entschuldigung - Icon-Datei konnte nicht erstellt werden!
 </translation>

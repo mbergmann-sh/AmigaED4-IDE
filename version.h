@@ -7,7 +7,7 @@
 // title) picks it up from AMIGAED_VERSION_STRING below, so there's
 // nothing else to keep in sync by hand when starting a new revision.
 //
-#define AMIGAED_REVISION 100
+#define AMIGAED_REVISION 126
 
 #define AMIGAED_STRINGIFY2(x) #x
 #define AMIGAED_STRINGIFY(x) AMIGAED_STRINGIFY2(x)

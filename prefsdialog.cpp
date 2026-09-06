@@ -33,6 +33,11 @@ PrefsDialog::PrefsDialog(QWidget *parent, int tabindex) :
     // languages if this label were run through tr().
     ui->comboBoxDefaultStyle->insertSeparator(ui->comboBoxDefaultStyle->count());
     ui->comboBoxDefaultStyle->addItem(QStringLiteral("Dark"));
+    // Same synthetic-entry treatment as "Dark" above - see MainWindow::
+    // isWorkbench13Theme()/isWorkbench31Theme()/applyApplicationStyle()
+    // for what selecting either one actually does.
+    ui->comboBoxDefaultStyle->addItem(QStringLiteral("Workbench 1.3"));
+    ui->comboBoxDefaultStyle->addItem(QStringLiteral("Workbench 3.1"));
 
     // set items for default compiler combobox:
     ui->comboBoxDefaultCompiler->addItems(p_Compilers);
@@ -241,7 +246,6 @@ void PrefsDialog::save_mySettings()
     mySettings.setValue("Project/Email", ui->lineEdit_email->text());
     mySettings.setValue("Project/Website", ui->lineEdit_website->text());
     mySettings.setValue("Project/ProjectRootDir", ui->lineEdit_projectsRootDir->text());
-    mySettings.setValue("Project/DefaultIcon", ui->lineEdit_getDefaultIcon->text());
 
     // TAB: GCC
     mySettings.setValue("GCC/GccPath", ui->lineEdit_getGCCexefile->text());
@@ -297,7 +301,6 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_email->setText(mySettings.value("Project/Email").toString());
     ui->lineEdit_website->setText(mySettings.value("Project/Website").toString());
     ui->lineEdit_projectsRootDir->setText(mySettings.value("Project/ProjectRootDir").toString());
-    ui->lineEdit_getDefaultIcon->setText(mySettings.value("Project/DefaultIcon").toString());
 
     // TAB: GCC
     ui->lineEdit_getGCCexefile->setText(mySettings.value("GCC/GccPath").toString());
@@ -390,13 +393,5 @@ void PrefsDialog::on_checkBoxNoLCD_clicked()
 void PrefsDialog::on_checkBoxNoCompileButton_clicked()
 {
     simpleStatusbar();
-}
-
-void PrefsDialog::on_btn_getDefaultIcon_clicked()
-{
-    QString fileName = QFileDialog::getOpenFileName(this,
-            tr("Path Amiga icon file"), QDir::homePath(),
-            tr("Amiga Icon Files (*.info);;All Files (*)"));
-    ui->lineEdit_getDefaultIcon->setText(fileName);
 }
 

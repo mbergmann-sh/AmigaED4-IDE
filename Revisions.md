@@ -8,6 +8,476 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.112
+- ReAction template rewritten again, this time checked line-by-line
+  against a confirmed-working ReAction/vbcc program the user provided
+  (window.class + gadtools.library menu + requester.class). Found and
+  fixed several real discrepancies that earlier revisions had gotten
+  wrong by inference alone:
+  - Menu layout: switched from `LayoutMenusA(menuStrip, visualInfo,
+    TAG_DONE)` to `LayoutMenus(menuStrip, visualInfo, GTMN_NewLookMenus,
+    TRUE, TAG_DONE)` - the varargs form, with `GTMN_NewLookMenus` for a
+    proper ReAction-style menu appearance, matching the reference
+    exactly (the "A" form isn't what the working program uses).
+  - Window content: `WINDOW_ParentGroup` is the actual window.class
+    tag for attaching the root gadget/layout tree - `WINDOW_Layout`,
+    used in rev.110/111, isn't a real window.class tag at all, and
+    (silently ignored rather than erroring) would have left the window
+    just as content-less as before that "fix".
+  - Object creation: switched every `NewObject(NULL, "xxx.class"/
+    "xxx.gadget", ...)` call to `NewObject(XXX_GetClass(), NULL, ...)`
+    using the `_GetClass()` accessors from `<proto/window.h>`/`<proto/
+    layout.h>`/`<proto/string.h>`/`<proto/requester.h>` - what the
+    reference program actually uses throughout, rather than passing
+    class names as plain strings.
+  - Window open/input/close: switched from raw `DoMethod(obj, WM_OPEN/
+    WM_HANDLEINPUT/WM_CLOSE)` calls to the `RA_OpenWindow()`/
+    `RA_HandleInput()`/`RA_CloseWindow()` macros from `<reaction/
+    reaction_macros.h>` (also newly included, alongside `<reaction/
+    reaction.h>`), and menu strip attachment moved to `SetMenuStrip()`
+    called AFTER opening the window, rather than a `WINDOW_MenuStrip`
+    tag at creation time - both match the reference exactly.
+  - Library versions: intuition.library/gadtools.library/window.class/
+    string.gadget/requester.class all opened with version 0L ("any"),
+    except `gadgets/layout.gadget` specifically at 47L - matching the
+    reference's own version numbers exactly, rather than 39/44
+    guessed in earlier revisions.
+  - Dropped `utility.library` entirely - unused in the reference
+    program, and not actually needed by anything else in this
+    template either.
+  - `<clib/alib_protos.h>` in place of `<proto/alib.h>` for DoMethod/
+    NewObject/etc.'s prototypes, matching the reference's own include
+    (both likely work, but this matches confirmed-working code
+    exactly rather than a plausible alternative).
+
+## rev.126
+- Fixed the editor sometimes staying in the previous theme's colours
+  after switching themes: `applyLexerDarkColors()` and
+  `initializeLexerNone()` (used for plain-text tabs with no lexer at
+  all) were both a one-way "make it dark" - neither had any code path
+  to undo that and restore the light-theme colours when switching AWAY
+  from "Dark" to any other theme (native styles, Workbench 1.3,
+  Workbench 3.1), so an already-open tab that had been dark-coloured
+  stayed that way indefinitely afterward. Both now explicitly reset
+  every style back to the lexer's own class defaults (plus this app's
+  own small set of additional light-theme customizations -
+  QsciLexerCPP's GlobalClass/KeywordSet2) when the theme isn't "Dark",
+  exactly mirroring what a brand new tab gets.
+- Fixed "Console Debugging Message" (Inserts menu / context menu)
+  always inserting its `if (myDebug) {...}` block flush against column
+  0 regardless of where the cursor actually was, breaking the visual
+  indentation of whatever code it was inserted into - a hardcoded `0`
+  where the cursor's own original column should have been used
+  throughout. Every line of the block, and the final cursor position,
+  now use that original column instead.
+
+## rev.125
+- Fixed a false-positive match in the GCC regex, found via a real
+  multi-file test build: GCC's own "In file included from foo.c:12:0:"
+  lines were silently matching the columnless diagnostic pattern - a
+  bare `\w+` also matches pure digits, so the "0" (a column number,
+  not a diagnostic keyword) satisfied it as if it were one, making
+  that line clickable (though never coloured, since "0" contains
+  neither "error" nor "warning"). Tightened the diagnostic-keyword
+  group to letters only (`[A-Za-z]+` instead of `\w+`), and added a
+  second check requiring the captured word(s) to actually be one of
+  GCC's real diagnostic keywords (error/warning/note/fatal error)
+  before accepting a match at all - both confirmed against the exact
+  lines from the test build that surfaced this.
+
+## rev.124
+- Output pane error/warning highlighting (rev.123) now updates live
+  when the theme changes, output already on screen included - it
+  previously only ever coloured newly-appended output, so switching
+  themes while errors/warnings were already showing left them in the
+  old theme's colours. Found and fixed a related, slightly older gap
+  while at it: the View > Theme menu (rev.115) called
+  `applyApplicationStyle()` directly but never `reapplyEditorTheme()`,
+  so switching to/from "Dark" through that menu specifically (as
+  opposed to via Prefs, which already called both) left already-open
+  editor tabs' margin/caret-line/lexer colours stale too. Both
+  `reapplyEditorTheme()` and the new `highlightOutputDiagnostics()`
+  call are now made once, centrally, at the end of
+  `applyApplicationStyle()` itself - so every path that changes the
+  theme (Prefs, View > Theme, Shift+F12 reload) re-colours both
+  consistently, automatically, with nothing to remember at each call
+  site.
+
+## rev.123
+- Fixed clicking a line in the output pane not reliably jumping to the
+  matching error/warning: `on_output_cursorPositionChanged()` looked up
+  the clicked line via `output->toPlainText().split('\n',
+  Qt::SkipEmptyParts)` - since SkipEmptyParts drops blank lines from
+  that list while the cursor's own blockNumber() still counts them, the
+  two fell out of sync the moment the build output contained even one
+  blank line before the clicked one (routine in real compiler output),
+  silently checking the wrong line's text against the regex. Now reads
+  the exact clicked line directly via the document's own block
+  structure (`document()->findBlockByNumber()`) instead - no
+  re-splitting, nothing to fall out of sync.
+- Output pane error/warning lines are now colour-highlighted (bold text
+  + tinted background, errors and warnings in their own colours),
+  theme-aware (one scheme for the dark theme, one shared by every
+  light-background theme - native styles, Workbench 1.3, Workbench
+  3.1), reusing the exact same VBCC/GCC regex parsers
+  (`checkVBCC()`/`checkGCC()`, selected by the currently selected
+  compiler) that already drive click-to-jump - so a line is coloured
+  if and only if it's also clickable.
+- Fixed the GCC regex not recognizing "fatal error:" lines at all (a
+  plain `\w+` can't match two words) - `(\w+(?:\s+\w+)?)` now allows
+  one optional second word before the colon, still matching plain
+  single-word "error"/"warning"/"note" exactly as before.
+
+## rev.122
+- Replaced the ReAction template's placeholder "read-only string
+  gadget" approach entirely - both attempts at forcing a string.gadget
+  read-only failed, each on a different compiler: `GA_ReadOnly` isn't a
+  real identifier at all (SAS/C: "undefined identifier"), and
+  `STRINGA_Editable`, though genuinely documented elsewhere, isn't
+  defined in this particular NDK/vbcc header set either ("unknown
+  identifier"). Switched to `label.image` (`LABEL_GetClass()`,
+  `LABEL_Text`, opened as `images/label.image`, added to the layout via
+  `LAYOUT_AddImage` rather than `LAYOUT_AddChild`) instead - the class
+  actually meant for static, non-interactive text, exactly what the
+  reference program's own `CHILD_Label` entries use (here attached
+  directly to the layout rather than as another gadget's label), and
+  sidesteps the whole read-only-attribute-naming question entirely.
+
+## rev.121
+- Fixed the ReAction template's placeholder string gadget not
+  compiling under SAS/C ("undefined identifier <GA_ReadOnly>") -
+  `GA_ReadOnly` isn't a real, documented BOOPSI/string.gadget
+  attribute at all (vbcc's headers apparently let the undefined
+  identifier through without complaint; SAS/C's correctly rejected
+  it). Replaced with `STRINGA_Editable, FALSE` - the actual,
+  documented string.gadget attribute for making it a non-editable,
+  read-only text display.
+
+## rev.120
+- Fixed the Workbench 1.3 theme's menu bar being unreadable: Fusion's
+  own menu bar rendering synthesizes its shading from a single
+  `QPalette::Window` colour, and against this theme's saturated blue
+  that washed out badly enough to make the menu text (white, per the
+  palette) blend completely into the background - confirmed by
+  rendering it offscreen with and without a fix. Added an explicit
+  stylesheet for just the menu bar/menus while this theme is active,
+  sidestepping Fusion's gradient synthesis entirely rather than fighting
+  it further; cleared again automatically when switching to any other
+  theme/style.
+
+## rev.119
+- Corrected both Workbench themes (rev.115) against real Workbench 1.3
+  and 3.1 screenshots - the two were effectively swapped/invented
+  before: Workbench 1.3's actual desktop is a solid BLUE (#0055AA,
+  sampled directly from a screenshot) with a white title bar and white
+  icon-label text, not the flat gray guessed originally; Workbench 3.1
+  is the plainer, NEUTRAL GRAY one (#AAAAAA, also sampled directly)
+  with black text throughout, not the invented periwinkle-blue-gray
+  before. The classic Amiga blue now appears as 1.3's dominant desktop
+  colour and, appropriately demoted, as 3.1's selection highlight only -
+  giving the two themes a family resemblance while keeping them clearly
+  distinguishable, matching how the real desktops actually differ.
+
+## rev.118
+- Fixed the ReAction template not compiling under SAS/C (vbcc/gcc, both
+  C99, compiled it fine): SAS/C uses C89, which requires every
+  declaration in a block to come before any statement in that same
+  block. `Object *textGadget = ...;`/`layoutObj`/`winObj` were each
+  declared-with-initializer after `if (menuStrip) LayoutMenus(...);` (a
+  statement) earlier in the same block - legal C99, but exactly the
+  SAS/C errors reported (218 "declaration found in statement block",
+  77, 90, ...). Restructured to plain declarations
+  (`Object *textGadget;` etc.) grouped together at the top of that
+  block, assigned via separate statements afterward in their original
+  positions. Checked the other five templates (Empty C, Shell, AmigaOS
+  1.3, AmigaOS 3.x, MUI) for the same category of issue too - none of
+  them mix declarations and statements in a way C89 would reject.
+
+## rev.117
+- Fixed AmigaED not recognizing an emulator already running at startup
+  (e.g. one left open on purpose from a previous session): the
+  external-process check (`isEmulatorProcessRunningExternally()`,
+  added in rev.111) was only ever run when the user clicked Start -
+  nothing checked at startup itself. Now checked once during
+  construction too, right after the toolbar/menu are built; if found,
+  Start is disabled and Stop enabled immediately, with no popup (unlike
+  clicking Start while one is already running, this never launches
+  anything, so there's nothing to confirm).
+- Fixed the real reason the ReAction template's menu still did nothing
+  even after rev.116's `WMHI_MENUMASK` fix: the window never requested
+  `WA_IDCMP` at all, so `RA_HandleInput()` never actually received
+  `WMHI_MENUPICK` (or `WMHI_CLOSEWINDOW`) events in the first place -
+  confirmed against the reference program, which explicitly requests
+  `IDCMP_MENUPICK`/`IDCMP_CLOSEWINDOW` (among others) via `WA_IDCMP`.
+  Added `WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_MENUPICK` to the window's
+  own tag list, with a comment on adding more flags (`IDCMP_GADGETUP`,
+  `IDCMP_NEWSIZE`, ...) as more gadgets are added.
+
+## rev.116
+- Fixed the ReAction template's menu picks doing nothing at all
+  (confirmed: window opened fine, but neither About nor Quit worked
+  from the menu) - `ItemAddress(menuStrip, (UWORD)result)` used a raw
+  cast of the whole packed `WMHI_MENUPICK` result instead of masking
+  out just the menu/item number with `result & WMHI_MENUMASK` (as the
+  reference program actually does), so `ItemAddress()` never resolved
+  to the right (or any) `MenuItem`, and `GTMENUITEM_USERDATA()` on it
+  never matched `MENU_ABOUT`/`MENU_QUIT` either.
+
+## rev.115
+- Two new nostalgic application themes, alongside the existing native
+  styles and "Dark": **Workbench 1.3** (flat mid-gray chrome, black
+  text, classic Amiga blue selection, orange accent - the same 4-colour
+  palette AmigaED's own built-in tool icon uses) and **Workbench 3.1**
+  (the cooler, richer periwinkle-blue chrome and deeper navy selection
+  AmigaOS 3.x's Workbench became known for). Both are synthetic
+  entries handled the same way "Dark" already was (force the "Fusion"
+  style plus a custom `QPalette`), added to Prefs > Misc's "Default
+  application style" combo box.
+- New **View > Theme** submenu, listing every style available on this
+  platform (native `QStyleFactory` styles, plus Dark/Workbench 1.3/
+  Workbench 3.1) as checkable, mutually exclusive entries (one shared
+  `QActionGroup`) - picking one changes AmigaED's theme immediately, no
+  restart needed, and stays in sync with Prefs > Misc's own style
+  setting no matter which of the two is used to change it.
+
+## rev.114
+- Prefs dialog layout tightened up (user-provided `prefsdialog.ui`),
+  mainly closing the large empty gaps left in the Project and Emulator
+  tabs since rev.105 removed the "Default icon" row - fields now sit
+  compactly instead of spread out with dead space between them.
+  Checked before merging: all 97 widgets present under their original
+  names and classes (nothing `prefsdialog.cpp` relies on could have
+  broken), no duplicate widget/layout names, all buddy/tabstop
+  references still valid, all icon resource paths still resolve, and
+  the dialog renders cleanly across all six tabs.
+
+## rev.113
+- Fixed Start/Stop Emulator (toolbar buttons, and the equivalent Tools
+  menu entries - the exact same `QAction`s in both places) not
+  toggling when an externally-tracked emulator process was found
+  running (rev.111's "start another instance anyway?" prompt,
+  answered "No"): since AmigaED never actually launched that process
+  itself, `myEmulator` stayed `NotRunning`/null throughout, so nothing
+  ever disabled Start or enabled Stop for it. New `p_externalEmulatorTracked`
+  flag covers this case explicitly: Start gets disabled and Stop
+  enabled right when the user declines starting a second instance;
+  Stop, when triggered for this case, now terminates that process by
+  executable name via the platform's own tools (`taskkill /F` on
+  Windows, `pkill -x` on Linux/macOS - there's no `QProcess` handle to
+  call `terminate()`/`kill()` on for a process AmigaED didn't start)
+  rather than doing nothing; and the periodic poll
+  (`checkEmulatorStillRunning()`) now also re-checks by name whether
+  this externally-tracked process is still running, resyncing
+  Start/Stop back once it (however it happened) ends. closeEvent()'s
+  "leave the emulator open?" prompt now also triggers for this case,
+  not just one AmigaED itself started.
+- ReAction template rewritten again - see the detailed rev.112 entry
+  above for the full list of corrections found by checking it
+  line-by-line against a confirmed-working ReAction/vbcc program.
+
+## rev.111
+- Fixed the ReAction template's "Failed to create/layout the menu
+  strip." reported by rev.110's new diagnostics: `LayoutMenusA()` was
+  passed `NULL` as its VisualInfo argument, which makes it fail
+  outright - it needs a real one (fonts/pens for the screen the menu
+  will appear on), obtained via `LockPubScreen(NULL)` (locks the
+  default public screen, i.e. Workbench) + `GetVisualInfoA()`, freed
+  again (`FreeVisualInfo()`/`UnlockPubScreen()`) right after layout,
+  since nothing needs it to stay alive past that point.
+- Fixed a real bug in the new "leave the emulator open on exit"
+  feature (rev.110): choosing to leave it open still produced a
+  spurious "CrashExit - UAE has a problem!!" report and killed it
+  anyway, because `QProcess`'s own destructor kills its still-running
+  child process when destroyed - which happened regardless of skipping
+  AmigaED's own `actionKillEmulator()` call, once the `QProcess` member
+  itself got destroyed along with the rest of `MainWindow` at app exit.
+  `myEmulator` is now a heap-allocated `QProcess *` with no `QObject`
+  parent (rather than a plain value member) specifically so it can be
+  left deliberately un-destroyed in that one case, letting the actual
+  emulator process survive AmigaED's exit intact.
+- Corrected the shutdown prompt's wording to match exactly: "AmigaED
+  is shutting down while your Amiga Emulator is up and running. Do you
+  want me to leave the Emulator open?" - the previous wording didn't
+  make clear enough what "it"/"open" specifically referred to.
+
+## rev.110
+- ReAction template: attempted fix for the window never actually
+  opening (program ran, exited cleanly, but showed nothing - neither
+  from Workbench nor the Shell). The window had no content at all (no
+  `WINDOW_Layout`) and no explicit size - the same underlying class of
+  problem the MUI template's window had before rev.108's fix. Added a
+  minimal placeholder read-only string gadget inside a single-child
+  `layout.gadget`, plus explicit `WA_Width`/`WA_Height`. Also added
+  `Printf()` diagnostics at every failure point (library opens, menu
+  creation, window object creation, `WM_OPEN`) that were previously
+  completely silent, so if this doesn't fully resolve it, running the
+  program from a Shell will now say exactly which step failed.
+- New: closeEvent() no longer unconditionally kills a running emulator
+  on exit - if one is still running once AmigaED is actually committed
+  to closing (i.e. after any unsaved-changes prompts), it now asks
+  "AmigaED is shutting down while your Amiga emulator is still
+  running. Do you want to leave it open?" (Yes/No, defaulting to Yes)
+  before deciding whether to stop it.
+- New: actionEmulator() (Start Emulator) now also checks, via the
+  platform's own process list (`tasklist` on Windows, `pgrep` on
+  Linux/macOS) rather than just AmigaED's own bookkeeping, whether a
+  process matching the configured emulator's executable name is
+  already running anywhere on the system - covering the case where a
+  previous AmigaED session left one open (see above), or it was
+  started outside AmigaED entirely - and asks before starting a
+  second instance rather than doing so unconditionally. Matches by
+  executable name only, so it can't distinguish two different configs
+  of the same emulator (e.g. separate OS 1.3 / OS 3.x setups) from
+  each other - deliberately asks rather than silently refusing, since
+  running two on purpose is legitimate here.
+
+## rev.109
+- Fixed three real VBCC compile problems in the ReAction template:
+  - `struct Library *IntuitionBase;` conflicted with `<proto/intuition.h>`'s
+    own extern declaration of it as the more specific
+    `struct IntuitionBase *` (intuition.library's own extended
+    library-base type) - reported as "redeclaration of var
+    <IntuitionBase> with new type". Removed the redundant declaration
+    and cast `OpenLibrary()`'s result to `struct IntuitionBase *` at
+    the assignment instead. UtilityBase/GadToolsBase have no such
+    library-specific base type, so those two are still declared
+    (as plain `struct Library *`) same as before.
+  - `WINDOWCLASS` and `REQUESTERCLASS` ("unknown identifier" errors) -
+    this NDK/vbcc header set doesn't actually define those convenience
+    macros even with `<classes/window.h>`/`<classes/requester.h>`
+    included. Both `NewObject(NULL, ...)` calls now pass the plain
+    string ("window.class"/"requester.class") directly instead -
+    exactly what those macros would have expanded to anyway.
+  - "implicit declaration of function <DoMethod>" - the BOOPSI helper
+    functions (`DoMethod`, `NewObject`, `DisposeObject`, `SetAttrs`,
+    `GetAttr`, ...) are declared in `<proto/alib.h>` (mirroring the
+    classic `<clib/alib_protos.h>`), not by any of the headers already
+    included - added.
+
+## rev.108
+- Fixed the MUI template compiling cleanly but never actually showing
+  its window: the window object was created with no
+  `MUIA_Window_RootObject` at all - a MUI window with no content isn't
+  a valid, functioning window, and neither MUI nor the template's own
+  `if (app && win)` check caught this (both `app` and `win` still come
+  back non-NULL), so it failed completely silently. Added a minimal
+  placeholder `MUIC_Text` object as the window's root content, and a
+  `Printf()` diagnostic in the (until now silent) failure branch for
+  if object creation ever does fail outright.
+
+## rev.107
+- Fixed the line-number margin turning light gray (instead of staying
+  dark) for any .c/.h/.cpp file actually opened, while the "Dark"
+  application style was active - a brand new blank tab was unaffected,
+  which is what made this easy to miss. Cause: `initializeLexerCPP()`
+  was the only one of AmigaED's lexer-init functions that never called
+  `initializeMargin()` itself. That's harmless the first time (a new
+  tab already got its margin set once, right after its own initial
+  C/C++ lexer was created), but opening an actual .c/.h file re-runs
+  `initializeLexerCPP()` a second time on that same tab (via
+  `applyLexerForFileExtension()`), and setting a fresh lexer that
+  second time reset the margin to its own non-dark default colours -
+  which nothing afterward corrected back. Added the missing call.
+
+## rev.106
+- Fixed a real compile error in the MUI template (VBCC: "error 43 ...
+  initialization of incomplete struct" on the `struct NewMenu nm[] =
+  {...}` array): `<libraries/gadtools.h>`, which actually declares
+  `struct NewMenu` and the `NM_TITLE`/`NM_ITEM`/`NM_END` constants used
+  there, was missing - `<libraries/mui.h>` alone doesn't provide them.
+  Added (gadtools.library itself is still never opened/called in the
+  MUI template - only the struct/constant definitions are needed).
+- All "New Project" templates except AmigaOS 1.3 (which has no
+  dos.library Printf() the way later NDKs provide it) now include
+  `<dos/dos.h>` and `<proto/dos.h>`, so `Printf()` - dos.library's
+  byte-saving, AmigaOS 3.x-typical alternative to ANSI C's `printf()`
+  - is available for error output without adding these by hand.
+  Affects the ReAction, MUI, and Empty C templates (Shell and AmigaOS
+  3.x already had both).
+
+## rev.105
+- Replaced the "default icon" file entirely with a built-in AmigaED
+  icon: a small, multi-coloured classic Amiga Tool icon (DiskObject +
+  Gadget + Image, 2 bitplanes/4 colours, valid on Kickstart 1.3 through
+  3.x), embedded as a Qt resource (`resources/amigaed_tool.info`) and
+  hand-built byte-for-byte per the documented on-disk icon format - no
+  Amiga tools involved in generating it.
+- AmigaED now WRITES this icon itself, directly (`writeProgramIcon()`),
+  right after a successful build - both a single-file (ad-hoc) compile
+  and a project build - whenever Prefs > Misc > "create icon" is
+  checked. This replaces copying a user-chosen file via a shell
+  command embedded in the generated Makefile, which was a recurring
+  source of Windows-specific breakage (sh.exe/cmd.exe quoting/escaping
+  - see rev.94, rev.98) - writing it from within Qt/C++ sidesteps that
+  category of bug entirely, at the cost of the icon no longer being
+  created if "make" is run directly outside AmigaED.
+- The icon's `do_StackSize` field is set per target: 4096 for AmigaOS
+  1.3, 8192 for AmigaOS 3.x (also the default for Empty C/Shell
+  projects, and for ad-hoc single-file compiles targeting OS 3.x),
+  16000 for ReAction projects, 34000 for MUI projects.
+- Removed the now-unneeded "Default icon" file/browse widgets from
+  Prefs > Project (the "create icon" checkbox itself, in Prefs > Misc,
+  stays).
+
+## rev.104
+- ReAction template's About box now uses `requester.class`
+  (`REQUESTERCLASS`/`RM_OPENREQ`) instead of the older Intuition
+  `EasyRequestArgs()` - ReAction's own BOOPSI requester, matching the
+  rest of the template's window.class/gadtools.library-based approach.
+  Opens `requester.class` alongside the other libraries (added to the
+  startup check and the cleanup CloseLibrary() calls too).
+
+## rev.103
+- Fixed "Close Project" leaving other project tabs open, closing only
+  the main .c file. `closeProjectTabs()` only recognized a tab as
+  belonging to the project if its file was tracked in
+  `currentProject->files` - but the project's own auto-generated
+  Makefiles are deliberately NOT tracked there (see
+  actionRemoveFileFromProject()), so a Makefile tab (or any other
+  untracked file physically sitting in the project's own directory)
+  was treated as "unrelated" and left open. Now also matches by
+  directory: any open tab whose file lives directly in the project's
+  own folder counts as belonging to it, tracked or not.
+
+## rev.102
+- Moved "Show output pane..." / "Hide output pane..." from the Build
+  menu to the View menu, directly below "Hide Functions Browser".
+- MUI and ReAction "New Project" templates rewritten from bare
+  library-opening skeletons into actually working small GUI programs:
+  both now build a real window with a **File** menu containing
+  **About** and **Quit**. About pops up a modal requester titled
+  "About this Program" with the text "This Programm was created with
+  the help of AmigaED 4.0" and an "OK" button - via `MUI_Request()` for
+  the MUI template, and via `EasyRequestArgs()` (the equivalent
+  AmigaOS/ReAction-native call, no MUI dependency) for the ReAction
+  template. Quit closes the window and ends the program cleanly in
+  both. The ReAction template builds its menu the standard
+  gadtools.library way (`CreateMenusA()`/`LayoutMenusA()`/
+  `ItemAddress()`/`GTMENUITEM_USERDATA()`) and its window via
+  `window.class` (`WM_OPEN`/`WM_HANDLEINPUT`/`WM_CLOSE`), matching
+  AmigaOS 3.2/NDK3.2R4-typical ReAction code rather than MUI's own API.
+
+## rev.101
+- "Comment/Uncomment Block" promoted out of the context menu's
+  "Comments..." submenu (one click away, no submenu hover needed) to
+  the very topmost entry of the context menu, followed by a separator
+  - ahead of even "Search and Replace...". On the main Inserts menu it
+  is likewise now a standalone top-level entry rather than nested in
+  "Comments...".
+- Search and Replace: fixed "Replace" (single occurrence) not actually
+  replacing anything until pressed several times, and only then after
+  a Replace All had already run once. The previous version only
+  replaced when the current selection's text compared exactly equal
+  to the search term; rewritten to simply trust that any current
+  selection is the match Find/Next just left behind (the same
+  assumption most editors' Replace button makes) and replace it
+  outright, then advance to the next occurrence.
+- New menu entry **File > Close Project**: closes every tab belonging
+  to the current project (prompting to save any with unsaved changes
+  first, same as switching to a different project), then returns to
+  the "no project loaded" state. Cancelling a save prompt leaves the
+  project and all its tabs open untouched.
+
 ## rev.100
 - Reverted rev.99's `QWebEngineView` for the Help > Manual viewer back
   to `QTextBrowser`: Qt WebEngine (Chromium) does not compile with

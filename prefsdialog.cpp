@@ -246,6 +246,7 @@ void PrefsDialog::save_mySettings()
     mySettings.setValue("Project/Email", ui->lineEdit_email->text());
     mySettings.setValue("Project/Website", ui->lineEdit_website->text());
     mySettings.setValue("Project/ProjectRootDir", ui->lineEdit_projectsRootDir->text());
+    mySettings.setValue("Project/SaveFilesAutomatically", ui->checkBox_saveProjectFilesAutomatically->isChecked());
 
     // TAB: GCC
     mySettings.setValue("GCC/GccPath", ui->lineEdit_getGCCexefile->text());
@@ -301,6 +302,7 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_email->setText(mySettings.value("Project/Email").toString());
     ui->lineEdit_website->setText(mySettings.value("Project/Website").toString());
     ui->lineEdit_projectsRootDir->setText(mySettings.value("Project/ProjectRootDir").toString());
+    ui->checkBox_saveProjectFilesAutomatically->setChecked(mySettings.value("Project/SaveFilesAutomatically", false).toBool());
 
     // TAB: GCC
     ui->lineEdit_getGCCexefile->setText(mySettings.value("GCC/GccPath").toString());

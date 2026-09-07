@@ -8,47 +8,22 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
-## rev.112
-- ReAction template rewritten again, this time checked line-by-line
-  against a confirmed-working ReAction/vbcc program the user provided
-  (window.class + gadtools.library menu + requester.class). Found and
-  fixed several real discrepancies that earlier revisions had gotten
-  wrong by inference alone:
-  - Menu layout: switched from `LayoutMenusA(menuStrip, visualInfo,
-    TAG_DONE)` to `LayoutMenus(menuStrip, visualInfo, GTMN_NewLookMenus,
-    TRUE, TAG_DONE)` - the varargs form, with `GTMN_NewLookMenus` for a
-    proper ReAction-style menu appearance, matching the reference
-    exactly (the "A" form isn't what the working program uses).
-  - Window content: `WINDOW_ParentGroup` is the actual window.class
-    tag for attaching the root gadget/layout tree - `WINDOW_Layout`,
-    used in rev.110/111, isn't a real window.class tag at all, and
-    (silently ignored rather than erroring) would have left the window
-    just as content-less as before that "fix".
-  - Object creation: switched every `NewObject(NULL, "xxx.class"/
-    "xxx.gadget", ...)` call to `NewObject(XXX_GetClass(), NULL, ...)`
-    using the `_GetClass()` accessors from `<proto/window.h>`/`<proto/
-    layout.h>`/`<proto/string.h>`/`<proto/requester.h>` - what the
-    reference program actually uses throughout, rather than passing
-    class names as plain strings.
-  - Window open/input/close: switched from raw `DoMethod(obj, WM_OPEN/
-    WM_HANDLEINPUT/WM_CLOSE)` calls to the `RA_OpenWindow()`/
-    `RA_HandleInput()`/`RA_CloseWindow()` macros from `<reaction/
-    reaction_macros.h>` (also newly included, alongside `<reaction/
-    reaction.h>`), and menu strip attachment moved to `SetMenuStrip()`
-    called AFTER opening the window, rather than a `WINDOW_MenuStrip`
-    tag at creation time - both match the reference exactly.
-  - Library versions: intuition.library/gadtools.library/window.class/
-    string.gadget/requester.class all opened with version 0L ("any"),
-    except `gadgets/layout.gadget` specifically at 47L - matching the
-    reference's own version numbers exactly, rather than 39/44
-    guessed in earlier revisions.
-  - Dropped `utility.library` entirely - unused in the reference
-    program, and not actually needed by anything else in this
-    template either.
-  - `<clib/alib_protos.h>` in place of `<proto/alib.h>` for DoMethod/
-    NewObject/etc.'s prototypes, matching the reference's own include
-    (both likely work, but this matches confirmed-working code
-    exactly rather than a plausible alternative).
+## rev.136
+- **New**: Build Project now saves (or asks about) every open project
+  file with unsaved changes first - including a hand-edited Makefile,
+  not just source files - since `regenerateProjectMakefiles()` and the
+  compiler itself both always read straight from disk; an unsaved edit
+  in an open tab was silently ignored by the build otherwise. New Prefs
+  &gt; Project &gt; "Save Project Files Automatically" checkbox (placed
+  directly below "Projects root", left-aligned) controls what happens
+  when modified files are found: checked saves them all immediately
+  with no prompt; unchecked (the default) asks once, listing every
+  affected file, with Yes/No/Cancel - Cancel aborts the build entirely,
+  No proceeds using whatever's already on disk. Implemented as a new
+  `saveModifiedProjectFiles()`, reusing the existing per-tab `save()`
+  machinery (temporarily switching tabs so it acts on the right file,
+  then restoring whichever tab was active before) rather than
+  duplicating it.
 
 ## rev.135
 - **Addressed a fundamental complaint, not just a symptom**: rev.134's
@@ -508,6 +483,48 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 - ReAction template rewritten again - see the detailed rev.112 entry
   above for the full list of corrections found by checking it
   line-by-line against a confirmed-working ReAction/vbcc program.
+
+## rev.112
+- ReAction template rewritten again, this time checked line-by-line
+  against a confirmed-working ReAction/vbcc program the user provided
+  (window.class + gadtools.library menu + requester.class). Found and
+  fixed several real discrepancies that earlier revisions had gotten
+  wrong by inference alone:
+  - Menu layout: switched from `LayoutMenusA(menuStrip, visualInfo,
+    TAG_DONE)` to `LayoutMenus(menuStrip, visualInfo, GTMN_NewLookMenus,
+    TRUE, TAG_DONE)` - the varargs form, with `GTMN_NewLookMenus` for a
+    proper ReAction-style menu appearance, matching the reference
+    exactly (the "A" form isn't what the working program uses).
+  - Window content: `WINDOW_ParentGroup` is the actual window.class
+    tag for attaching the root gadget/layout tree - `WINDOW_Layout`,
+    used in rev.110/111, isn't a real window.class tag at all, and
+    (silently ignored rather than erroring) would have left the window
+    just as content-less as before that "fix".
+  - Object creation: switched every `NewObject(NULL, "xxx.class"/
+    "xxx.gadget", ...)` call to `NewObject(XXX_GetClass(), NULL, ...)`
+    using the `_GetClass()` accessors from `<proto/window.h>`/`<proto/
+    layout.h>`/`<proto/string.h>`/`<proto/requester.h>` - what the
+    reference program actually uses throughout, rather than passing
+    class names as plain strings.
+  - Window open/input/close: switched from raw `DoMethod(obj, WM_OPEN/
+    WM_HANDLEINPUT/WM_CLOSE)` calls to the `RA_OpenWindow()`/
+    `RA_HandleInput()`/`RA_CloseWindow()` macros from `<reaction/
+    reaction_macros.h>` (also newly included, alongside `<reaction/
+    reaction.h>`), and menu strip attachment moved to `SetMenuStrip()`
+    called AFTER opening the window, rather than a `WINDOW_MenuStrip`
+    tag at creation time - both match the reference exactly.
+  - Library versions: intuition.library/gadtools.library/window.class/
+    string.gadget/requester.class all opened with version 0L ("any"),
+    except `gadgets/layout.gadget` specifically at 47L - matching the
+    reference's own version numbers exactly, rather than 39/44
+    guessed in earlier revisions.
+  - Dropped `utility.library` entirely - unused in the reference
+    program, and not actually needed by anything else in this
+    template either.
+  - `<clib/alib_protos.h>` in place of `<proto/alib.h>` for DoMethod/
+    NewObject/etc.'s prototypes, matching the reference's own include
+    (both likely work, but this matches confirmed-working code
+    exactly rather than a plausible alternative).
 
 ## rev.111
 - Fixed the ReAction template's "Failed to create/layout the menu

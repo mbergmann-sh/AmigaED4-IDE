@@ -215,6 +215,7 @@ public:
     int p_defaultEmulator;          // default emulator to start, setted by prefs > emulator tab combobox
     QString p_emulator_to_start;    // Argument for default OS to start in UAE, depends on p_defaultEmulator
     QString p_projectsRootDir;      // Path to default folder to store projects in (use that path as a hd mount in UAE in order to test compiled app!)
+    bool p_saveProjectFilesAutomatically = false;   // Prefs > Project > "Save Project Files Automatically" - see saveModifiedProjectFiles()
     QStringList p_Compilers = {"VBCC - C", "GNU - C", "GNU - C++"};    // used for building compiler preselection combobox entries
     QStringList p_targetOS = {"OS 1.3", "OS 3.x"};
     int p_defaultCompiler;          // set from prefs file
@@ -309,6 +310,7 @@ public slots:
     void openFileInTab(const QString &fileName);             // switch to an already-open tab, or open a new one, for this file
     void updateWindowTitle();                                // refresh window title from curFile (no modified-state/file-path changes)
     bool maybeSaveAll();                                      // maybeSave() for every open tab - used before quitting
+    bool saveModifiedProjectFiles();                          // saves (or asks/skips per Prefs) every open, modified tab belonging to the current project - including Makefiles - before a project build
 
 private slots:
     void onTabChanged(int index);                    // active tab switched - update textEdit/curFile/window title

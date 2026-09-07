@@ -2115,6 +2115,19 @@ Overwrite it?</source>
         <translation>Aktuell ist kein Projekt geladen.</translation>
     </message>
     <message>
+        <location filename="../mainwindow.cpp" line="2727"/>
+        <source>The following open project files have unsaved changes:
+
+%1
+
+Save them before building? (Prefs &gt; Project &gt; &quot;Save Project Files Automatically&quot; skips this question from now on.)</source>
+        <translation>Die folgenden geöffneten Projektdateien haben ungespeicherte Änderungen:
+
+%1
+
+Vor dem Bauen speichern? (Prefs &gt; Project &gt; &quot;Save Project Files Automatically&quot; überspringt diese Frage künftig.)</translation>
+    </message>
+    <message>
         <location filename="../mainwindow.cpp" line="6732"/>
         <source>Makefile not found:
 %1
@@ -2485,6 +2498,16 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
 </context>
 <context>
     <name>PrefsDialog</name>
+    <message>
+        <location filename="../prefsdialog.ui" line="188"/>
+        <source>Save Project Files Automatically</source>
+        <translation>Projektdateien automatisch speichern</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="191"/>
+        <source>If checked, any open project file (including Makefiles) with unsaved changes is saved automatically before a project build, with no prompt. If unchecked, you are asked each time instead.</source>
+        <translation>Wenn aktiviert, wird jede geöffnete Projektdatei (auch Makefiles) mit ungespeicherten Änderungen vor einem Projekt-Build automatisch gespeichert, ohne Nachfrage. Wenn nicht aktiviert, wirst du jedes Mal gefragt.</translation>
+    </message>
     <message>
         <source>Prefs - Amiga Cross Editor </source>
         <translation type="vanished">Einstellungen - Amiga Cross Editor </translation>

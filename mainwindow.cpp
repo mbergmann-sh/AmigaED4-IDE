@@ -1801,6 +1801,7 @@ void MainWindow::readSettings()
     p_email = (settings.value("Project/Email").toString());
     p_website = (settings.value("Project/Website").toString());
     p_projectsRootDir = (settings.value("Project/ProjectRootDir").toString());
+    p_saveProjectFilesAutomatically = settings.value("Project/SaveFilesAutomatically", false).toBool();
 
     // TAB: GCC
     p_compiler_gcc = (settings.value("GCC/GccPath").toString());
@@ -2664,6 +2665,95 @@ bool MainWindow::maybeSaveAll()
             return false;   // user cancelled - abort the whole quit
     }
     return true;
+}
+
+//
+// Saves (or asks about) every open, modified tab belonging to the
+// current project before a build - confirmed a real gap otherwise: an
+// edited-but-unsaved source file (or, since rev.135 made hand-edited
+// Makefiles stick around, a Makefile itself) would silently build from
+// whatever was last saved to disk, not what's actually in the editor.
+//
+// Unlike maybeSave()/maybeSaveAll() (one confirmation dialog PER
+// modified tab), this asks ONCE for every affected file together -
+// or, if Prefs > Project > "Save Project Files Automatically" is
+// checked, saves them all immediately with no prompt at all.
+//
+// Returns false if the build should be aborted (the user cancelled, or
+// a save itself failed) - true otherwise, including when the user
+// chose to proceed without saving.
+//
+bool MainWindow::saveModifiedProjectFiles()
+{
+    if (!currentProject || !tabWidget)
+        return true;
+
+    QStringList projectPaths;
+    for (const ProjectFile &f : currentProject->files)
+        projectPaths << QFileInfo(f.path).absoluteFilePath();
+    // Makefiles are tracked project inputs too (as far as this check is
+    // concerned) even though they're not listed in currentProject->files -
+    // an open, edited Makefile should be saved (or at least asked about)
+    // right alongside the source files that triggered this build.
+    const QString dir = currentProject->projectDir();
+    for (const char *makefileName : {"Makefile.gcc", "Makefile.vbcc", "Makefile.sc"})
+        projectPaths << QFileInfo(dir + QDir::separator() + makefileName).absoluteFilePath();
+
+    QList<QsciScintilla *> modifiedEditors;
+    QStringList modifiedNames;
+    for (int i = 0; i < tabWidget->count(); ++i)
+    {
+        QsciScintilla *editor = qobject_cast<QsciScintilla *>(tabWidget->widget(i));
+        if (!editor || !editor->isModified())
+            continue;
+
+        QString path = editor->property("amigaed_filePath").toString();
+        if (path.isEmpty() || !projectPaths.contains(QFileInfo(path).absoluteFilePath()))
+            continue;
+
+        modifiedEditors << editor;
+        modifiedNames << strippedName(path);
+    }
+
+    if (modifiedEditors.isEmpty())
+        return true;
+
+    if (!p_saveProjectFilesAutomatically)
+    {
+        QMessageBox::StandardButton ret = QMessageBox::question(this, tr(AMIGAED_VERSION_STRING),
+            tr("The following open project files have unsaved changes:\n\n%1\n\n"
+               "Save them before building? (Prefs > Project > \"Save Project Files "
+               "Automatically\" skips this question from now on.)")
+                .arg(modifiedNames.join("\n")),
+            QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes);
+
+        if (ret == QMessageBox::Cancel)
+            return false;   // abort the build
+        if (ret == QMessageBox::No)
+            return true;    // proceed - build from whatever's already on disk
+    }
+
+    QsciScintilla *previouslyActive = textEdit;
+    int previousIndex = tabWidget->indexOf(previouslyActive);
+    bool allSaved = true;
+
+    for (QsciScintilla *editor : modifiedEditors)
+    {
+        int idx = tabWidget->indexOf(editor);
+        if (idx < 0)
+            continue;
+        tabWidget->setCurrentIndex(idx);   // onTabChanged() updates textEdit/curFile - save() acts on those
+        if (!save())
+        {
+            allSaved = false;
+            break;
+        }
+    }
+
+    if (previousIndex >= 0)
+        tabWidget->setCurrentIndex(previousIndex);
+
+    return allSaved;
 }
 
 //
@@ -7793,6 +7883,13 @@ void MainWindow::actionBuildProject()
         QMessageBox::information(this, tr(AMIGAED_VERSION_STRING), tr("No project is currently loaded."));
         return;
     }
+
+    // Save (or ask about) any open, modified project file - including a
+    // hand-edited Makefile - before doing anything else: regenerateProjectMakefiles()
+    // and the compiler itself both read straight from disk, so an
+    // unsaved edit would otherwise be silently ignored by this build.
+    if (!saveModifiedProjectFiles())
+        return;   // user cancelled, or a save failed - abort the build
 
     // Regenerate before every build, not just when a file is added/
     // removed - confirmed the Makefiles otherwise never picked up a

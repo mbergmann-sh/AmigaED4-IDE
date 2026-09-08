@@ -1,0 +1,80 @@
+# FS-UAE Konfiguration für Amiga 1200 (aufgemotzt: 68020/68882, AGA, Z3-Grafik)
+
+[config]
+
+amiga_model = A1200
+kickstart_file = ~/FS-UAE/Kickstarts/A1200.47.111.rom
+#kickstart_rom_file_id=5C40328A,KS ROM v3.2.2 (A1200)
+chipset = aga
+
+# --- Prozessor und FPU ---
+cpu = 68020
+fpu = 68882
+
+# JIT-Compiler aktivieren (für maximale CPU-Geschwindigkeit)
+jit_compiler = 1
+
+# --- Speicher-Konfiguration ---
+chip_memory = 2048
+# War "z3_fast_memory" - das ist kein echtes FS-UAE-Schlüsselwort und
+# wurde daher vermutlich stillschweigend ignoriert (kein Fehler, aber
+# auch kein Z3-RAM). Die korrekte, dokumentierte Option heißt
+# zorro_iii_memory (siehe https://fs-uae.net/docs/options/zorro-iii-memory/).
+zorro_iii_memory = 524288
+
+# --- RTG / Picasso96 Zorro III Grafikkarte mit 32 MB Videospeicher ---
+graphics_card = uaegfx-z3
+graphics_memory = 32768
+
+# --- Grafik- und Fenstereinstellungen (Windowed Modus) ---
+window_width = 1024
+window_height = 768
+fullscreen = 0
+stretch = 1
+
+# --- Festplatte (RDB-Hardfile mit 2 Partitionen: UDH0=Workbench, UDH1=Work) ---
+# Unter WinUAE erstellt und dort lauffähig - für FS-UAE ergänzt:
+# hard_drive_0_type = rdb erzwingt die korrekte RDB-Mehrpartitionen-
+# Erkennung, statt sich allein auf die (in der Praxis nicht immer
+# zuverlässige) automatische RDSK-Header-Erkennung zu verlassen.
+# hard_drive_0_controller = ide0 entspricht dem eingebauten IDE-
+# Controller des A1200 (bestätigt funktionierendes Community-Beispiel
+# für exakt dieses Szenario). hard_drive_0_label wurde entfernt - bei
+# einer bereits partitionierten RDB-Datei kommen die Partitionsnamen
+# (UDH0/UDH1) aus der RDB-Struktur selbst, ein externes Label greift
+# hier nicht wie bei einem einfachen Verzeichnis-Mount.
+hard_drive_0 = ~/FS-UAE/Hard Drives/os32_clean.hdf
+hard_drive_0_type = rdb
+hard_drive_0_controller = ide0
+hard_drive_0_boot_priority = 5
+
+hard_drive_1       = ~/Projekte/AMIGA
+hard_drive_1_label = Code
+
+# --- Floppy 1 ---
+# Empty drive - no disk inserted.
+floppy_drive_0 =
+# --- Floppy 2 ---
+# Empty drive - no disk inserted.
+floppy_drive_1 =
+
+# --- Clipboard / clock / floppy sound ---
+# Shares the clipboard between host and Amiga (needs an app that opens
+# clipboard.device on the Amiga side too - e.g. a text editor's own
+# Cut/Copy/Paste - to actually use it, this only enables the emulator
+# side of the exchange).
+clipboard_sharing = 1
+
+# MSM6242B is the real RTC chip used in A500/500+/600/1200/2000 - lets
+# the emulated Amiga read the current time automatically from the host.
+# Note: A500 already auto-enables this ("auto", the default) once a
+# memory expansion is present, which fast_memory above already does -
+# set explicitly here anyway to remove any doubt. If it doesn't take
+# effect, the next thing to try is uae_chipset_compatible = - (see
+# https://fs-uae.net/docs/options/uae-rtc/ for why).
+uae_rtc = MSM6242B
+
+# No audible drive click (or any other floppy sound) for the one
+# floppy drive configured above.
+floppy_drive_0_sounds = off
+floppy_drive_1_sounds = off

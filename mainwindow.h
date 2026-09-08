@@ -29,6 +29,24 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#if defined(Q_OS_WIN)
+// Needed for CREATE_NEW_CONSOLE/CREATE_NO_WINDOW/STARTF_USESTDHANDLES,
+// used by actionOpenShell()'s setCreateProcessArgumentsModifier() -
+// explicit rather than relying on <QProcess> pulling this in
+// transitively via its own (Windows-only) CreateProcessArguments
+// struct definition. NOMINMAX/WIN32_LEAN_AND_MEAN avoid windows.h's
+// own well-known min()/max() macro clashes with the C++ standard
+// library, and trim its footprint to reduce the chance of any other
+// such clash with Qt headers included afterward.
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 #include <QMainWindow>
 #include <QSettings>
 #include <QMessageBox>
@@ -297,6 +315,7 @@ public slots:
     void actionCleanProject();
     void actionProjectOptions();     // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
     void actionOpenShell();          // "Open Shell" - opens the system's default command line in the current project's folder (or Prefs "Projects root" if none loaded)
+    void closeAllOpenShells();       // terminates every shell/terminal actionOpenShell() launched and is still tracking - called from closeEvent()
     void onProjectTreeDoubleClicked(QTreeWidgetItem *item, int column);
     void onFunctionsTreeDoubleClicked(QTreeWidgetItem *item, int column);
     void onProjectTreeContextMenu(const QPoint &pos);
@@ -672,6 +691,7 @@ private:
     QAction *cleanProjectAct;
     QAction *projectOptionsAct;      // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
     QAction *openShellAct;           // "Open Shell" - opens the system's default command line in the current project's folder (or Prefs "Projects root" if none loaded)
+    QList<QProcess *> p_openShellProcesses;   // every shell/terminal actionOpenShell() has launched and is still tracking - closed automatically on exit, see closeAllOpenShells()
     QAction *saveAct;               // save file
     QAction *saveAsAct;             // save file as...
     QAction *prefsAct;              // open prefs dialog

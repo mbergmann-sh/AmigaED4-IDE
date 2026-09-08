@@ -484,6 +484,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
         }
 
         writeSettings();
+        closeAllOpenShells();   // no prompt - shells opened by AmigaED are always closed with it, unlike the emulator above
         event->accept();    // OK: Quit the app!
     }
     else
@@ -777,7 +778,7 @@ void MainWindow::createActions()
     projectOptionsAct->setStatusTip(tr("Edit this project's own extra compiler/linker options"));
     connect(projectOptionsAct, SIGNAL(triggered()), this, SLOT(actionProjectOptions()));
 
-    openShellAct = new QAction(tr("Open Shell"), this);
+    openShellAct = new QAction(QIcon(":/images/open_shell.png"), tr("Open Shell"), this);
     openShellAct->setStatusTip(tr("Open the system's default command line, starting in the current project's folder (or Prefs > Project > \"Projects root\" if none is loaded)"));
     connect(openShellAct, SIGNAL(triggered()), this, SLOT(actionOpenShell()));
 
@@ -1485,6 +1486,7 @@ void MainWindow::createToolBars()
     buildToolBar->addAction(compileAct);
     buildToolBar->addAction(buildProjectAct);   // mirrors menu entry Build/Build Project
     buildToolBar->addAction(cleanProjectAct);   // mirrors menu entry Build/Clean Project
+    buildToolBar->addAction(openShellAct);      // mirrors menu entry Build/Open Shell
     buildToolBar->addSeparator();
     buildToolBar->addAction(emulatorAct);
     buildToolBar->addAction(killEmulatorAct);
@@ -8294,7 +8296,8 @@ void MainWindow::actionProjectOptions()
 }
 
 //
-// Build > Open Shell: opens the host OS's own default command line,
+// Build > Open Shell (also on the Build toolbar, right after Clean
+// Project): opens the host OS's own default command line,
 // starting in the current project's own folder - or, if no project is
 // loaded, Prefs > Project > "Projects root" instead (falling back
 // further to the user's home directory if even that is empty/missing,
@@ -8303,10 +8306,17 @@ void MainWindow::actionProjectOptions()
 // There's no portable, single QProcess call that does this - each OS
 // needs its own actual terminal/shell program launched, with the
 // desired directory passed as that PROCESS's own working directory
-// (QProcess::startDetached()'s own workingDirectory parameter) rather
-// than via a "cd" command typed into it, since that's what every
-// terminal already honours for its OWN initial shell consistently,
-// with no per-terminal command-line quoting/escaping to get wrong.
+// rather than via a "cd" command typed into it, since that's what every
+// terminal already honours for its OWN initial shell consistently, with
+// no per-terminal command-line quoting/escaping to get wrong.
+//
+// Deliberately NOT started detached: a detached process is, by
+// definition, fully disconnected from AmigaED once launched - there is
+// no QProcess handle left afterward to terminate() it with. Every shell
+// opened this way is instead a plain, owned, tracked QProcess (added to
+// p_openShellProcesses, removed again once it exits on its own) so that
+// closeAllOpenShells() can close whatever's left open when AmigaED
+// itself quits, as asked for.
 //
 void MainWindow::actionOpenShell()
 {
@@ -8321,12 +8331,58 @@ void MainWindow::actionOpenShell()
         return;
     }
 
+    auto trackProcess = [this](QProcess *proc)
+    {
+        p_openShellProcesses << proc;
+        // QueuedConnection: avoids removing/deleting proc from directly
+        // inside its own finished() signal emission.
+        connect(proc, &QProcess::finished, this, [this, proc](int, QProcess::ExitStatus)
+        {
+            p_openShellProcesses.removeAll(proc);
+            proc->deleteLater();
+        }, Qt::QueuedConnection);
+    };
+
     bool started = false;
 
 #if defined(Q_OS_WIN)
-    started = QProcess::startDetached(QStringLiteral("cmd.exe"), QStringList(), dir);
+    // The static QProcess::startDetached(program, args, dir) overload
+    // only supports a limited set of properties on Windows - and, per
+    // Qt's own qprocess_win.cpp comments, deliberately sets
+    // CREATE_NO_WINDOW so that console tools launched from a GUI app
+    // (AmigaED has no console of its own to attach one to) don't pop
+    // one up - confirmed exactly this: "started" came back true, cmd.exe
+    // really was running (visible in Task Manager), but no window ever
+    // appeared. setCreateProcessArgumentsModifier(), clearing
+    // CREATE_NO_WINDOW and setting CREATE_NEW_CONSOLE instead, is Qt's
+    // own documented way around this - and, same as tracking the
+    // process at all above, only available via a real QProcess
+    // instance/start(), not the static startDetached() convenience
+    // overload.
+    QProcess *cmdProcess = new QProcess(this);
+    cmdProcess->setProgram(QStringLiteral("cmd.exe"));
+    cmdProcess->setWorkingDirectory(dir);
+    cmdProcess->setCreateProcessArgumentsModifier(
+        [](QProcess::CreateProcessArguments *args)
+        {
+            args->flags &= ~CREATE_NO_WINDOW;
+            args->flags |= CREATE_NEW_CONSOLE;
+            args->startupInfo->dwFlags &= ~STARTF_USESTDHANDLES;
+        });
+    cmdProcess->start();
+    started = cmdProcess->waitForStarted();
+    if (started)
+        trackProcess(cmdProcess);
+    else
+        cmdProcess->deleteLater();
 #elif defined(Q_OS_MAC)
-    started = QProcess::startDetached(QStringLiteral("open"), { QStringLiteral("-a"), QStringLiteral("Terminal"), dir });
+    QProcess *openProcess = new QProcess(this);
+    openProcess->start(QStringLiteral("open"), { QStringLiteral("-a"), QStringLiteral("Terminal"), dir });
+    started = openProcess->waitForStarted();
+    if (started)
+        trackProcess(openProcess);
+    else
+        openProcess->deleteLater();
 #else
     // Linux has no single canonical default terminal the way Windows has
     // cmd.exe - try a short list of common ones in turn. x-terminal-emulator
@@ -8334,6 +8390,16 @@ void MainWindow::actionOpenShell()
     // both a WSL2 Debian and a dedicated Debian machine) is tried first,
     // covering Debian/Ubuntu-based systems out of the box; the rest are
     // fallbacks for other distros that don't provide that alternative.
+    //
+    // Caveat worth knowing about, confirmed working correctly under
+    // KDE/konsole: gnome-terminal specifically uses a client/server
+    // model where the process actually launched here is a short-lived
+    // client that hands off to a long-running gnome-terminal-server and
+    // exits almost immediately - terminating THIS tracked process won't
+    // close the resulting window (and, since that server is shared with
+    // any OTHER gnome-terminal windows the user has open, killing IT
+    // instead would be wrong too). x-terminal-emulator/konsole/xterm/
+    // xfce4-terminal don't have this problem.
     static const QStringList candidates = {
         QStringLiteral("x-terminal-emulator"),
         QStringLiteral("gnome-terminal"),
@@ -8343,9 +8409,16 @@ void MainWindow::actionOpenShell()
     };
     for (const QString &terminal : candidates)
     {
-        started = QProcess::startDetached(terminal, QStringList(), dir);
+        QProcess *termProcess = new QProcess(this);
+        termProcess->setWorkingDirectory(dir);
+        termProcess->start(terminal, QStringList());
+        started = termProcess->waitForStarted();
         if (started)
+        {
+            trackProcess(termProcess);
             break;
+        }
+        termProcess->deleteLater();
     }
 #endif
 
@@ -8363,6 +8436,27 @@ void MainWindow::actionOpenShell()
                                  "The system's default command line could not be started.").arg(dir));
 #endif
     }
+}
+
+//
+// Terminates every shell/terminal actionOpenShell() launched and is
+// still tracking - called from closeEvent() so opened shells don't
+// linger after AmigaED itself has already quit, as asked for. terminate()
+// first (a graceful close request - e.g. WM_CLOSE on Windows, SIGTERM on
+// Linux/macOS), briefly waiting for it to actually take effect, then
+// kill() as a fallback for anything that's still around afterward.
+//
+void MainWindow::closeAllOpenShells()
+{
+    for (QProcess *proc : p_openShellProcesses)
+    {
+        if (proc->state() == QProcess::NotRunning)
+            continue;
+        proc->terminate();
+        if (!proc->waitForFinished(500))
+            proc->kill();
+    }
+    p_openShellProcesses.clear();
 }
 
 //

@@ -8,6 +8,74 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.147
+- **New**: added a colourful "Open Shell" toolbar icon (`images/open_shell.png`,
+  same visual style/size as Build Project/Clean Project), derived from
+  `AmigaShell.info`'s role as the classic AmigaShell launcher icon (that
+  file itself only carries a 4x4 placeholder image, so the new icon was
+  drawn fresh to match). The menu entry stays exactly where it already
+  was, **Build > Open Shell** - only the new toolbar button was added,
+  right after Clean Project, triggering the exact same
+  `actionOpenShell()` as the menu entry always did.
+- **Docs**: Toolbar Reference chapter (HTML manuals + both PDFs)
+  updated with the new Open Shell entry (now #17, Start/Stop
+  Emulator/Exit shifted to #18-20) and its own toolbar reference strip
+  image, plus a new warning note that editing files by hand in a shell
+  opened this way can leave the project out of sync with what Build
+  Project/Clean Project expect.
+
+## rev.146
+- Confirmed working correctly under Linux/KDE (konsole) since rev.144,
+  unrelated to rev.145's Windows-only fix.
+- **New**: shells/terminals opened via Build > Open Shell are now
+  closed automatically when AmigaED itself quits, no prompt (unlike the
+  emulator, which is explicitly asked about instead) - as asked for.
+  Required switching `actionOpenShell()` away from
+  `QProcess::startDetached()` entirely, on every platform: a detached
+  process is, by definition, fully disconnected from AmigaED the
+  moment it's launched, leaving no handle behind to later terminate()
+  it with. Every opened shell is now a plain, owned, tracked `QProcess`
+  instead (`p_openShellProcesses`, added on launch, removed again once
+  it exits on its own via a queued `finished()` connection), and
+  `closeEvent()` now calls a new `closeAllOpenShells()` - `terminate()`
+  first, briefly waiting, then `kill()` for anything still around
+  afterward - before actually accepting the close. Windows keeps
+  rev.145's `CREATE_NEW_CONSOLE` fix, which applies equally whether the
+  process is later started via `start()` or `startDetached()`.
+  Also fixed a real ordering bug introduced while rewriting the Linux
+  branch for this: `setWorkingDirectory()` was called AFTER `start()`,
+  which has no effect at all - swapped back to the only order that
+  actually works.
+  Noted, but out of scope to actually solve: gnome-terminal
+  specifically uses a client/server model where the process launched
+  here is a short-lived client that hands off to a long-running
+  gnome-terminal-server and exits almost immediately - terminating
+  that tracked (client) process won't close the resulting window, and
+  the server itself is shared with any other gnome-terminal windows
+  the user has open, so it shouldn't be killed either. Not an issue
+  for x-terminal-emulator/konsole/xterm/xfce4-terminal, or for Windows'
+  cmd.exe - none of them use this pattern.
+
+## rev.145
+- **Fixed**: Open Shell (rev.144) did nothing at all on Windows 10 -
+  cmd.exe actually was launching (visible in Task Manager) but no
+  window ever appeared. Root cause, confirmed against Qt's own
+  qprocess_win.cpp source comments: the static
+  `QProcess::startDetached(program, args, dir)` convenience overload
+  deliberately sets `CREATE_NO_WINDOW` on Windows specifically so that
+  console tools launched from a GUI app (AmigaED has no console of its
+  own to attach one to) don't pop one up - reasonable as a general
+  QProcess default, but exactly backwards for what this one specific
+  feature needs. Switched to a real `QProcess` instance with
+  `setCreateProcessArgumentsModifier()` clearing `CREATE_NO_WINDOW` and
+  setting `CREATE_NEW_CONSOLE` instead - the documented way around
+  this, only available on an instance, not the static overload. Needed
+  an explicit (NOMINMAX/WIN32_LEAN_AND_MEAN-guarded) `#include
+  <windows.h>` for the `CREATE_NEW_CONSOLE`/`CREATE_NO_WINDOW`/
+  `STARTF_USESTDHANDLES` constants themselves. macOS/Linux unaffected -
+  neither ever used the static overload's Windows-specific console
+  handling in the first place.
+
 ## rev.144
 - **Fixed**: rev.143's new View > Indentation menu entries showed
   English text regardless of the active GUI language. Root cause: the

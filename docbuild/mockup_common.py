@@ -1,8 +1,14 @@
+import os
 from PIL import Image, ImageDraw, ImageFont
 
 FONT_DIR = "/usr/share/fonts/truetype/liberation/"
 def F(name, size):
     return ImageFont.truetype(FONT_DIR + name, size)
+
+# Directory this script lives in (docbuild/) - used below to locate the
+# app's images/ folder relative to the checkout, instead of a hardcoded
+# absolute path that only worked on one machine/session.
+_DOCBUILD_DIR = os.path.dirname(os.path.abspath(__file__))
 
 sans        = F("LiberationSans-Regular.ttf", 20)
 sans_bold   = F("LiberationSans-Bold.ttf", 20)
@@ -33,7 +39,7 @@ CONSOLE_FG  = (220, 220, 220)
 CONSOLE_RED = (255, 110, 110)
 CONSOLE_GREEN = (130, 220, 140)
 
-ICON_DIR = "/home/claude/amigaed80/AmigaED_4_rev131/images/"
+ICON_DIR = os.path.join(os.path.dirname(_DOCBUILD_DIR), "images") + "/"
 
 TOOLBAR_GROUPS = [
     ["new.png", "open.png", "save.png", "filesaveas.png", "printer.png"],
@@ -41,7 +47,7 @@ TOOLBAR_GROUPS = [
     ["cut.png", "copy.png", "paste.png"],
     ["search.png"],
     ["gotoline.png", "brackets.png"],
-    ["dice.png", "build_project.png", "clean_project.png"],
+    ["dice.png", "build_project.png", "clean_project.png", "open_shell.png"],
     ["start-emu.png", "stop-emu.png"],
     ["fileexit.png"],
 ]

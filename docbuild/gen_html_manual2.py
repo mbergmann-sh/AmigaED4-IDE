@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 import base64
+import os
 
-ASSET_DIR = "/home/claude/docbuild/html_assets/"
+# Resolve relative to this script's own location, not a hardcoded
+# absolute path from one particular machine/session.
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSET_DIR = os.path.join(_SCRIPT_DIR, "html_assets") + "/"
 
 def b64(fname):
     with open(ASSET_DIR + fname, "rb") as f:
@@ -28,7 +32,7 @@ IMG_NATURAL_SIZE = {
     "prefs": (1160, 820),
     "ctxmenu": (1100, 810),
     "cover": (1000, 900),
-    "toolbar": (972, 80),
+    "toolbar": (1320, 96),
     "qs1": (1160, 560),
     "qs2": (1160, 620),
     "qs3": (1160, 560),
@@ -187,10 +191,14 @@ def build(lang):
       <tr><td>14</td><td>Compile</td><td>Build &rarr; Compile...</td><td>""" + T("Ad-hoc single-file compile (Mode 1) - see below.", "Ad-hoc-Einzeldatei-Kompilierung (Modus 1) \u2013 siehe unten.") + """</td></tr>
       <tr><td>15</td><td>Build Project</td><td>Build &rarr; Build Project</td><td>""" + T("Project build (Mode 2) - see below.", "Projekt-Build (Modus 2) \u2013 siehe unten.") + """</td></tr>
       <tr><td>16</td><td>Clean Project</td><td>Build &rarr; Clean Project</td><td>""" + T("Removes the current project's build artifacts (object files, executable, icon).", "Entfernt die Build-Artefakte des aktuellen Projekts (Objektdateien, Executable, Icon).") + """</td></tr>
-      <tr><td>17</td><td>""" + T("Start Emulator", "Start Emulator") + """</td><td>Tools &rarr; Emulator &rarr; Start default Workbench in UAE...</td><td>""" + T("Launches your configured UAE emulator.", "Startet den konfigurierten UAE-Emulator.") + """</td></tr>
-      <tr><td>18</td><td>""" + T("Stop Emulator", "Stop Emulator") + """</td><td>Tools &rarr; Stop running Emulation...</td><td>""" + T("Stops the running emulator instance.", "Beendet die laufende Emulator-Instanz.") + """</td></tr>
-      <tr><td>19</td><td>Exit</td><td>File &rarr; Exit</td><td>""" + T("Closes AmigaED.", "Beendet AmigaED.") + """</td></tr>
+      <tr><td>17</td><td>""" + T("Open Shell", "Open Shell") + """</td><td>Build &rarr; Open Shell</td><td>""" + T("Opens the system's default command line, starting in the current project's folder (or the configured \u201cProjects root\u201d if none is loaded).", "Öffnet die Standard-Kommandozeile des Systems, gestartet im Ordner des aktuellen Projekts (oder im konfigurierten \u201eProjects root\u201c, falls kein Projekt geladen ist).") + """</td></tr>
+      <tr><td>18</td><td>""" + T("Start Emulator", "Start Emulator") + """</td><td>Tools &rarr; Emulator &rarr; Start default Workbench in UAE...</td><td>""" + T("Launches your configured UAE emulator.", "Startet den konfigurierten UAE-Emulator.") + """</td></tr>
+      <tr><td>19</td><td>""" + T("Stop Emulator", "Stop Emulator") + """</td><td>Tools &rarr; Stop running Emulation...</td><td>""" + T("Stops the running emulator instance.", "Beendet die laufende Emulator-Instanz.") + """</td></tr>
+      <tr><td>20</td><td>Exit</td><td>File &rarr; Exit</td><td>""" + T("Closes AmigaED.", "Beendet AmigaED.") + """</td></tr>
     </table>
+    <div class="note"><b>""" + T("Warning", "Warnhinweis") + """:</b> """ + T(
+        "Open Shell gives you an unrestricted command line in the project's own folder - including the Makefiles and every file a build reads or produces. Editing, renaming, or deleting files there by hand, outside of AmigaED's own actions, can leave the project in a state that no longer matches what AmigaED expects, and may cause the next Build Project or Clean Project to fail or behave unexpectedly. Treat the shell as a power-user escape hatch, not part of the normal edit/build cycle.",
+        "Open Shell öffnet eine uneingeschränkte Kommandozeile direkt im Projektordner \u2013 einschlie\u00dflich der Makefiles und sämtlicher Dateien, die ein Build liest oder erzeugt. Werden Dateien dort von Hand bearbeitet, umbenannt oder gelöscht, au\u00dferhalb der eigenen Aktionen von AmigaED, kann der Projektzustand nicht mehr zu dem passen, was AmigaED erwartet \u2013 der nächste Build Project- oder Clean Project-Lauf kann dadurch fehlschlagen oder sich unerwartet verhalten. Die Shell ist als Werkzeug für erfahrene Nutzer gedacht, nicht als Teil des normalen Bearbeiten-und-Bauen-Zyklus.") + """</div>
     <div class="note"><b>""" + T("Note", "Hinweis") + """:</b> """ + T(
         "Start/Stop Emulator automatically grey out and enable each other depending on whether an emulator instance is currently running - including one AmigaED itself didn't start (e.g. left open on purpose from a previous session, or launched outside AmigaED entirely).",
         "Start/Stop Emulator grauen sich automatisch gegenseitig ein bzw. aus, je nachdem, ob gerade eine Emulator-Instanz läuft \u2013 auch eine, die AmigaED selbst nicht gestartet hat (z. B. bewusst aus einer früheren Sitzung offen gelassen, oder ganz unabhängig von AmigaED gestartet).") + """</div>
@@ -458,9 +466,9 @@ def build(lang):
     return wrap(title, body)
 
 
-with open("/home/claude/docbuild/manual_en.html", "w", encoding="utf-8") as f:
+with open(os.path.join(_SCRIPT_DIR, "manual_en.html"), "w", encoding="utf-8") as f:
     f.write(build("en"))
-with open("/home/claude/docbuild/manual_de.html", "w", encoding="utf-8") as f:
+with open(os.path.join(_SCRIPT_DIR, "manual_de.html"), "w", encoding="utf-8") as f:
     f.write(build("de"))
 
 print("done")

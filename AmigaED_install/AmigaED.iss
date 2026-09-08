@@ -24,6 +24,17 @@
 #define MyAppExeName "AmigaED.exe"
 #define MyAppId "B3B6B6C1-6C8E-4B2C-9C36-6E9C6E5B7F3A"
 
+; Whether wizard_image.png (see the WizardImageFile comment further
+; below) is available to also show inside the license disclaimer dialog
+; in [Code]. Defined at compile time so both the [Files] entry that
+; stages it into {tmp} and the Pascal code that loads it can be left out
+; together, cleanly, if the file isn't there - same "only takes effect
+; if the file actually exists" approach already used for
+; WizardImageFile/WizardSmallImageFile below.
+#if FileExists(SourcePath + "wizard_image.png")
+  #define HasDisclaimerImage
+#endif
+
 [Setup]
 AppId={{{#MyAppId}}
 AppName={#MyAppName}
@@ -48,7 +59,7 @@ SourceDir=install_src
 ; previously compiled Setup.exe sitting inside it right along with the
 ; rest.
 OutputDir=..\Output
-OutputBaseFilename=AmigaED_rev144_Setup
+OutputBaseFilename=AmigaED_rev147_Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -115,6 +126,20 @@ german.BtnUninstall=%1 &deinstallieren
 german.BtnCancel=Abbrechen
 german.UninstallFailed=Die Deinstallation konnte nicht gestartet werden.
 
+; Used by the license disclaimer dialog (ShowDisclaimer in [Code] below),
+; shown right after Setup's language-selection page and before anything
+; else - including the "already installed?" check further down - so
+; declining it stops the installer in its tracks no matter what else
+; might otherwise happen first.
+english.DisclaimerCaption=License Disclaimer
+english.DisclaimerText=AmigaED 4.0 is distributed under the GNU Lesser General Public License, with one additional restriction: fascists, racists, AfD voters and members, as well as MAGA supporters and Putin sympathizers, are not permitted to use this program!
+english.BtnAccept=&Accept
+english.BtnDecline=&Decline
+german.DisclaimerCaption=Lizenz-Hinweis
+german.DisclaimerText=AmigaED 4.0 steht unter der GNU Lesser License mit einer Einschränkung: Faschisten, Rassisten, AfD-Wähler und -mitglieder, sowie MAGA-Befürworter und Putin-Fans dürfen dieses Programm nicht verwenden!
+german.BtnAccept=&Akzeptieren
+german.BtnDecline=&Ablehnen
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
@@ -129,6 +154,12 @@ Source: "*"; DestDir: "{app}"; Excludes: "DOC\*"; Flags: recursesubdirs createal
 ; the chosen install directory if the user answers "Yes" to the
 ; documentation prompt asked from InitializeSetup below.
 Source: "DOC\*"; DestDir: "{app}\DOC"; Flags: recursesubdirs createallsubdirs ignoreversion; Check: ShouldInstallDocs
+; Staged into {tmp} (not {app} - never installed alongside the program)
+; purely so the license disclaimer dialog in [Code] can load it at
+; runtime. Only present if HasDisclaimerImage was defined above.
+#ifdef HasDisclaimerImage
+Source: "{#SourcePath}wizard_image.png"; DestDir: "{tmp}"; Flags: dontcopy noencryption
+#endif
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -172,6 +203,14 @@ var
   // helper local to AskInstallChoice, as this used to be, fails to
   // compile with "'BEGIN' expected").
   InstallChoiceBtnTop: Integer;
+
+  // Set by the button click handlers below; ShowDisclaimer() reads it
+  // back once the dialog closes. True = Accept (installation continues),
+  // False = Decline or the dialog closed any other way (Esc/title bar) -
+  // same "closing it any other way counts as the safe/negative choice"
+  // convention as InstallChoiceResult above.
+  DisclaimerAccepted: Boolean;
+  DisclaimerForm: TSetupForm;
 
 function ShouldInstallDocs(): Boolean;
 begin
@@ -256,6 +295,105 @@ begin
   Result := InstallChoiceResult;
 end;
 
+// --- License disclaimer dialog -----------------------------------------
+// Shown right after the language-selection page, before Setup does
+// anything else. Two buttons, Accept/Decline (captions from
+// [CustomMessages] above, so they follow the chosen Setup language) -
+// deliberately a custom form rather than a stock MsgBox, since a plain
+// MsgBox's OK/Cancel captions can't be renamed to "Accept"/"Decline".
+procedure DisclaimerButtonClick(Sender: TObject);
+begin
+  DisclaimerAccepted := (TNewButton(Sender).Tag = 1);
+  DisclaimerForm.Close;
+end;
+
+function ShowDisclaimer(): Boolean;
+var
+  InfoLabel: TNewStaticText;
+  AcceptBtn, DeclineBtn: TNewButton;
+  BtnWidth: Integer;
+  TextLeft: Integer;
+#ifdef HasDisclaimerImage
+  DisclaimerImage: TBitmapImage;
+#endif
+begin
+  DisclaimerAccepted := False; // closing the form any other way still counts as Decline
+
+  // Wide/tall enough for the image column (if any) plus the disclaimer
+  // text wrapping over a handful of lines, plus two buttons underneath.
+  // Fixed size (False, False), same as AskInstallChoice's dialog above.
+  DisclaimerForm := CreateCustomForm(ScaleX(560), ScaleY(280), False, False);
+  try
+    DisclaimerForm.Caption := ExpandConstant('{cm:DisclaimerCaption}');
+    DisclaimerForm.Position := poScreenCenter;
+    DisclaimerForm.BorderStyle := bsDialog;
+
+#ifdef HasDisclaimerImage
+    // Reuses the same wizard_image.png already configured as
+    // WizardImageFile above - extracted into {tmp} here purely so this
+    // dialog's own TBitmapImage can load it (TBitmapImage.PngImage
+    // loads PNG directly; no BMP conversion needed). Stretched into a
+    // fixed-size column on the left, same idea as the Welcome page's
+    // own large wizard image.
+    DisclaimerImage := TBitmapImage.Create(DisclaimerForm);
+    DisclaimerImage.Parent := DisclaimerForm;
+    DisclaimerImage.Left := ScaleX(16);
+    DisclaimerImage.Top := ScaleY(16);
+    DisclaimerImage.Width := ScaleX(110);
+    DisclaimerImage.Height := ScaleY(200);
+    DisclaimerImage.Stretch := True;
+    DisclaimerImage.Center := True;
+    ExtractTemporaryFile('wizard_image.png');
+    DisclaimerImage.PngImage.LoadFromFile(ExpandConstant('{tmp}\wizard_image.png'));
+    TextLeft := DisclaimerImage.Left + DisclaimerImage.Width + ScaleX(16);
+#else
+    TextLeft := ScaleX(16);
+#endif
+
+    InfoLabel := TNewStaticText.Create(DisclaimerForm);
+    InfoLabel.Parent := DisclaimerForm;
+    InfoLabel.Left := TextLeft;
+    InfoLabel.Top := ScaleY(16);
+    InfoLabel.Width := DisclaimerForm.ClientWidth - TextLeft - ScaleX(16);
+    InfoLabel.Height := ScaleY(200);
+    InfoLabel.AutoSize := False;
+    InfoLabel.WordWrap := True;
+    InfoLabel.Caption := ExpandConstant('{cm:DisclaimerText}');
+
+    BtnWidth := (DisclaimerForm.ClientWidth - ScaleX(32) - ScaleX(10)) div 2;
+
+    AcceptBtn := TNewButton.Create(DisclaimerForm);
+    AcceptBtn.Parent := DisclaimerForm;
+    AcceptBtn.Left := ScaleX(16);
+    AcceptBtn.Top := ScaleY(232);
+    AcceptBtn.Width := BtnWidth;
+    AcceptBtn.Height := ScaleY(23);
+    AcceptBtn.Caption := ExpandConstant('{cm:BtnAccept}');
+    AcceptBtn.Tag := 1;
+    AcceptBtn.OnClick := @DisclaimerButtonClick;
+
+    DeclineBtn := TNewButton.Create(DisclaimerForm);
+    DeclineBtn.Parent := DisclaimerForm;
+    DeclineBtn.Left := AcceptBtn.Left + AcceptBtn.Width + ScaleX(10);
+    DeclineBtn.Top := ScaleY(232);
+    DeclineBtn.Width := BtnWidth;
+    DeclineBtn.Height := ScaleY(23);
+    DeclineBtn.Caption := ExpandConstant('{cm:BtnDecline}');
+    DeclineBtn.Tag := 0;
+    DeclineBtn.OnClick := @DisclaimerButtonClick;
+    DeclineBtn.Cancel := True; // Esc / closing the dialog acts as Decline
+
+    // Decline is the active/default control - closing the dialog any
+    // way other than an explicit Accept click is the safe outcome.
+    DisclaimerForm.ActiveControl := DeclineBtn;
+    DisclaimerForm.ShowModal;
+  finally
+    DisclaimerForm.Free;
+  end;
+
+  Result := DisclaimerAccepted;
+end;
+
 function InitializeSetup(): Boolean;
 var
   UninstallString: String;
@@ -264,6 +402,18 @@ var
   Choice: Integer;
 begin
   Result := True;
+
+  // License disclaimer - shown first, right after the language-selection
+  // page (Inno Setup has already resolved the active language by the
+  // time InitializeSetup runs, so {cm:DisclaimerText} etc. below come
+  // out in that language). Declining exits Setup immediately, before
+  // the "already installed?" check or anything else gets a chance to
+  // run.
+  if not ShowDisclaimer() then
+  begin
+    Result := False;
+    Exit;
+  end;
 
   UninstallRegKey := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{{#MyAppId}}_is1';
 

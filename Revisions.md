@@ -23,6 +23,21 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   image, plus a new warning note that editing files by hand in a shell
   opened this way can leave the project out of sync with what Build
   Project/Clean Project expect.
+	- **New**: Windows-Installer (`AmigaED_install\AmigaED.iss`) zeigt jetzt
+  direkt nach der Sprachauswahl einen Lizenz-Disclaimer-Dialog mit den
+  Buttons "Accept"/"Decline" (deutsch: "Akzeptieren"/"Ablehnen") - ein
+  eigenes Fenster statt einer Standard-MsgBox, da deren OK/Cancel-
+  Beschriftungen sich nicht umbenennen lassen. Wählt der Nutzer
+  "Decline" (oder schließt den Dialog anderweitig, z.B. über Esc oder
+  die Titelleiste - zählt bewusst ebenfalls als Ablehnung), bricht
+  Setup sofort ab, noch bevor die "bereits installiert?"-Prüfung oder
+  irgendetwas anderes läuft. Text und Beschriftungen kommen komplett
+  aus `[CustomMessages]` und folgen damit automatisch der auf der
+  Sprachauswahl-Seite gewählten Setup-Sprache. Sofern `wizard_image.png`
+  vorhanden ist (gleiches Bild wie beim Willkommensfenster), wird es
+  links im Dialog zusätzlich mit angezeigt (`HasDisclaimerImage`-Schalter,
+  Bild wird dafür nach `{tmp}` extrahiert und per `TBitmapImage`
+  geladen) - fehlt die Datei, erscheint der Dialog einfach ohne Bild.
 
 ## rev.146
 - Confirmed working correctly under Linux/KDE (konsole) since rev.144,

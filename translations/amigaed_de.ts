@@ -2071,6 +2071,21 @@ AmigaED benötigt eine, um das Projekt zu importieren.</translation>
         <translation>Hauptdatei des Projekts:</translation>
     </message>
     <message>
+        <location filename="../mainwindow.cpp" line="7737"/>
+        <source>Target OS for this project:</source>
+        <translation>Ziel-Betriebssystem für dieses Projekt:</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7732"/>
+        <source>AmigaOS 3.x</source>
+        <translation>AmigaOS 3.x</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="7732"/>
+        <source>AmigaOS 1.3</source>
+        <translation>AmigaOS 1.3</translation>
+    </message>
+    <message>
         <location filename="../mainwindow.cpp" line="6547"/>
         <source>A project file named &quot;%1&quot; already exists in that folder.
 

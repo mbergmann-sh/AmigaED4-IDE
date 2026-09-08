@@ -777,6 +777,10 @@ void MainWindow::createActions()
     projectOptionsAct->setStatusTip(tr("Edit this project's own extra compiler/linker options"));
     connect(projectOptionsAct, SIGNAL(triggered()), this, SLOT(actionProjectOptions()));
 
+    openShellAct = new QAction(tr("Open Shell"), this);
+    openShellAct->setStatusTip(tr("Open the system's default command line, starting in the current project's folder (or Prefs > Project > \"Projects root\" if none is loaded)"));
+    connect(openShellAct, SIGNAL(triggered()), this, SLOT(actionOpenShell()));
+
     saveAct = new QAction(QIcon(":/images/save.png"), tr("&Save"), this);
     saveAct->setShortcut(tr("Ctrl+S"));
     saveAct->setStatusTip(tr("Save the document to disk"));
@@ -1360,6 +1364,8 @@ void MainWindow::createMenus()
     buildMenue->addSeparator();
     buildMenue->addAction(toggleGccDefaultOptsAct);
     buildMenue->addAction(toggleVbccDefaultOptsAct);
+    buildMenue->addSeparator();
+    buildMenue->addAction(openShellAct);
 
 
     menuBar()->addSeparator();
@@ -1380,6 +1386,7 @@ void MainWindow::createMenus()
     guiLanguageMenue->addAction(guiLanguageEnglishAct);
     guiLanguageMenue->addAction(guiLanguageGermanAct);
     buildThemeMenu();
+    buildIndentationMenu();
     viewMenue->addSeparator();
     viewMenue->addAction(showFunctionsBrowserAct);
     viewMenue->addAction(hideFunctionsBrowserAct);
@@ -1517,6 +1524,7 @@ void MainWindow::retranslateUi()
     buildProjectAct->setText(tr("Build Project"));
     cleanProjectAct->setText(tr("Clean Project"));
     projectOptionsAct->setText(tr("Project Options..."));
+    openShellAct->setText(tr("Open Shell"));
     saveAct->setText(tr("&Save"));
     saveAsAct->setText(tr("Save &As..."));
     prefsAct->setText(tr("Global prefs..."));
@@ -1604,6 +1612,7 @@ void MainWindow::retranslateUi()
     buildProjectAct->setStatusTip(tr("Run the project's Makefile (target \"all\") for the currently selected compiler"));
     cleanProjectAct->setStatusTip(tr("Remove the project's build artifacts (object files, executable, icon)"));
     projectOptionsAct->setStatusTip(tr("Edit this project's own extra compiler/linker options"));
+    openShellAct->setStatusTip(tr("Open the system's default command line, starting in the current project's folder (or Prefs > Project > \"Projects root\" if none is loaded)"));
     saveAct->setStatusTip(tr("Save the document to disk"));
     saveAsAct->setStatusTip(tr("Save the document under a new name"));
     prefsAct->setStatusTip(tr("Open global preferences..."));
@@ -1764,6 +1773,26 @@ void MainWindow::retranslateUi()
     if (themeMenue)
         themeMenue->setTitle(tr("Theme"));
 
+    // -- Indentation menu (View menu, added separately - see
+    // buildIndentationMenu()) -- unlike Theme above, these entries ARE
+    // translated (see buildIndentationMenu()'s own comment for why that's
+    // safe here); matched by each action's own data() (2/4/8), not by
+    // position, since retranslateUi() can run after the menu was built
+    // in either language.
+    if (indentationMenue)
+    {
+        indentationMenue->setTitle(tr("Indentation"));
+        for (QAction *act : indentationActionGroup->actions())
+        {
+            switch (act->data().toInt())
+            {
+            case 2: act->setText(tr("2 Characters")); break;
+            case 4: act->setText(tr("4 Characters")); break;
+            case 8: act->setText(tr("8 Characters")); break;
+            }
+        }
+    }
+
     // -- Functions Browser visibility menu (View menu, added separately - see createMenus()) --
     showFunctionsBrowserAct->setText(tr("Show Functions Browser"));
     showFunctionsBrowserAct->setStatusTip(tr("Show the Functions panel"));
@@ -1878,6 +1907,7 @@ void MainWindow::readSettings()
         applyApplicationStyle();   // also re-applies editor tab colours and output-pane highlighting - see its own end for why
     }
     p_show_indentation = (settings.value("MISC/ShowIndentGuide").toBool());
+    p_indentationWidth = (settings.value("MISC/IndentationWidth", 2).toInt());
     p_mydebug = (settings.value("MISC/ShowDebugOutput").toBool());
     p_no_lcd_statusbar = (settings.value("MISC/NoLCDstatusbar").toBool());
     p_defaultCompiler = (settings.value("MISC/DefaultCrossCompiler").toInt());
@@ -2464,8 +2494,8 @@ QsciScintilla *MainWindow::newEditorTab()
 
     editor->setEolMode(QsciScintilla::EolUnix);
     editor->setIndentationsUseTabs(true);
-    editor->setIndentationWidth(4);
-    editor->setTabWidth(4);
+    editor->setIndentationWidth(p_indentationWidth);
+    editor->setTabWidth(p_indentationWidth);
     editor->setAutoIndent(true);
     editor->setBraceMatching(QsciScintilla::SloppyBraceMatch);
     editor->SendScintilla(editor->QsciScintilla::SCI_STYLESETCHARACTERSET, 1, QsciScintilla::SC_CHARSET_ANSI);
@@ -5129,6 +5159,80 @@ void MainWindow::buildThemeMenu()
 }
 
 //
+// View > Indentation: "2/4/8 Characters", mutually exclusive, mirroring
+// buildThemeMenu()'s own pattern - default is "2 Characters"
+// (p_indentationWidth's own default), matching what the caller asked
+// for. Unlike the Theme menu's native style names (kept untranslated
+// since they double as literal QSettings values), these entries ARE
+// translated - the persisted value is the plain integer stored in each
+// action's data(), never the displayed text itself, so translation
+// can't break it.
+//
+void MainWindow::buildIndentationMenu()
+{
+    indentationMenue = viewMenue->addMenu(tr("Indentation"));
+    indentationActionGroup = new QActionGroup(this);
+    indentationActionGroup->setExclusive(true);
+
+    const QList<QPair<int, QString>> widths = {
+        { 2, tr("2 Characters") },
+        { 4, tr("4 Characters") },
+        { 8, tr("8 Characters") }
+    };
+    for (const auto &w : widths)
+    {
+        QAction *act = indentationMenue->addAction(w.second);
+        act->setCheckable(true);
+        act->setData(w.first);
+        act->setChecked(w.first == p_indentationWidth);
+        indentationActionGroup->addAction(act);
+        connect(act, SIGNAL(triggered()), this, SLOT(actionSelectIndentation()));
+    }
+}
+
+//
+// View > Indentation entry clicked: applies the clicked action's own
+// data() (2/4/8) as the new p_indentationWidth, persists it (so it
+// becomes the new startup default too, as asked for), and re-applies it
+// to every already-open tab immediately - new tabs already pick it up
+// via newEditorTab().
+//
+void MainWindow::actionSelectIndentation()
+{
+    QAction *act = qobject_cast<QAction *>(sender());
+    if (!act)
+        return;
+
+    p_indentationWidth = act->data().toInt();
+
+    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    settings.setValue("MISC/IndentationWidth", p_indentationWidth);
+
+    applyIndentationWidth();
+}
+
+//
+// Re-applies p_indentationWidth to every currently open tab - used when
+// the View > Indentation menu changes it live, so already-open tabs
+// don't keep the previous width until reopened (newEditorTab() already
+// applies the current value to brand new tabs on its own).
+//
+void MainWindow::applyIndentationWidth()
+{
+    if (!tabWidget)
+        return;
+
+    for (int i = 0; i < tabWidget->count(); ++i)
+    {
+        QsciScintilla *editor = qobject_cast<QsciScintilla *>(tabWidget->widget(i));
+        if (!editor)
+            continue;
+        editor->setIndentationWidth(p_indentationWidth);
+        editor->setTabWidth(p_indentationWidth);
+    }
+}
+
+//
 // View > Theme entry clicked: applies the clicked action's own text as
 // the new p_default_style, persists it (matching Prefs > Misc's own
 // MISC/DefaultStyle key exactly, so either place shows the other's
@@ -6900,12 +7004,45 @@ void MainWindow::regenerateProjectMakefiles()
 //
 QString MainWindow::mainFileTemplateContent(int templateKind, const QString &baseName) const
 {
-    QString header =
-        "/*\n"
-        " * File:\t\t" + baseName + ".c\n"
-        " * Description:\tAmigaED project main file\n"
-        " * TODO:\t\tFill in author/description as needed\n"
-        " */\n\n";
+    QString header;
+
+    // Fixed-width space padding (leftJustified), not tabs: a tab's actual
+    // rendered width depends on the viewer/editor's own tab-size setting,
+    // so tab-aligned columns only ever line up by coincidence - confirmed
+    // needing yet another manual tab tweak (rev.142) right after the
+    // first attempt (rev.141) already didn't quite line up. Space padding
+    // lines up identically everywhere, regardless of tab-width settings.
+    auto pad = [](const QString &label) { return label.leftJustified(13, ' '); };
+
+    // If Prefs > Project has an Author, Email, and/or Website configured,
+    // use them here instead of the generic TODO line - only for whichever
+    // of the three actually have something in them, so a partial fill-in
+    // (e.g. just an Author) doesn't produce empty label lines. Falls back
+    // to the original TODO placeholder unchanged when all three are
+    // still empty.
+    if (!p_author.trimmed().isEmpty() || !p_email.trimmed().isEmpty() || !p_website.trimmed().isEmpty())
+    {
+        header =
+            "/*\n"
+            " * " + pad("File:") + baseName + ".c\n"
+            " * " + pad("Description:") + "AmigaED project main file\n";
+        if (!p_author.trimmed().isEmpty())
+            header += " * " + pad("Author:") + p_author.trimmed() + "\n";
+        if (!p_email.trimmed().isEmpty())
+            header += " * " + pad("Email:") + p_email.trimmed() + "\n";
+        if (!p_website.trimmed().isEmpty())
+            header += " * " + pad("Web:") + p_website.trimmed() + "\n";
+        header += " */\n\n";
+    }
+    else
+    {
+        header =
+            "/*\n"
+            " * " + pad("File:") + baseName + ".c\n"
+            " * " + pad("Description:") + "AmigaED project main file\n"
+            " * " + pad("TODO:") + "Fill in author/description as needed\n"
+            " */\n\n";
+    }
 
     switch (templateKind)
     {
@@ -8154,6 +8291,78 @@ void MainWindow::actionProjectOptions()
     markProjectModified();
     regenerateProjectMakefiles();
     createStatusBarMessage(tr("Project options updated."), 3000);
+}
+
+//
+// Build > Open Shell: opens the host OS's own default command line,
+// starting in the current project's own folder - or, if no project is
+// loaded, Prefs > Project > "Projects root" instead (falling back
+// further to the user's home directory if even that is empty/missing,
+// rather than silently doing nothing).
+//
+// There's no portable, single QProcess call that does this - each OS
+// needs its own actual terminal/shell program launched, with the
+// desired directory passed as that PROCESS's own working directory
+// (QProcess::startDetached()'s own workingDirectory parameter) rather
+// than via a "cd" command typed into it, since that's what every
+// terminal already honours for its OWN initial shell consistently,
+// with no per-terminal command-line quoting/escaping to get wrong.
+//
+void MainWindow::actionOpenShell()
+{
+    QString dir = currentProject ? currentProject->projectDir() : p_projectsRootDir;
+    if (dir.isEmpty())
+        dir = QDir::homePath();
+
+    if (!QFileInfo::exists(dir))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("This folder no longer exists:\n%1").arg(dir));
+        return;
+    }
+
+    bool started = false;
+
+#if defined(Q_OS_WIN)
+    started = QProcess::startDetached(QStringLiteral("cmd.exe"), QStringList(), dir);
+#elif defined(Q_OS_MAC)
+    started = QProcess::startDetached(QStringLiteral("open"), { QStringLiteral("-a"), QStringLiteral("Terminal"), dir });
+#else
+    // Linux has no single canonical default terminal the way Windows has
+    // cmd.exe - try a short list of common ones in turn. x-terminal-emulator
+    // (Debian's own update-alternatives-based generic launcher, present on
+    // both a WSL2 Debian and a dedicated Debian machine) is tried first,
+    // covering Debian/Ubuntu-based systems out of the box; the rest are
+    // fallbacks for other distros that don't provide that alternative.
+    static const QStringList candidates = {
+        QStringLiteral("x-terminal-emulator"),
+        QStringLiteral("gnome-terminal"),
+        QStringLiteral("konsole"),
+        QStringLiteral("xfce4-terminal"),
+        QStringLiteral("xterm")
+    };
+    for (const QString &terminal : candidates)
+    {
+        started = QProcess::startDetached(terminal, QStringList(), dir);
+        if (started)
+            break;
+    }
+#endif
+
+    if (!started)
+    {
+#if defined(Q_OS_LINUX)
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("Could not open a shell in:\n%1\n\n"
+                                 "None of the usual terminal programs (x-terminal-emulator, "
+                                 "gnome-terminal, konsole, xfce4-terminal, xterm) could be started - "
+                                 "is at least one of them installed?").arg(dir));
+#else
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("Could not open a shell in:\n%1\n\n"
+                                 "The system's default command line could not be started.").arg(dir));
+#endif
+    }
 }
 
 //

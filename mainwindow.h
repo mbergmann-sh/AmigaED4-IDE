@@ -232,6 +232,7 @@ public:
     // that distinction matters).
     bool p_styleInitialized = false;
     bool p_show_indentation;        // show indentation guidelines by default?
+    int p_indentationWidth = 2;     // View > Indentation ("2/4/8 Characters") - width of one indent level in every editor tab, in characters (see newEditorTab()/applyIndentationWidth())
     bool p_mydebug = false;         // show or hide debugging informations
     bool p_no_lcd_statusbar;        // use normal text instead of LCD for cursor position view
     bool p_no_compilerbuttons;      // hide compiler selector and compile button from statusbar
@@ -295,6 +296,7 @@ public slots:
     void actionBuildProject();
     void actionCleanProject();
     void actionProjectOptions();     // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
+    void actionOpenShell();          // "Open Shell" - opens the system's default command line in the current project's folder (or Prefs "Projects root" if none loaded)
     void onProjectTreeDoubleClicked(QTreeWidgetItem *item, int column);
     void onFunctionsTreeDoubleClicked(QTreeWidgetItem *item, int column);
     void onProjectTreeContextMenu(const QPoint &pos);
@@ -377,6 +379,7 @@ private slots:
     void actionShowLineNumbers();         // show or hide line numbers
     void actionShowCaretLine();           // show or hide caret line
     void actionSelectTheme();             // View/Theme entry clicked - applies the clicked action's own text as the new p_default_style
+    void actionSelectIndentation();       // View/Indentation entry clicked - applies the clicked action's data() (2/4/8) as the new p_indentationWidth
     void actionShowDebug();               // sets showing or hideing for debugging informations
     void actionShowEOL();                 // show or hide EOL character
     void actionShowUnprintable();         // show or hide unprintable characters
@@ -505,6 +508,8 @@ private:
     void reapplyEditorTheme();                     // re-applies margin/caret/selection/lexer colors to every currently open tab - used when the style changes at runtime (Prefs closed / Shift+F12)
     void buildThemeMenu();                         // populates View/Theme with one checkable, mutually-exclusive entry per available style (native styles + Dark/Workbench 1.3/Workbench 3.1) - called once from the constructor
     void syncThemeMenuCheckedState();              // ensures the entry matching p_default_style is checked - called after buildThemeMenu() and whenever the style changes elsewhere (e.g. Prefs dialog)
+    void buildIndentationMenu();                   // populates View/Indentation with "2/4/8 Characters", mutually exclusive - called once from the constructor
+    void applyIndentationWidth();                  // re-applies p_indentationWidth to every open tab's setIndentationWidth()/setTabWidth() - called after a change and whenever a project/file is loaded
 
 
     // Qscintila Editor widget instance - since AmigaED v3.2, always points
@@ -602,6 +607,8 @@ private:
     QMenu *viewMenue;           // holds actions to change editors view
     QMenu *themeMenue = nullptr;         // View/Theme - one checkable entry per available style, mutually exclusive (see buildThemeMenu())
     QActionGroup *themeActionGroup = nullptr;   // enforces the mutual exclusion (radio-button behaviour) for themeMenue's entries
+    QMenu *indentationMenue = nullptr;          // View/Indentation - "2/4/8 Characters", mutually exclusive (see buildIndentationMenu())
+    QActionGroup *indentationActionGroup = nullptr;   // enforces the mutual exclusion (radio-button behaviour) for indentationMenue's entries
     QMenu *tabwidthMenue;       // Submenu of viewMenu, holds different values for tab width
     QMenu *syntaxMenue;         // holds actions to change syntax lexers
     QMenu *toolsMenue;          // holds misc actions
@@ -664,6 +671,7 @@ private:
     QAction *buildProjectAct;
     QAction *cleanProjectAct;
     QAction *projectOptionsAct;      // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
+    QAction *openShellAct;           // "Open Shell" - opens the system's default command line in the current project's folder (or Prefs "Projects root" if none loaded)
     QAction *saveAct;               // save file
     QAction *saveAsAct;             // save file as...
     QAction *prefsAct;              // open prefs dialog

@@ -8,6 +8,77 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.144
+- **Fixed**: rev.143's new View > Indentation menu entries showed
+  English text regardless of the active GUI language. Root cause: the
+  app loads a *compiled* `translations/amigaed_de.qm` at runtime (via
+  `translations.qrc`), not the `amigaed_de.ts` source directly - .ts
+  edits (mine, throughout this whole project) only take effect once
+  `lrelease` recompiles them into that .qm file, which hadn't happened
+  since rev.143's new strings were added. Recompiled it now
+  (462 entries, all finished) and verified the specific new strings
+  ("Indentation", "2/4/8 Characters", ...) actually load correctly
+  from the result before considering this fixed - not just assuming
+  the .ts edit alone was sufficient, which is exactly what silently
+  wasn't happening before.
+- **New**: Build menu gained "Open Shell" as its last entry, after a
+  separator - opens the host OS's own default command line, starting
+  in the current project's own folder, or Prefs > Project > "Projects
+  root" if none is loaded (falling back further to the user's home
+  directory if even that is empty). Windows uses cmd.exe; Linux has no
+  single canonical default the way Windows does, so it tries a short
+  list of common terminals in turn (x-terminal-emulator first - Debian/
+  Ubuntu's own generic launcher, present on both the WSL2 Debian and
+  dedicated Debian machines this project is tested on - then
+  gnome-terminal/konsole/xfce4-terminal/xterm as fallbacks); macOS uses
+  Terminal.app. Each platform's own two failure-message variants
+  (Linux's mentions the specific terminals tried; the others don't) are
+  kept as fully separate, complete `tr()` calls rather than
+  interleaving `#if`/`#else` inside a single translated string, so
+  translation can't silently apply to only one branch - both are
+  translated to German.
+
+## rev.143
+- New project main file header (rev.141/142) now uses fixed-width space
+  padding (`QString::leftJustified()`) instead of tabs to align
+  "File:"/"Description:"/"Author:"/"Email:"/"Web:"/"TODO:" - a tab's
+  actual rendered width depends on the viewer/editor's own tab-size
+  setting, so tab-aligned columns only ever lined up by coincidence
+  (confirmed needing a manual tab-count fix in rev.142 mere hours after
+  rev.141 shipped). Space padding lines up identically everywhere,
+  regardless of anyone's tab-width settings.
+- **New**: View &gt; Indentation menu - "2 Characters"/"4 Characters"/
+  "8 Characters", mutually exclusive, default "2 Characters" - sets the
+  width of one indent level (`setIndentationWidth()`/`setTabWidth()`)
+  for every editor tab. Applied to brand new tabs automatically
+  (`newEditorTab()`, the one shared choke point every new tab already
+  goes through - confirmed `openFileInTab()` uses it too, so this
+  needed no other call sites), and re-applied live to every
+  already-open tab the moment the menu selection changes. The choice is
+  persisted (`MISC/IndentationWidth`) and becomes the new startup
+  default, same as View &gt; Theme. Fully translated (German
+  included), unlike the Theme menu's deliberately-untranslated native
+  style names - the persisted value is each action's own numeric
+  data() (2/4/8), never the displayed text, so translation can't affect
+  it.
+
+## rev.142
+- Fixed the "Web:" line's alignment in rev.141's new header comment -
+  needed one more tab to line up with "Author:"/"Email:" above it.
+
+## rev.141
+- **New**: a newly created project's main file header comment now uses
+  Prefs &gt; Project's Author/Email/Website fields (whichever of the
+  three actually have something entered) instead of the generic
+  "TODO: Fill in author/description as needed" line - e.g. an Author
+  filled in alone adds just an "Author:" line, no empty Email:/Web:
+  lines for the other two. Falls back to the original TODO placeholder
+  unchanged when all three are still empty, exactly as before.
+  Implemented in `mainFileTemplateContent()`, the one shared header
+  generator already used by all six New Project templates - so this
+  applies to Empty C, Shell, AmigaOS 1.3, AmigaOS 3.x, ReAction, and
+  MUI alike, not just one of them.
+
 ## rev.140
 - Adopted the user's own cosmetic layout touch-ups to `prefsdialog.ui`
   (Qt Designer): the VBCC tab's rows are now individually-grouped

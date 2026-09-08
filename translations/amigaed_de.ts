@@ -220,6 +220,47 @@
         <translation>Bearbeitet die projekteigenen zusätzlichen Compiler-/Linker-Optionen</translation>
     </message>
     <message>
+        <location filename="../mainwindow.cpp" line="780"/>
+        <location filename="../mainwindow.cpp" line="1527"/>
+        <source>Open Shell</source>
+        <translation>Shell öffnen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="781"/>
+        <location filename="../mainwindow.cpp" line="1615"/>
+        <source>Open the system's default command line, starting in the current project's folder (or Prefs &gt; Project &gt; &quot;Projects root&quot; if none is loaded)</source>
+        <translation>Öffnet die Standard-Kommandozeile des Systems, gestartet im Ordner des aktuellen Projekts (oder in Prefs &gt; Project &gt; &quot;Projects root&quot;, falls keines geladen ist)</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="8350"/>
+        <source>This folder no longer exists:
+%1</source>
+        <translation>Dieser Ordner existiert nicht mehr:
+%1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="8377"/>
+        <source>Could not open a shell in:
+%1
+
+None of the usual terminal programs (x-terminal-emulator, gnome-terminal, konsole, xfce4-terminal, xterm) could be started - is at least one of them installed?</source>
+        <translation>Konnte keine Shell öffnen in:
+%1
+
+Keines der üblichen Terminal-Programme (x-terminal-emulator, gnome-terminal, konsole, xfce4-terminal, xterm) konnte gestartet werden - ist mindestens eines davon installiert?</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="8377"/>
+        <source>Could not open a shell in:
+%1
+
+The system's default command line could not be started.</source>
+        <translation>Konnte keine Shell öffnen in:
+%1
+
+Die Standard-Kommandozeile des Systems konnte nicht gestartet werden.</translation>
+    </message>
+    <message>
         <location filename="../mainwindow.cpp" line="7845"/>
         <source>Project Options - "%1"</source>
         <translation>Projekt-Optionen - "%1"</translation>
@@ -1519,6 +1560,30 @@
         <location filename="../mainwindow.cpp" line="1738"/>
         <source>Theme</source>
         <translation>Design</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="1362"/>
+        <location filename="../mainwindow.cpp" line="1755"/>
+        <source>Indentation</source>
+        <translation>Einrückung</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="5170"/>
+        <location filename="../mainwindow.cpp" line="1758"/>
+        <source>2 Characters</source>
+        <translation>2 Zeichen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="5171"/>
+        <location filename="../mainwindow.cpp" line="1759"/>
+        <source>4 Characters</source>
+        <translation>4 Zeichen</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="5172"/>
+        <location filename="../mainwindow.cpp" line="1760"/>
+        <source>8 Characters</source>
+        <translation>8 Zeichen</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="1275"/>

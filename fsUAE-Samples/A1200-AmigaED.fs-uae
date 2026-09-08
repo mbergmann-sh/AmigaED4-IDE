@@ -58,6 +58,31 @@ floppy_drive_0 =
 # Empty drive - no disk inserted.
 floppy_drive_1 =
 
+# --- Netzwerk ---
+# bsdsocket_library: einfache Socket-basierte Programme (die direkt
+# bsdsocket.library aufrufen) bekommen sofort TCP/IP ueber die
+# Host-Verbindung, ganz ohne eigenen Treiber im Amiga.
+#
+# network_card: virtuelle A2065-Ethernetkarte (Zorro II), automatisch
+# per SLIRP genattet - kein Bridging/Routing auf Host-Seite noetig.
+# AmigaOS sieht danach ein echtes Netzwerkgeraet (traditionell als
+# "uaenet.device" bekannt - das ist kein eigener FS-UAE-Schluessel,
+# sondern der Geraetename, den die konfigurierte Karte im Amiga
+# bekommt). WICHTIG: Das allein reicht nicht - im Workbench selbst
+# muss noch ein TCP/IP-Stack eingerichtet werden (z.B. Roadshow,
+# kommerziell/Demo - AmigaOS bringt selbst keinen mit).
+bsdsocket_library = 1
+network_card = a2065
+
+# --- Maus / Input-Grab ---
+# Bekanntes WSLg-Problem: ohne diese drei Optionen bleiben Host- und
+# Amiga-Mauszeiger gleichzeitig sichtbar und driften auseinander -
+# siehe A500-AmigaED.fs-uae fuer die Details. Nicht A1200-spezifisch,
+# daher hier ebenfalls gesetzt.
+mouse_integration    = 0
+initial_input_grab   = 1
+automatic_input_grab = 1
+
 # --- Clipboard / clock / floppy sound ---
 # Shares the clipboard between host and Amiga (needs an app that opens
 # clipboard.device on the Amiga side too - e.g. a text editor's own
@@ -67,14 +92,14 @@ clipboard_sharing = 1
 
 # MSM6242B is the real RTC chip used in A500/500+/600/1200/2000 - lets
 # the emulated Amiga read the current time automatically from the host.
-# Note: A500 already auto-enables this ("auto", the default) once a
-# memory expansion is present, which fast_memory above already does -
-# set explicitly here anyway to remove any doubt. If it doesn't take
-# effect, the next thing to try is uae_chipset_compatible = - (see
+# Set explicitly here rather than relying on "auto" (the default) to
+# pick it correctly on its own for this particular machine/memory
+# combination. If it doesn't take effect, the next thing to try is
+# uae_chipset_compatible = - (see
 # https://fs-uae.net/docs/options/uae-rtc/ for why).
 uae_rtc = MSM6242B
 
-# No audible drive click (or any other floppy sound) for the one
+# No audible drive click (or any other floppy sound) for either
 # floppy drive configured above.
 floppy_drive_0_sounds = off
 floppy_drive_1_sounds = off

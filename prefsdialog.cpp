@@ -54,7 +54,6 @@ PrefsDialog::PrefsDialog(QWidget *parent, int tabindex) :
     // load global configuration
     load_mySettings();
     simpleStatusbar();
-
 }
 
 PrefsDialog::~PrefsDialog()
@@ -247,6 +246,12 @@ void PrefsDialog::save_mySettings()
     mySettings.setValue("Project/Website", ui->lineEdit_website->text());
     mySettings.setValue("Project/ProjectRootDir", ui->lineEdit_projectsRootDir->text());
     mySettings.setValue("Project/SaveFilesAutomatically", ui->checkBox_saveProjectFilesAutomatically->isChecked());
+    // Formerly two separate, independently-driftable UI fields (VBCC
+    // tab's "Default Target OS" and Emulator tab's "Default config") for
+    // what was always meant to be ONE setting - by explicit user
+    // decision, now a single combo box here instead, right below the
+    // checkbox above.
+    mySettings.setValue("VBCC/VcDefaultTarget", ui->comboBox_defaultTargetOS->currentIndex());
 
     // TAB: GCC
     mySettings.setValue("GCC/GccPath", ui->lineEdit_getGCCexefile->text());
@@ -272,14 +277,12 @@ void PrefsDialog::save_mySettings()
     mySettings.setValue("VBCC/Vc13LinkerOpts", ui->lineEdit_VC13LinkerOpts->text());
     mySettings.setValue("VBCC/Vc30LinkerOpts", ui->lineEdit_VCdefaultLinkerOpts->text());
     mySettings.setValue("SASC/DefaultOpts", ui->lineEdit_SASCdefaultOpts->text());
-    mySettings.setValue("VBCC/VcDefaultTarget", ui->comboBoxVbccDefaultTargetOS->currentIndex());
     mySettings.setValue("VBCC/ShowVbccDefaultOpts", ui->checkBox_ShowVbccOpts->isChecked());
 
     // TAB: Emulator
      mySettings.setValue("UAE/UaePath", ui->lineEdit_getEmulatorExefile->text());
      mySettings.setValue("UAE/Os13ConfigPath", ui->lineEdit_getOS13Configfile->text());
      mySettings.setValue("UAE/Os30ConfigPath", ui->lineEdit_getOS3Configfile->text());
-     mySettings.setValue("UAE/DefaultConfig", ui->comboBox_defaultEmulator->currentIndex());
 
      // TAB: Misc
      mySettings.setValue("MISC/DefaultStyle", ui->comboBoxDefaultStyle->currentText());
@@ -303,6 +306,11 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_website->setText(mySettings.value("Project/Website").toString());
     ui->lineEdit_projectsRootDir->setText(mySettings.value("Project/ProjectRootDir").toString());
     ui->checkBox_saveProjectFilesAutomatically->setChecked(mySettings.value("Project/SaveFilesAutomatically", false).toBool());
+    // Formerly two separate, independently-driftable UI fields (VBCC
+    // tab's "Default Target OS" and Emulator tab's "Default config") for
+    // what was always meant to be ONE setting - by explicit user
+    // decision, now a single combo box here instead.
+    ui->comboBox_defaultTargetOS->setCurrentIndex(mySettings.value("VBCC/VcDefaultTarget").toInt());
 
     // TAB: GCC
     ui->lineEdit_getGCCexefile->setText(mySettings.value("GCC/GccPath").toString());
@@ -329,13 +337,11 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_VCdefaultLinkerOpts->setText(mySettings.value("VBCC/Vc30LinkerOpts").toString());
     ui->lineEdit_SASCdefaultOpts->setText(mySettings.value("SASC/DefaultOpts").toString());
     ui->checkBox_ShowVbccOpts->setChecked(mySettings.value("VBCC/ShowVbccDefaultOpts").toBool());
-    ui->comboBoxVbccDefaultTargetOS->setCurrentIndex(mySettings.value("VBCC/VcDefaultTarget").toInt());
 
     // TAB: Emulator
     ui->lineEdit_getEmulatorExefile->setText(mySettings.value("UAE/UaePath").toString());
     ui->lineEdit_getOS13Configfile->setText(mySettings.value("UAE/Os13ConfigPath").toString());
     ui->lineEdit_getOS3Configfile->setText(mySettings.value("UAE/Os30ConfigPath").toString());
-    ui->comboBox_defaultEmulator->setCurrentIndex(mySettings.value("UAE/DefaultConfig").toInt());
 
     // TAB: Misc
     ui->comboBoxDefaultStyle->setCurrentText(mySettings.value("MISC/DefaultStyle").toString());

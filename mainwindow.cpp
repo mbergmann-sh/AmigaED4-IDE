@@ -1854,13 +1854,14 @@ void MainWindow::readSettings()
     // TAB: SAS/C
     p_compiler_sc_call = (settings.value("SASC/DefaultOpts").toString());
     p_compiler_vc_default_target = (settings.value("VBCC/VcDefaultTarget").toInt());
+    p_prefsPersistedDefaultTarget = p_compiler_vc_default_target;   // capture BEFORE any project (see applyProjectTargetOSIfNeeded()) gets a chance to change the value above - see writeSettings()
     p_show_vbcc_opts = (settings.value("VBCC/ShowVbccDefaultOpts").toBool());
 
     // TAB: Emulator
     p_emulator = (settings.value("UAE/UaePath").toString());
     p_os13_config = (settings.value("UAE/Os13ConfigPath").toString());
     p_os30_config = (settings.value("UAE/Os30ConfigPath").toString());
-    p_defaultEmulator = (settings.value("UAE/DefaultConfig").toInt());
+    p_defaultEmulator = p_compiler_vc_default_target;   // both now fed by the ONE "Default Target OS" combobox on Prefs' Project tab (VBCC/VcDefaultTarget) - see prefsdialog.cpp's save/load_mySettings()
 
     // TAB: Misc
     QString newDefaultStyle = settings.value("MISC/DefaultStyle").toString();
@@ -1915,6 +1916,17 @@ void MainWindow::writeSettings()
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("EditorZoomLevel", static_cast<int>(textEdit->SendScintilla(textEdit->QsciScintilla::SCI_GETZOOM)));
+
+    // Explicitly re-assert the target-OS default Prefs was actually set
+    // to at startup - NOT whatever p_compiler_vc_default_target (the
+    // status bar gadget) ended up at during this session, which a loaded/
+    // created/imported project may well have switched away from (see
+    // applyProjectTargetOSIfNeeded()). Prefs' own dialog is the only
+    // other writer of this same setting, and only when the user actually
+    // opens and saves it there - this call guarantees the invariant
+    // regardless, rather than relying on "nothing else happens to touch
+    // it" remaining true as the code evolves further.
+    settings.setValue("VBCC/VcDefaultTarget", p_prefsPersistedDefaultTarget);
 }
 
 //
@@ -2781,16 +2793,20 @@ void MainWindow::actionToggleGccDefaultOptsDialog()
 
 
 //
-// GUI Language (I18n): menu handlers just delegate to the shared helper.
+// GUI Language (I18n): menu handlers just delegate to the shared helper -
+// persist=false, since this is the explicit runtime-only quick-switch
+// (see applyGuiLanguage()'s own comment on why that matters); Prefs' own
+// "Default GUI Language" field is the only thing that should change what
+// the NEXT program start uses.
 //
 void MainWindow::actionSetGuiLanguageEnglish()
 {
-    applyGuiLanguage("en");
+    applyGuiLanguage("en", false);
 }
 
 void MainWindow::actionSetGuiLanguageGerman()
 {
-    applyGuiLanguage("de");
+    applyGuiLanguage("de", false);
 }
 
 //
@@ -2810,11 +2826,13 @@ void MainWindow::actionHideFunctionsBrowser()
 
 //
 // Switch the running application's GUI language: (un)installs the
-// QTranslator, persists the choice for the next program start, updates
-// the menu's checked state and re-applies every translatable string via
-// retranslateUi() - all without requiring a restart.
+// QTranslator, updates the menu's checked state and re-applies every
+// translatable string via retranslateUi() - all without requiring a
+// restart. persist controls whether this ALSO becomes the new default
+// for the next program start (QSettings) or only applies to the
+// current session - see the two call sites below for which is which.
 //
-void MainWindow::applyGuiLanguage(const QString &langCode)
+void MainWindow::applyGuiLanguage(const QString &langCode, bool persist)
 {
     if (p_guiTranslator)
     {
@@ -2840,8 +2858,23 @@ void MainWindow::applyGuiLanguage(const QString &langCode)
 
     p_guiLanguage = (p_guiTranslator) ? "de" : "en";
 
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
-    settings.setValue("MISC/DefaultGUILanguage", p_guiLanguage);
+    // Confirmed a real bug here: this used to run unconditionally on
+    // EVERY call, including from the View > GUI Language menu's own
+    // runtime-only quick-switch (see actionSetGuiLanguageEnglish()/
+    // actionSetGuiLanguageGerman() below) - silently overwriting
+    // Prefs > Misc > "Default GUI Language" the moment the user just
+    // wanted to look at the other language for the current session,
+    // contradicting that very field's own tooltip ("...can also be
+    // switched at runtime via View -> GUI Language" - implying the
+    // runtime switch should NOT itself change what "next start"
+    // means). Only Prefs' own dialog (via readSettings(), called again
+    // after it closes) is meant to actually change the persisted
+    // default now.
+    if (persist)
+    {
+        QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+        settings.setValue("MISC/DefaultGUILanguage", p_guiLanguage);
+    }
 
     // The very first call happens from readSettings() at the top of the
     // constructor, before createActions()/createMenus() have run - there is
@@ -4435,7 +4468,7 @@ bool MainWindow::isEmulatorProcessRunningExternally() const
 // the OS directly (by process name), rather than relying on AmigaED's
 // own bookkeeping.
 //
-bool MainWindow::actionEmulator()
+bool MainWindow::actionEmulator(int forcedTarget)
 {
     if ((myEmulator && myEmulator->state() != QProcess::NotRunning) || p_externalEmulatorTracked)
     {
@@ -4475,7 +4508,21 @@ bool MainWindow::actionEmulator()
     QString command = p_emulator;
     QStringList arguments;
 
-    switch(p_defaultEmulator)
+    // Follows the status bar's own "Change default target OS" gadget
+    // (p_compiler_vc_default_target) by default - NOT a fixed Prefs
+    // default - so Start Emulator launches whichever Workbench actually
+    // matches the target the rest of AmigaED (compiling, Makefile
+    // generation) is currently using. Confirmed this used to launch a
+    // fixed Prefs-configured default (p_defaultEmulator) unconditionally,
+    // which made no sense for e.g. an AmigaOS 1.3 project while Prefs'
+    // own default happened to be set to 3.x - see
+    // applyProjectTargetOSIfNeeded() for how the gadget itself gets set
+    // automatically per project. actionEmuOS13()/actionEmuOS30() (the
+    // explicit "Start OS 1.3"/"Start OS 3.x" menu entries) instead pass
+    // forcedTarget to deliberately override this for one launch, without
+    // touching the gadget/compile target at all.
+    int target = (forcedTarget >= 0) ? forcedTarget : p_compiler_vc_default_target;
+    switch(target)
     {
     case 0:
         p_emulator_to_start = p_os13_config;
@@ -4563,12 +4610,16 @@ bool MainWindow::actionEmulator()
 //
 void MainWindow::actionEmuOS13()
 {
-    p_defaultEmulator = 0;
     // actionEmulator() already handles user feedback for every failure
     // case itself (including opening Prefs when the cause is a missing
     // config/path) - it can also now fail simply because an emulator is
     // already running, which must NOT send the user into Prefs.
-    actionEmulator();
+    //
+    // Passes 0 directly rather than touching p_compiler_vc_default_target
+    // (the status bar's shared target-OS gadget) - this is a deliberate,
+    // one-off "start this specific Workbench regardless of the current
+    // project/compile target" action, not a change to that target itself.
+    actionEmulator(0);
 }
 
 //
@@ -4576,8 +4627,7 @@ void MainWindow::actionEmuOS13()
 //
 void MainWindow::actionEmuOS30()
 {
-    p_defaultEmulator = 1;
-    actionEmulator();
+    actionEmulator(1);
 }
 
 //
@@ -7485,16 +7535,21 @@ bool MainWindow::closeProjectTabs()
 // modern target and leaving the combo at whatever it happened to show
 // before would be actively misleading rather than merely uninformative.
 //
+// forcedTarget overrides this template-based inference entirely (0 = OS
+// 1.3, 1 = OS 3.x) - used by importExistingProject(), which asks the
+// user directly instead: an imported project has no template of its own
+// to infer a sensible target from in the first place.
+//
 // Called both when a project is newly created (createNewProject()) and
 // whenever one is loaded (loadProjectFile(), via actionLoadProject()/
 // openRecentProject()/"Recent Projects").
 //
-void MainWindow::applyProjectTargetOSIfNeeded()
+void MainWindow::applyProjectTargetOSIfNeeded(int forcedTarget)
 {
     if (!currentProject)
         return;
 
-    int target = (currentProject->templateKind == 2) ? 0 : 1;   // 0 = "OS 1.3", 1 = "OS 3.x"
+    int target = (forcedTarget >= 0) ? forcedTarget : ((currentProject->templateKind == 2) ? 0 : 1);   // 0 = "OS 1.3", 1 = "OS 3.x"
     p_compiler_vc_default_target = target;
     osCombo->setCurrentIndex(target);   // reflect it in the status bar; also triggers setDefaultTargetOS()
 }
@@ -7694,6 +7749,19 @@ void MainWindow::importExistingProject()
         return;
     name = name.trimmed();
 
+    // An imported project has no AmigaED template of its own to infer a
+    // sensible default target OS from (unlike New Project - see
+    // applyProjectTargetOSIfNeeded()) - ask directly instead of silently
+    // guessing "OS 3.x" for what might well be a classic 1.3-only program.
+    QStringList targetOSChoices = { tr("AmigaOS 3.x"), tr("AmigaOS 1.3") };
+    bool targetOsOk = false;
+    QString chosenTargetOS = QInputDialog::getItem(this, tr("Import existing Project"),
+                                                    tr("Target OS for this project:"),
+                                                    targetOSChoices, 0, false, &targetOsOk);
+    if (!targetOsOk)
+        return;
+    int importedTargetOS = (chosenTargetOS == targetOSChoices.at(1)) ? 0 : 1;   // 0 = "OS 1.3", 1 = "OS 3.x"
+
     Project *project = new Project();
     project->name = name;
     project->templateKind = -1;   // imported project - not built from one of AmigaED's own templates
@@ -7742,7 +7810,7 @@ void MainWindow::importExistingProject()
     refreshProjectTree();
     refreshFunctionsList();
 
-    applyProjectTargetOSIfNeeded();
+    applyProjectTargetOSIfNeeded(importedTargetOS);
 
     openFileInTab(mainFilePath);
     if (tabWidget->count() == 0)

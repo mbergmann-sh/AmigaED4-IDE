@@ -8,6 +8,90 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.140
+- Adopted the user's own cosmetic layout touch-ups to `prefsdialog.ui`
+  (Qt Designer): the VBCC tab's rows are now individually-grouped
+  sub-layouts (cleaner alignment of "vc:"/"vasm:"/"config dir:" and
+  their fields), and "Show/Change Opts at compiler start" now sits
+  centered under the option fields instead of pushed off to the right
+  where rev.139's combo-box removal had left it. No widget was renamed,
+  removed, or duplicated - verified by cross-checking every `ui->`
+  reference in prefsdialog.cpp (44 in total) against the new file, and
+  checking for duplicate widget names, before adopting it. No
+  functional/behavioural change.
+
+## rev.139
+- Per explicit follow-up decision: rev.138's two synced-but-separate
+  "Default Target OS" combo boxes (VBCC tab and Emulator tab) are now a
+  single one instead, on the Project tab, directly below "Save Project
+  Files Automatically" - removed entirely from both the VBCC and
+  Emulator tabs rather than kept in sync across two locations. Same
+  underlying setting as before (`VBCC/VcDefaultTarget`), so nothing
+  else about how it's read or applied changed. Verified the new layout
+  and both emptied-out tabs by actually rendering the .ui file, and
+  cleaned up a stale `<tabstop>` entry left pointing at one of the
+  removed widgets (Qt warns, harmlessly, if left dangling).
+
+## rev.138
+- **Fixed**: switching the GUI language at runtime (View &gt; GUI
+  Language) silently overwrote Prefs &gt; Misc &gt; "Default GUI
+  Language" every time - contradicting that very field's own tooltip
+  ("...can also be switched at runtime via View -&gt; GUI Language",
+  implying the runtime switch should be session-only). `applyGuiLanguage()`
+  gained a `persist` parameter (default true); the two View menu
+  actions now pass `false`, so a runtime language switch only affects
+  the current session - only Prefs' own dialog changes what the next
+  program start uses.
+- **Unified** two Prefs fields that turned out to be meant as the exact
+  same setting, per explicit confirmation: VBCC tab's "Default Target
+  OS" and Emulator tab's "Default config" (used to decide what "Start
+  default Workbench in UAE" launches, see rev.137) now read/write the
+  one same value (`VBCC/VcDefaultTarget`) instead of two separate,
+  independently-driftable ones (`VBCC/VcDefaultTarget` and
+  `UAE/DefaultConfig`) - changing either combo box in Prefs updates the
+  other live, so there's never a "which one wins on Save" question.
+  `p_defaultEmulator` (mainwindow.cpp) now simply mirrors
+  `p_compiler_vc_default_target` rather than loading its own,
+  now-removed settings key. Both combo boxes' tooltips updated to
+  mention the other.
+
+## rev.137
+- **Fixed**: "Start default Workbench in UA&E..." (the main emulator
+  toolbar/menu button) always launched whichever Workbench was
+  configured as Prefs' own fixed "Default Emulator", regardless of the
+  currently loaded project - so an AmigaOS 1.3 project would launch a
+  3.x Workbench if that happened to be the Prefs default, making no
+  sense for testing that project. It now follows the status bar's own
+  "Change default target OS" gadget instead (the same one that already
+  drives compiling and Makefile generation) - `actionEmulator()` gained
+  an optional `forcedTarget` parameter (default -1, meaning "use the
+  gadget") so the existing explicit "Start OS 1.3"/"Start OS 3.x" menu
+  entries (`actionEmuOS13()`/`actionEmuOS30()`) keep overriding it for
+  one launch without touching the gadget/compile target themselves,
+  exactly as before.
+- The status-bar gadget already switched itself automatically per
+  project template (`applyProjectTargetOSIfNeeded()`, existing: "OS
+  1.3" for an AmigaOS 1.3 Project, "OS 3.x" for every other template) -
+  this didn't change. What did: **Import existing Project** used to
+  silently fall through to "OS 3.x" (an imported project has no
+  AmigaED template of its own to infer a target from) - it now asks
+  directly which target OS the project is for, via a new optional
+  `forcedTarget` parameter on `applyProjectTargetOSIfNeeded()` itself.
+- **New**: whatever target OS Prefs was actually configured with at
+  startup is now explicitly re-asserted back into settings on exit
+  (`p_prefsPersistedDefaultTarget`, captured in `readSettings()` -
+  which also means it updates correctly if the user changes and saves
+  a new Prefs default mid-session, not just at startup) - so a
+  project's own target-OS switch during a session never overwrites the
+  user's actual permanent Prefs default, which is restored regardless
+  of whatever project was open (or what OS it needed) when AmigaED was
+  closed.
+- Prefs > Emulator's own "Default config:" combobox and setting
+  (`p_defaultEmulator`, tooltip "Select default AmigaOS to be
+  started") are unchanged in the UI but no longer affect real
+  behaviour - kept as-is rather than removed, since that's a separate
+  decision from what was actually asked for here.
+
 ## rev.136
 - **New**: Build Project now saves (or asks about) every open project
   file with unsaved changes first - including a hand-edited Makefile,

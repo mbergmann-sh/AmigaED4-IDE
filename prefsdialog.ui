@@ -24,17 +24,6 @@
    <bool>true</bool>
   </property>
   <layout class="QGridLayout" name="gridLayout_4">
-   <item row="1" column="1">
-    <widget class="QPushButton" name="btn_CancelSave">
-     <property name="text">
-      <string>Cancel</string>
-     </property>
-     <property name="icon">
-      <iconset resource="application.qrc">
-       <normaloff>:/images/fileexit.png</normaloff>:/images/fileexit.png</iconset>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="2">
     <widget class="QPushButton" name="btn_SavePrefs">
      <property name="text">
@@ -46,18 +35,16 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Orientation::Horizontal</enum>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="btn_CancelSave">
+     <property name="text">
+      <string>Cancel</string>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>211</width>
-       <height>20</height>
-      </size>
+     <property name="icon">
+      <iconset resource="application.qrc">
+       <normaloff>:/images/fileexit.png</normaloff>:/images/fileexit.png</iconset>
      </property>
-    </spacer>
+    </widget>
    </item>
    <item row="0" column="0" colspan="3">
     <widget class="QTabWidget" name="tabWidget">
@@ -184,15 +171,62 @@
        </item>
        <item row="1" column="0">
         <widget class="QCheckBox" name="checkBox_saveProjectFilesAutomatically">
-         <property name="text">
-          <string>Save Project Files Automatically</string>
-         </property>
          <property name="toolTip">
           <string>If checked, any open project file (including Makefiles) with unsaved changes is saved automatically before a project build, with no prompt. If unchecked, you are asked each time instead.</string>
+         </property>
+         <property name="text">
+          <string>Save Project Files Automatically</string>
          </property>
         </widget>
        </item>
        <item row="2" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout_defaultTargetOS">
+         <item>
+          <widget class="QLabel" name="label_defaultTargetOS">
+           <property name="text">
+            <string>Default Target OS:</string>
+           </property>
+           <property name="buddy">
+            <cstring>comboBox_defaultTargetOS</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="comboBox_defaultTargetOS">
+           <property name="toolTip">
+            <string>Select whether to compile, generate Makefiles, and start the emulator for OS 1.3 or OS 2.x/3.x by default. Used at startup, and whenever no open project (or an imported one - see File &gt; Import existing Project...) says otherwise.</string>
+           </property>
+           <property name="currentIndex">
+            <number>1</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>OS 1.3</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>OS 3.x</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_defaultTargetOS">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="0">
         <spacer name="verticalSpacer_3">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
@@ -557,25 +591,8 @@
        <string>Basic settings for vc</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_9">
-       <item row="0" column="0" colspan="2">
+       <item row="0" column="0">
         <layout class="QGridLayout" name="gridLayout_18">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_19">
-           <property name="text">
-            <string>vc: </string>
-           </property>
-           <property name="buddy">
-            <cstring>lineEdit_projectsRootDir</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="lineEdit_getVCexefile">
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="2">
           <widget class="QPushButton" name="btn_getVCexefile">
            <property name="maximumSize">
@@ -593,9 +610,26 @@
            </property>
           </widget>
          </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_19">
+           <property name="text">
+            <string>vc: </string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getVCexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
-       <item row="1" column="0" colspan="2">
+       <item row="1" column="0">
         <layout class="QGridLayout" name="gridLayout_16">
          <item row="0" column="0">
           <widget class="QLabel" name="label_17">
@@ -604,13 +638,6 @@
            </property>
            <property name="buddy">
             <cstring>lineEdit_projectsRootDir</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="lineEdit_getVASMexefile">
-           <property name="text">
-            <string/>
            </property>
           </widget>
          </item>
@@ -631,10 +658,27 @@
            </property>
           </widget>
          </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getVASMexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
-       <item row="2" column="0" colspan="2">
+       <item row="2" column="0">
         <layout class="QGridLayout" name="gridLayout_17">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_18">
+           <property name="text">
+            <string>config dir:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
          <item row="0" column="2">
           <widget class="QPushButton" name="btn_getVCconfigDir">
            <property name="maximumSize">
@@ -649,16 +693,6 @@
            <property name="icon">
             <iconset resource="application.qrc">
              <normaloff>:/images/open.png</normaloff>:/images/open.png</iconset>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_18">
-           <property name="text">
-            <string>config dir:</string>
-           </property>
-           <property name="buddy">
-            <cstring>lineEdit_projectsRootDir</cstring>
            </property>
           </widget>
          </item>
@@ -745,16 +779,6 @@
        </item>
        <item row="6" column="0" colspan="2">
         <layout class="QGridLayout" name="gridLayout_29">
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="lineEdit_VCdefaultLinkerOpts">
-           <property name="toolTip">
-            <string>Linker options for vbcc when targetting AmigaOS 3.x (used for single-file compiles, the &quot;Linker Options&quot; prompt when creating a new project, and the generated Makefile's LDFLAGS)</string>
-           </property>
-           <property name="text">
-            <string>-noixemul -L$NDK39_LIB -lmieee -lauto -lamiga</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="0">
           <widget class="QLabel" name="label_36">
            <property name="text">
@@ -765,31 +789,21 @@
            </property>
           </widget>
          </item>
-        </layout>
-       </item>
-       <item row="7" column="0">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>32</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="7" column="1">
-        <layout class="QGridLayout" name="gridLayout_13">
-         <item row="0" column="2">
-          <widget class="QLabel" name="label_11">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_VCdefaultLinkerOpts">
+           <property name="toolTip">
+            <string>Linker options for vbcc when targetting AmigaOS 3.x (used for single-file compiles, the &quot;Linker Options&quot; prompt when creating a new project, and the generated Makefile's LDFLAGS)</string>
+           </property>
            <property name="text">
-            <string>Default Target OS:</string>
+            <string>-noixemul -L$NDK39_LIB -lmieee -lauto -lamiga</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="5">
+        </layout>
+       </item>
+       <item row="7" column="0">
+        <layout class="QGridLayout" name="gridLayout_13">
+         <item row="0" column="1">
           <widget class="QCheckBox" name="checkBox_ShowVbccOpts">
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If set, you will be presented with an options field where you might change options for recent compilation every time compilation is triggered&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -805,40 +819,33 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="3">
-          <widget class="QComboBox" name="comboBoxVbccDefaultTargetOS">
-           <property name="toolTip">
-            <string>Select whether to compile for OS 1.3 or OS 2.x to OS 3.x by default</string>
-           </property>
-           <property name="currentIndex">
-            <number>1</number>
-           </property>
-           <item>
-            <property name="text">
-             <string>OS 1.3</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>OS 3.x</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="0" column="4">
-          <spacer name="horizontalSpacer_3">
-           <property name="orientation">
-            <enum>Qt::Orientation::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>28</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
         </layout>
+       </item>
+       <item row="7" column="1">
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>259</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="8" column="0">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>32</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>
@@ -1013,33 +1020,6 @@
             </size>
            </property>
           </spacer>
-         </item>
-         <item row="3" column="2" colspan="2">
-          <widget class="QLabel" name="label_26">
-           <property name="text">
-            <string>Default config:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="4" colspan="2">
-          <widget class="QComboBox" name="comboBox_defaultEmulator">
-           <property name="toolTip">
-            <string>Select default AmigaOS to be started</string>
-           </property>
-           <property name="currentIndex">
-            <number>1</number>
-           </property>
-           <item>
-            <property name="text">
-             <string>AmigaOS 1.3</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>AmigaOS 3.x</string>
-            </property>
-           </item>
-          </widget>
          </item>
         </layout>
        </item>
@@ -1243,6 +1223,19 @@
      </widget>
     </widget>
    </item>
+   <item row="1" column="0">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>211</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -1287,7 +1280,6 @@
   <tabstop>btn_getOS13Configfile</tabstop>
   <tabstop>lineEdit_getOS3Configfile</tabstop>
   <tabstop>btn_getOS3Configfile</tabstop>
-  <tabstop>comboBox_defaultEmulator</tabstop>
   <tabstop>checkBoxIndentationLines</tabstop>
   <tabstop>checkBoxNoLCD</tabstop>
   <tabstop>checkBoxDebugOutput</tabstop>

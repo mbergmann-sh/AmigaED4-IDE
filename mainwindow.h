@@ -196,6 +196,7 @@ public:
     QString p_compiler_vc30_linker_call;         // VBCC linker opts, OS 3.x
     QString p_compiler_sc_call;                  // SAS/C default opts (e.g. "ICONS ERRORREXX") - used ONLY for generating Makefile.sc; SAS/C itself is never invoked by AmigaED (it only runs on a real Amiga/emulator), and makes no OS 1.3/3.x distinction
     int  p_compiler_vc_default_target;          // holds the status bar's shared target-OS gadget value (0 = OS 1.3, 1 = OS 3.x) - despite the name, used by whichever compiler (VBCC, GCC or G++) is currently selected
+    int  p_prefsPersistedDefaultTarget = 1;     // the value Prefs itself was actually set to at startup, BEFORE any per-project change to p_compiler_vc_default_target above - re-asserted into QSettings on exit (see writeSettings()) so a session's project-driven target switches never leak into what the user permanently configured in Prefs
     QString p_selected_compiler;                // holds value of compiler to use for recent compilation
     QString p_lastMakeExecutable;                // full path AmigaED last tried to run "make" from - used by compilerError() for a clear message
     QString p_selected_compiler_args;           // holds value for default compiler args to use (constructed in method 'startCompiler()' )
@@ -212,8 +213,8 @@ public:
     QString p_emulator;             // path to emulator to start, used as 'command'
     QString p_os13_config;          // path to OS 1.3 emulator config-file, used as 'argument'
     QString p_os30_config;          // path to OS 3.x emulator config-file, used as 'argument'
-    int p_defaultEmulator;          // default emulator to start, setted by prefs > emulator tab combobox
-    QString p_emulator_to_start;    // Argument for default OS to start in UAE, depends on p_defaultEmulator
+    int p_defaultEmulator;          // mirrors p_compiler_vc_default_target (see readSettings()) - was Prefs > Emulator's own "Default config:" combobox, now retired in favour of the single "Default Target OS" combobox on the Project tab (see prefsdialog.ui/.cpp); kept only for this debug print, no longer used to decide what "Start default Workbench in UAE" launches (see actionEmulator())
+    QString p_emulator_to_start;    // Argument for default OS to start in UAE
     QString p_projectsRootDir;      // Path to default folder to store projects in (use that path as a hd mount in UAE in order to test compiled app!)
     bool p_saveProjectFilesAutomatically = false;   // Prefs > Project > "Save Project Files Automatically" - see saveModifiedProjectFiles()
     QStringList p_Compilers = {"VBCC - C", "GNU - C", "GNU - C++"};    // used for building compiler preselection combobox entries
@@ -364,7 +365,7 @@ private slots:
     void actionGoto_matching_brace();   // jumps to matching brace
     int actionCompile();                // calls compilation of current file
     // Emulator
-    bool actionEmulator();              // starts default UAE
+    bool actionEmulator(int forcedTarget = -1);   // starts UAE; defaults to following the status bar's "Change default target OS" gadget - pass 0/1 to force OS 1.3/3.x regardless of it (see actionEmuOS13()/actionEmuOS30())
     bool isEmulatorProcessRunningExternally() const;   // true if an emulator process is already running on the system, whether or not AmigaED itself started it - see actionEmulator()
     void killExternalEmulatorProcess();                // terminates a matching emulator process AmigaED didn't itself start (see p_externalEmulatorTracked) - used by actionKillEmulator()
     void actionEmuOS13();               // sets UAE default to Workbench 1.3 and calls actionEmulator()
@@ -464,7 +465,7 @@ private:
     void createMenus();                                                 // creates menues from actions
     void createToolBars();                                              // creates toolbars from actions
     void retranslateUi();                                               // re-applies all tr() strings after a runtime GUI-language change
-    void applyGuiLanguage(const QString &langCode);                     // installs/removes the QTranslator for "en"/"de", saves the choice, calls retranslateUi()
+    void applyGuiLanguage(const QString &langCode, bool persist = true);   // installs/removes the QTranslator for "en"/"de", calls retranslateUi(); persist=false for a session-only switch (View menu) that must NOT change Prefs' own default
     void createStatusBarMessage(QString statusmessage, int timeout);    // sets up the statusbar with a custom message
     // GUI methods...
     void SetLexerAtFileExtension(QString fileName);     // Helper to set approbiate Lexer according to a file's .ext
@@ -537,7 +538,7 @@ private:
     void createNewProject(int templateKind);         // shared implementation for all "New Project" menu entries
     void importExistingProject();                     // shared implementation for "Import existing Project..." - scans a chosen folder, builds a Project from what it finds and saves it as a new .aep
     bool isImportSkippableFile(const QString &path) const;  // true for a file an import scan should leave out: .o, .lnk, or an executable
-    void applyProjectTargetOSIfNeeded();               // switches the status bar's target-OS gadget to match the project's template ("OS 1.3" vs "OS 3.x") - applies to VBCC, GCC and G++ alike
+    void applyProjectTargetOSIfNeeded(int forcedTarget = -1);   // switches the status bar's target-OS gadget to match the project's template ("OS 1.3" vs "OS 3.x") - applies to VBCC, GCC and G++ alike; pass 0/1 to force it instead of inferring from the template (see importExistingProject())
     void getCompilerAndLinkerOptsForTarget(int compiler, int targetOS, QString &compilerOpts, QString &linkerOpts) const;   // central (compiler, target OS) -> (compiler opts, linker opts) lookup
     QString compilerDisplayLabel(int compiler) const;   // short status-bar-friendly compiler name: "gcc"/"g++"/"vbcc"
     QString dedupTokens(const QString &args) const;                          // removes duplicate whitespace-separated tokens, keeping the first occurrence of each

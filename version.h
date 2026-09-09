@@ -7,7 +7,7 @@
 // title) picks it up from AMIGAED_VERSION_STRING below, so there's
 // nothing else to keep in sync by hand when starting a new revision.
 //
-#define AMIGAED_REVISION 148
+#define AMIGAED_REVISION 149
 
 #define AMIGAED_STRINGIFY2(x) #x
 #define AMIGAED_STRINGIFY(x) AMIGAED_STRINGIFY2(x)
@@ -24,7 +24,7 @@
 // setApplicationName() in main.cpp) must use these same two strings -
 // otherwise prefs silently split across two different files/registry
 // keys. AMIGAED_SETTINGS_APP was renamed from "Amiga Cross Editor" (the
-// app's original working title) to "AmigaED4" in rev.148, since the app
+// app's original working title) to "AmigaED4" in rev.149, since the app
 // itself had long since been renamed to AmigaED - see
 // MainWindow::migrateLegacySettingsIfNeeded() for the one-time startup
 // migration that carries existing users' settings over to the new file
@@ -33,7 +33,7 @@
 #define AMIGAED_SETTINGS_ORG "MB-SoftWorX"
 #define AMIGAED_SETTINGS_APP "AmigaED4"
 
-// The pre-rev.148 application name, kept ONLY so
+// The pre-rev.149 application name, kept ONLY so
 // migrateLegacySettingsIfNeeded() can still find and read an existing
 // user's old settings file/registry key on their first startup after
 // upgrading. Never used for anything else - do not read/write current

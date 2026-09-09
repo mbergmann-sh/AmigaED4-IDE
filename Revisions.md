@@ -8,7 +8,7 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
-## rev.148
+## rev.149
 - **New**: the app's settings file/registry key is renamed from
   "Amiga Cross Editor" (its original working title) to "AmigaED4"
   (`AMIGAED_SETTINGS_APP` in `version.h`, used consistently by every
@@ -30,6 +30,29 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   current-schema keys were copied, a deliberately planted obsolete key
   was correctly left behind, the migration never re-runs on a second
   startup, and a fresh install with no old file at all is unaffected.
+- **New**: Prefs > GCC and Prefs > VBCC each gained an "Assembler
+  Include Path:" field, wired straight into the generated Makefile's
+  assemble rule for hand-written `.asm`/`.s` sources - appended as
+  `-I<path>` for both toolchains' `%.o: %.asm`/`%.o: %.s` recipes
+  (vasm on Makefile.vbcc, GNU as on Makefile.gcc), and only added at
+  all when the corresponding field isn't empty - a project with no
+  assembler includes gets no extra flag. Lets a hand-written assembler
+  source `include`/`.include` a file (e.g. from the NDK's separate
+  assembler-include tree, `.i` files for vasm) without needing an
+  absolute path in the source itself or a hand-edited Makefile.
+- **Fixed**: the `-I<path>` flag above was first quoted (`-I"<path>"`)
+  to protect paths containing spaces - which on Windows immediately
+  broke every assembler build outright, with mingw32-make failing
+  before vasm/GNU as was ever even invoked ("sh: /bin/sh: No such file
+  or directory", make error 127). Cause: a quoted recipe line makes
+  mingw32-make decide the line needs shell interpretation and hands it
+  to `$(SHELL)` (defaulting to "sh"), which doesn't exist on a plain
+  Windows install without MSYS/Git-Bash - the exact same class of
+  problem already documented and avoided elsewhere in this Makefile
+  (see the `del`/`cmd /c` reasoning below, rev.94/98/105). The flag is
+  now deliberately left unquoted, matching every other path already in
+  this Makefile (CC/AS/toolchain paths) - so, like those, this field's
+  value should itself avoid spaces.
 - **New**: full dual-toolchain support for m68k Assembler Projects - vasm
   and GNU as (`m68k-amigaos-as`) are now two genuinely separate,
   mutually exclusive dialects instead of routing both through vasm.
@@ -138,6 +161,38 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   format table now lists vasm and GNU as alongside VBCC/GCC/G++. HTML
   manuals (`help/manual_en.html`/`manual_de.html`) and both PDFs
   (`DOC/AmigaED_Guide_EN.pdf`/`AmigaED_Anleitung_DE.pdf`) regenerated.
+- **Fixed**: vasm's own `fatal error N in line M of "file": message`
+  diagnostics (its most serious level, distinct from a plain `error`
+  or `warning`) were neither clickable nor colour-highlighted in the
+  Compiler Output pane, unlike ordinary vasm errors/warnings. Cause:
+  `checkVBCC()`'s diagnostic regex (shared by VBCC and vasm, both of
+  which use the same "TYPE N in line M of ..." shape) captured the
+  leading diagnostic type as a single `\w+` - which can only ever
+  match one word, so it couldn't match "fatal error" at all (two
+  words, with a space) and the whole line fell through as unrecognized.
+  Fixed the same way GCC/G++'s own two-word "fatal error:" level was
+  already handled in `checkGCC()`: the type is now captured as
+  `\w+(?:\s+\w+)?`, so a two-word type matches too, while a plain
+  single-word "warning"/"error" still matches exactly as before.
+- **New**: the Compiler Output pane's context menu gained two new
+  entries, "Mark all and copy" and "Empty Console", alongside Qt's own
+  standard entries (Copy, Select All, ...). "Mark all and copy" selects
+  the pane's entire contents and copies them to the clipboard in one
+  click, instead of the usual Select All + Copy two-step. "Empty
+  Console" clears the pane outright - unlike a normal build/compile
+  run, which only ever appends new output on top of whatever is
+  already there.
+- **Updated**: `aboutdialog.ui` (Help > About) revised - the License
+  tab's text now also names MAGA supporters and Putin's "minions"
+  alongside the existing racism/fascism/AfD wording, closing with "A
+  free world needs free Software - and it needs free people."; the
+  License tab is now the one shown by default when the dialog opens
+  (previously About). Re-saved through a newer Qt Designer, which
+  rewrote several enum values to their fully-scoped Qt6 form (e.g.
+  `Qt::ApplicationModal` to `Qt::WindowModality::ApplicationModal`,
+  `QFrame::NoFrame` to `QFrame::Shape::NoFrame`, `Qt::Horizontal` to
+  `Qt::Orientation::Horizontal`) - purely cosmetic, no behaviour
+  change.
 
 ## rev.147
 - **New**: added a colourful "Open Shell" toolbar icon (`images/open_shell.png`,

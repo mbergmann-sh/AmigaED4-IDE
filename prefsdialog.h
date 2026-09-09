@@ -46,9 +46,11 @@ private slots:
     void on_btn_getSTRIPexefile_clicked();
     void on_btn_getASexefile_clicked();
     void on_btn_getLDexefile_clicked();
+    void on_btn_getASIncludeDir_clicked();
     void on_btn_getVCexefile_clicked();
     void on_btn_getVASMexefile_clicked();
     void on_btn_getVCconfigDir_clicked();
+    void on_btn_getVASMIncludeDir_clicked();
     void on_btn_getEmulatorExefile_clicked();
     void on_btn_getOS13Configfile_clicked();
     void on_btn_getOS3Configfile_clicked();

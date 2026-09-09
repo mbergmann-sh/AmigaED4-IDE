@@ -192,6 +192,8 @@ public:
     QString p_compiler_vasm;            // Path to vasm executable - assembles .asm/.s sources for a project built with the "vasm" compiler entry (Makefile.vbcc), see regenerateProjectMakefiles()
     QString p_compiler_as;              // Path to GNU as (m68k-amigaos-as) executable - assembles .asm/.s sources for a project built with the "GNU as" compiler entry (Makefile.gcc), see regenerateProjectMakefiles()
     QString p_compiler_ld;               // Path to GNU ld (m68k-amigaos-ld) executable - links a pure-assembly "GNU as" project directly (Makefile.gcc's asmOnlyProject case), instead of going through gcc's own "-nostartfiles -nostdlib" frontend - see regenerateProjectMakefiles()
+    QString p_compiler_as_include;       // Assembler include search path for GNU as's ".include" directive (Prefs > GCC > "Assembler Include Path") - passed as -I<path> in the generated Makefile.gcc assemble rule, only when non-empty; see regenerateProjectMakefiles()
+    QString p_compiler_vasm_include;     // Assembler include search path for vasm's "include" directive (Prefs > VBCC > "Assembler Include Path") - passed as -I<path> in the generated Makefile.vbcc assemble rule, only when non-empty; see regenerateProjectMakefiles()
     // Compiler + linker opts, split per compiler AND per target OS (OS 1.3
     // vs OS 3.x) - used for single-file compiles, the "New Project"
     // Compiler/Linker Options prompts, and the generated Makefiles' CCARGS
@@ -283,12 +285,15 @@ public slots:
     int stopCommand(int exitCode, QProcess::ExitStatus exitStatus);
     void actionKillEmulator();
     void finished(int exitCode, QProcess::ExitStatus exitStatus);
-    void migrateLegacySettingsIfNeeded();                // rev.148: one-time carry-over from the old "Amiga Cross Editor" settings file to the new "AmigaED4" one
+    void migrateLegacySettingsIfNeeded();                // rev.149: one-time carry-over from the old "Amiga Cross Editor" settings file to the new "AmigaED4" one
     void readPosSettings();
     void readSettings();                                // read app settings
     void jumpCompilerWarnings();                        // jump to error or warning, load file of occurance if not opened (unfinisched yet!)
     void setDefaultTargetOS(int default_os);            // change the currently active compiler's (VBCC, GCC or G++) target OS at runtime, driven by the status bar's target-OS gadget
     void on_output_cursorPositionChanged();             // react on user click in order to jump to error/warning in editor window
+    void showOutputContextMenu(const QPoint &pos);       // custom context menu for the Compiler Output pane - Qt's standard menu plus "Mark all and copy" / "Empty Console"
+    void on_output_markAllAndCopy();                     // Compiler Output pane context menu: select all text in the pane and copy it to the clipboard
+    void on_output_emptyConsole();                       // Compiler Output pane context menu: clear the pane's contents
     bool checkVBCC(QString str_to_search);              // RegEX VBCC messages : jump to line x - returns true if the line actually matched a diagnostic
     bool checkGCC(QString str_to_search);               // RegEX GCC/G++ messages : jump to line x - returns true if the line actually matched a diagnostic
     void jumpToError(int error_line, int error_column); // set cursor to error line and column, switching file if needed

@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     // PrefsDialog's own default-constructed QSettings (which resolves
     // via these two application-wide names) and MainWindow's explicit
     // ones always land in the exact same file. Renamed from the app's
-    // old working title "Amiga Cross Editor" to "AmigaED4" in rev.148 -
+    // old working title "Amiga Cross Editor" to "AmigaED4" in rev.149 -
     // see MainWindow::migrateLegacySettingsIfNeeded() for how an
     // existing user's old settings get carried over automatically.
     app.setApplicationName(AMIGAED_SETTINGS_APP);

@@ -84,7 +84,7 @@ static QProcess cmd;            // the process for running the compiler
 // Open MainWindow with given filename...
 MainWindow::MainWindow(QString cmdFileName)
 {
-    // rev.148: carry over an existing user's settings from the old
+    // rev.149: carry over an existing user's settings from the old
     // "Amiga Cross Editor" settings file/registry key to the new
     // "AmigaED4" one, BEFORE anything below reads from the new one -
     // see migrateLegacySettingsIfNeeded() for what this does and why.
@@ -387,6 +387,12 @@ MainWindow::MainWindow(QString cmdFileName)
     // per tab, inside newEditorTab() - there's no single fixed textEdit
     // left to connect at this point in the constructor.
     connect(output, SIGNAL(cursorPositionChanged()), this, SLOT(on_output_cursorPositionChanged()));
+
+    // Compiler Output pane's own context menu - Qt's standard QPlainTextEdit
+    // menu (Copy, Select All, ...) plus "Mark all and copy" / "Empty
+    // Console" (see showOutputContextMenu()).
+    output->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(output, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(showOutputContextMenu(const QPoint &)));
 
 
     cmd = new QProcess(this);
@@ -1834,7 +1840,7 @@ void MainWindow::createStatusBarMessage(QString statusmessage, int timeout)
 }
 
 //
-// rev.148: the app's settings file/registry key moved from
+// rev.149: the app's settings file/registry key moved from
 // "Amiga Cross Editor" (its original working title) to "AmigaED4" (see
 // AMIGAED_SETTINGS_APP/AMIGAED_LEGACY_SETTINGS_APP in version.h), so
 // existing users don't wake up to a blank Prefs dialog. Called ONCE,
@@ -1857,7 +1863,7 @@ void MainWindow::createStatusBarMessage(QString statusmessage, int timeout)
 // is never overwritten (shouldn't normally happen this early, but costs
 // nothing to guard against).
 //
-// rev.148 bugfix: the "does the old settings still exist" check used to
+// rev.149 bugfix: the "does the old settings still exist" check used to
 // be QFile::exists(oldSettings.fileName()) - correct on Linux/macOS,
 // where QSettings' NativeFormat is backed by a real .conf file, but
 // WRONG on Windows, where NativeFormat is backed by the registry
@@ -1997,6 +2003,7 @@ void MainWindow::readSettings()
     p_strip = (settings.value("GCC/StripPath").toString());
     p_compiler_as = (settings.value("GCC/AsPath").toString());
     p_compiler_ld = (settings.value("GCC/LdPath").toString());
+    p_compiler_as_include = (settings.value("GCC/AsIncludePath").toString());
     // Defaults below target the m68k-amigaos-gcc ("Bebbo") toolchain.
     // -mcrt=nix13/-noixemul select which C runtime to link against -
     // libnix built for Kickstart 1.3 vs. Kickstart 2.0+ respectively -
@@ -2024,6 +2031,7 @@ void MainWindow::readSettings()
     // TAB: VBCC
     p_compiler_vc = (settings.value("VBCC/VcPath").toString());
     p_compiler_vasm = (settings.value("VBCC/VasmPath").toString());
+    p_compiler_vasm_include = (settings.value("VBCC/VasmIncludePath").toString());
     p_vbcc_config_dir = (settings.value("VBCC/VcConfigPath").toString());
     // '+kick13'/'+aos68k' are vbcc's target CONFIGs (see vc's manual,
     // "vc +config ..."), not ordinary switches - regenerateProjectMakefiles()
@@ -3522,7 +3530,7 @@ void MainWindow::SelectCompiler(int index)
         index = currentProject->asmAssembler;
     }
 
-    // The reverse case (rev.148 bugfix): a C/C++ project (any
+    // The reverse case (rev.149 bugfix): a C/C++ project (any
     // templateKind other than 6 - see createNewProject()) can't be
     // built with a pure assembler either - vasm/GNU as have no idea
     // about C/C++ sources, headers, or the math library wiring that
@@ -7300,10 +7308,31 @@ void MainWindow::regenerateProjectMakefiles()
                 // 68000-class hardware - confirmed as a genuine vasm Hunk-
                 // format output module option (vasm manual, chapter
                 // "Hunk-format output module"), not a guess.
+                //
+                // "-I<path>" (Prefs > VBCC > "Assembler Include Path") adds
+                // a search directory for vasm's own "include" directive -
+                // vasm's documented include-path option (vasm manual,
+                // "General options") - only appended when that Prefs field
+                // isn't empty, so a project with no assembler includes gets
+                // no extra flag at all. Deliberately UNQUOTED, even though
+                // that breaks a path containing spaces: confirmed that
+                // wrapping it in quotes makes mingw32-make decide the
+                // recipe line needs shell interpretation and hand it to
+                // "sh" - which doesn't exist on a plain Windows install
+                // (no MSYS/Git-Bash), failing with "sh: /bin/sh: No such
+                // file or directory" before vasm is ever even invoked. Same
+                // root cause as the documented del/cmd-vs-sh handoff issue
+                // below (Revisions.md rev.94/98/105) - every other path in
+                // this Makefile (CC/AS/toolchain paths above) is already
+                // left unquoted for exactly this reason, so this Prefs
+                // field's value should itself avoid spaces.
+                QString vasmIncludeFlag = p_compiler_vasm_include.trimmed().isEmpty()
+                    ? QString()
+                    : QStringLiteral(" -I") + p_compiler_vasm_include.trimmed();
                 out << "%.o: %.asm\n";
-                out << "\t$(AS) -Fhunk -kick1hunks -o $@ $<\n\n";
+                out << "\t$(AS) -Fhunk -kick1hunks" << vasmIncludeFlag << " -o $@ $<\n\n";
                 out << "%.o: %.s\n";
-                out << "\t$(AS) -Fhunk -kick1hunks -o $@ $<\n\n";
+                out << "\t$(AS) -Fhunk -kick1hunks" << vasmIncludeFlag << " -o $@ $<\n\n";
             }
             else
             {
@@ -7313,10 +7342,22 @@ void MainWindow::regenerateProjectMakefiles()
                 // flag: its own default output format for the m68k-amigaos
                 // target is already what this toolchain's own linker
                 // (invoked via gcc, see the $(TARGET) recipe above) expects.
+                //
+                // "-I<path>" (Prefs > GCC > "Assembler Include Path") adds a
+                // search directory for GNU as's own ".include" directive -
+                // GNU as's documented "-I DIR" option, same idea as vasm's
+                // above, only appended when that Prefs field isn't empty.
+                // Deliberately UNQUOTED - see the long comment on
+                // vasmIncludeFlag above for why quoting it breaks the build
+                // on Windows (mingw32-make routes a quoted recipe line
+                // through a nonexistent "sh").
+                QString asIncludeFlag = p_compiler_as_include.trimmed().isEmpty()
+                    ? QString()
+                    : QStringLiteral(" -I") + p_compiler_as_include.trimmed();
                 out << "%.o: %.asm\n";
-                out << "\t$(AS) -o $@ $<\n\n";
+                out << "\t$(AS)" << asIncludeFlag << " -o $@ $<\n\n";
                 out << "%.o: %.s\n";
-                out << "\t$(AS) -o $@ $<\n\n";
+                out << "\t$(AS)" << asIncludeFlag << " -o $@ $<\n\n";
             }
         }
         out << "clean:\n";
@@ -10385,6 +10426,8 @@ void MainWindow::debugVars()
         qDebug() << "pp_compiler_vasm: " << p_compiler_vasm;
         qDebug() << "p_compiler_as: " << p_compiler_as;
         qDebug() << "p_compiler_ld: " << p_compiler_ld;
+        qDebug() << "p_compiler_as_include: " << p_compiler_as_include;
+        qDebug() << "p_compiler_vasm_include: " << p_compiler_vasm_include;
         qDebug() << "p_vbcc_config_dir: " << p_vbcc_config_dir;
         qDebug() << "p_compiler_vc13_call: " << p_compiler_vc13_call;
         qDebug() << "p_compiler_vc30_call: " << p_compiler_vc30_call;
@@ -10940,6 +10983,62 @@ void MainWindow::on_output_cursorPositionChanged()
 }
 
 //
+// Custom context menu for the Compiler Output pane - starts from Qt's own
+// standard QPlainTextEdit menu (Copy, Select All, ...) via
+// createStandardContextMenu() rather than rebuilding that from scratch,
+// then appends two extra entries requested by name: "Mark all and copy"
+// and "Empty Console" (see on_output_markAllAndCopy()/on_output_emptyConsole()
+// just below).
+//
+void MainWindow::showOutputContextMenu(const QPoint &pos)
+{
+    Q_UNUSED(pos);  // QCursor::pos() is used for placement below instead -
+                     // see showCustomContextMenue()'s comment on the same
+                     // choice, kept consistent here.
+
+    if (!output)
+        return;
+
+    QMenu *contextMenu = output->createStandardContextMenu();
+    if (!contextMenu)
+        return;
+
+    contextMenu->addSeparator();
+    contextMenu->addAction(tr("Mark all and copy"), this, &MainWindow::on_output_markAllAndCopy);
+    contextMenu->addAction(tr("Empty Console"), this, &MainWindow::on_output_emptyConsole);
+
+    contextMenu->exec(QCursor::pos());
+    delete contextMenu;
+}
+
+//
+// "Mark all and copy" (Compiler Output pane context menu): selects the
+// pane's entire text and copies it to the clipboard in one step, instead
+// of the usual Ctrl+A / Ctrl+C two-step.
+//
+void MainWindow::on_output_markAllAndCopy()
+{
+    if (!output)
+        return;
+
+    output->selectAll();
+    output->copy();
+}
+
+//
+// "Empty Console" (Compiler Output pane context menu): clears the pane's
+// contents outright - unlike a normal build/compile run, which only ever
+// appends new output on top of whatever is already there.
+//
+void MainWindow::on_output_emptyConsole()
+{
+    if (!output)
+        return;
+
+    output->clear();
+}
+
+//
 // Colours every error/warning line currently in the output pane -
 // errors and warnings each get their own colour (bold text + a tinted
 // background), chosen to stay readable against both a dark and a light
@@ -11037,7 +11136,17 @@ bool MainWindow::checkVBCC(QString str_to_search)
     // The filename is simply everything between the quotes, so this
     // handles plain relative names ("test.h") as well as full Windows
     // paths with backslashes ("D:\...\test.c") in one go.
-    QRegularExpression rx_vbcc("^(\\w+)\\s+(\\d+)\\s+in line\\s+(\\d+)\\s+of\\s+\"(.+)\":\\s*(.*)$");
+    // vasm additionally has a genuinely two-word diagnostic level of its
+    // own, "fatal error" (distinct from a plain "error"), e.g.:
+    //   fatal error 13 in line 44 of "test.asm": could not open <foo.i> for input
+    // (\\w+) alone can only ever match ONE word, so a line starting with
+    // "fatal error" failed this whole regex outright - not just losing
+    // its colour, but falling through as not a diagnostic line at all,
+    // so it wasn't clickable either. (\\w+(?:\\s+\\w+)?) fixes this the
+    // same way checkGCC() already handles GCC's own two-word "fatal
+    // error:" level, while still matching plain single-word "warning"/
+    // "error" exactly as before.
+    QRegularExpression rx_vbcc("^(\\w+(?:\\s+\\w+)?)\\s+(\\d+)\\s+in line\\s+(\\d+)\\s+of\\s+\"(.+)\":\\s*(.*)$");
     QRegularExpressionMatch match = rx_vbcc.match(str_to_search);
 
     bool matched = match.hasMatch();

@@ -175,6 +175,16 @@ void PrefsDialog::on_btn_getLDexefile_clicked()
     ui->lineEdit_getLDexefile->setText(fileName);
 }
 
+void PrefsDialog::on_btn_getASIncludeDir_clicked()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Open GNU as Include Directory"),
+                                                 "/home",
+                                                 QFileDialog::ShowDirsOnly
+                                                 | QFileDialog::DontResolveSymlinks);
+    if (!dir.isEmpty())
+        ui->lineEdit_getASIncludeDir->setText(dir);
+}
+
 void PrefsDialog::on_btn_getVCexefile_clicked()
 {
     QString exestring;
@@ -212,6 +222,16 @@ void PrefsDialog::on_btn_getVCconfigDir_clicked()
                                                  QFileDialog::ShowDirsOnly
                                                  | QFileDialog::DontResolveSymlinks);
     ui->lineEdit_getVCconfigDir->setText(dir);
+}
+
+void PrefsDialog::on_btn_getVASMIncludeDir_clicked()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Open vasm Include Directory"),
+                                                 "/home",
+                                                 QFileDialog::ShowDirsOnly
+                                                 | QFileDialog::DontResolveSymlinks);
+    if (!dir.isEmpty())
+        ui->lineEdit_getVASMIncludeDir->setText(dir);
 }
 
 void PrefsDialog::on_btn_getEmulatorExefile_clicked()
@@ -289,6 +309,7 @@ void PrefsDialog::save_mySettings()
     mySettings.setValue("GCC/StripPath", ui->lineEdit_getSTRIPexefile->text());
     mySettings.setValue("GCC/AsPath", ui->lineEdit_getASexefile->text());
     mySettings.setValue("GCC/LdPath", ui->lineEdit_getLDexefile->text());
+    mySettings.setValue("GCC/AsIncludePath", ui->lineEdit_getASIncludeDir->text());
     mySettings.setValue("GCC/Gcc13CompilerOpts", ui->lineEdit_GCC13CompilerOpts->text());
     mySettings.setValue("GCC/Gcc30CompilerOpts", ui->lineEdit_GCC30CompilerOpts->text());
     mySettings.setValue("GCC/Gcc13LinkerOpts", ui->lineEdit_GCC13LinkerOpts->text());
@@ -303,6 +324,7 @@ void PrefsDialog::save_mySettings()
     mySettings.setValue("VBCC/VcPath", ui->lineEdit_getVCexefile->text());
     mySettings.setValue("VBCC/VasmPath", ui->lineEdit_getVASMexefile->text());
     mySettings.setValue("VBCC/VcConfigPath", ui->lineEdit_getVCconfigDir->text());
+    mySettings.setValue("VBCC/VasmIncludePath", ui->lineEdit_getVASMIncludeDir->text());
     mySettings.setValue("VBCC/VcDefaultOpts13", ui->lineEdit_VCdefaultOptsOS13->text());
     mySettings.setValue("VBCC/VcDefaultOpts30", ui->lineEdit_VCdefaultOptsOS30->text());
     mySettings.setValue("VBCC/Vc13LinkerOpts", ui->lineEdit_VC13LinkerOpts->text());
@@ -350,6 +372,7 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_getSTRIPexefile->setText(mySettings.value("GCC/StripPath").toString());
     ui->lineEdit_getASexefile->setText(mySettings.value("GCC/AsPath").toString());
     ui->lineEdit_getLDexefile->setText(mySettings.value("GCC/LdPath").toString());
+    ui->lineEdit_getASIncludeDir->setText(mySettings.value("GCC/AsIncludePath").toString());
     ui->lineEdit_GCC13CompilerOpts->setText(mySettings.value("GCC/Gcc13CompilerOpts").toString());
     ui->lineEdit_GCC30CompilerOpts->setText(mySettings.value("GCC/Gcc30CompilerOpts").toString());
     ui->lineEdit_GCC13LinkerOpts->setText(mySettings.value("GCC/Gcc13LinkerOpts").toString());
@@ -364,6 +387,7 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_getVCexefile->setText(mySettings.value("VBCC/VcPath").toString());
     ui->lineEdit_getVASMexefile->setText(mySettings.value("VBCC/VasmPath").toString());
     ui->lineEdit_getVCconfigDir->setText(mySettings.value("VBCC/VcConfigPath").toString());
+    ui->lineEdit_getVASMIncludeDir->setText(mySettings.value("VBCC/VasmIncludePath").toString());
     ui->lineEdit_VCdefaultOptsOS13->setText(mySettings.value("VBCC/VcDefaultOpts13").toString());
     ui->lineEdit_VCdefaultOptsOS30->setText(mySettings.value("VBCC/VcDefaultOpts30").toString());
     ui->lineEdit_VC13LinkerOpts->setText(mySettings.value("VBCC/Vc13LinkerOpts").toString());

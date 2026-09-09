@@ -23,6 +23,9 @@ IMG = {
     "qs2": b64("qs2-000.png"),
     "qs3": b64("qs3-000.png"),
     "qs4": b64("qs4-000.png"),
+    "qs5": b64("qs5-000.png"),
+    "qs6": b64("qs6-000.png"),
+    "qs7": b64("qs7-000.png"),
 }
 
 IMG_NATURAL_SIZE = {
@@ -37,6 +40,9 @@ IMG_NATURAL_SIZE = {
     "qs2": (1160, 620),
     "qs3": (1160, 560),
     "qs4": (1160, 560),
+    "qs5": (1160, 560),
+    "qs6": (700, 280),
+    "qs7": (1160, 700),
 }
 
 def img_tag(key, alt, maxw=560):
@@ -202,6 +208,22 @@ def build(lang):
     <div class="note"><b>""" + T("Note", "Hinweis") + """:</b> """ + T(
         "Start/Stop Emulator automatically grey out and enable each other depending on whether an emulator instance is currently running - including one AmigaED itself didn't start (e.g. left open on purpose from a previous session, or launched outside AmigaED entirely).",
         "Start/Stop Emulator grauen sich automatisch gegenseitig ein bzw. aus, je nachdem, ob gerade eine Emulator-Instanz läuft \u2013 auch eine, die AmigaED selbst nicht gestartet hat (z. B. bewusst aus einer früheren Sitzung offen gelassen, oder ganz unabhängig von AmigaED gestartet).") + """</div>
+
+    <h2>""" + T("Choosing a Compiler or Assembler", "Compiler oder Assembler auswählen") + """</h2>
+    <p>""" + T("Both the compiler dropdown in the status bar (bottom right) and Build &rarr; Select Compiler... in the menu bar drive the exact same choice - picking one always updates the other, since both funnel through the same central function. Five entries are available:",
+          "Sowohl das Compiler-Dropdown in der Statusleiste (unten rechts) als auch Build &rarr; Select Compiler... im Menü steuern dieselbe Auswahl - die Wahl in dem einen aktualisiert automatisch das andere, da beide über dieselbe zentrale Funktion laufen. Fünf Einträge stehen zur Verfügung:") + """</p>
+    <table>
+      <tr><th>""" + T("Status bar", "Statusleiste") + """</th><th>""" + T("Build &rarr; Select Compiler...", "Build &rarr; Select Compiler...") + """</th><th>""" + T("Used for", "Verwendung") + """</th></tr>
+      <tr><td>VBCC - C</td><td>VBCC vc (C mode only)...</td><td>""" + T("Compiling C sources with vbcc.", "Kompilieren von C-Quellen mit vbcc.") + """</td></tr>
+      <tr><td>GNU - C</td><td>GNU gcc (C mode)...</td><td>""" + T("Compiling C sources with m68k-amigaos-gcc.", "Kompilieren von C-Quellen mit m68k-amigaos-gcc.") + """</td></tr>
+      <tr><td>GNU - C++</td><td>GNU g++ (C++ mode)...</td><td>""" + T("Compiling C++ sources with m68k-amigaos-g++.", "Kompilieren von C++-Quellen mit m68k-amigaos-g++.") + """</td></tr>
+      <tr><td>vasm</td><td>vasm (Assembler mode)...</td><td>""" + T("Assembling/linking a vasm-dialect Assembler Project (via vasm and vlink).", "Assemblieren/Linken eines vasm-Dialekt-Assembler-Projekts (über vasm und vlink).") + """</td></tr>
+      <tr><td>GNU as</td><td>GNU as (Assembler mode)...</td><td>""" + T("Assembling/linking a GNU-as-dialect Assembler Project (via m68k-amigaos-as and m68k-amigaos-ld).", "Assemblieren/Linken eines GNU-as-Dialekt-Assembler-Projekts (über m68k-amigaos-as und m68k-amigaos-ld).") + """</td></tr>
+    </table>
+    <p>""" + T("For an ad-hoc single file (Mode 1 above) or a C/C++ Project, only the three C/C++ entries make sense - picking vasm or GNU as there is refused with the warning &ldquo;You can't compile your ASM-Project with a C-Compiler! Please choose vasm or GNU as.&rdquo; and falls back to vasm. For an open Assembler Project (see &ldquo;Creating an Assembler Project&rdquo; in the Quick Start chapter above), it is the other way round: the project is locked to whichever of vasm/GNU as it was created for, and picking a C compiler or the other assembler dialect is refused the same way, falling back to the project's own locked-in choice.",
+          "Für eine Ad-hoc-Einzeldatei (Modus 1 oben) oder ein C/C++-Projekt ergeben nur die drei C/C++-Einträge Sinn - die Auswahl von vasm oder GNU as wird dort mit der Warnung &bdquo;You can't compile your ASM-Project with a C-Compiler! Please choose vasm or GNU as.&ldquo; abgelehnt und fällt auf vasm zurück. Bei einem offenen Assembler-Projekt (siehe &bdquo;Ein Assembler-Projekt anlegen&ldquo; im Schnellstart-Kapitel oben) ist es umgekehrt: Das Projekt ist auf den bei seiner Erstellung gewählten Dialekt (vasm oder GNU as) festgelegt - die Auswahl eines C-Compilers oder des jeweils anderen Assembler-Dialekts wird ebenso abgelehnt und fällt auf die im Projekt festgelegte Wahl zurück.") + """</p>
+    <p>""" + T("The GNU as and GNU ld executable paths (needed for the GNU as entry above) are configured in Prefs &rarr; GCC, alongside the existing GCC/G++ fields - see &ldquo;The Preferences Editor&rdquo; below.",
+          "Die Pfade zu den GNU-as- und GNU-ld-Programmen (für den Eintrag GNU as oben) werden in Prefs &rarr; GCC eingestellt, zusammen mit den bestehenden GCC-/G++-Feldern - siehe &bdquo;Der Einstellungs-Editor (Prefs)&ldquo; weiter unten.") + """</p>
     """)
 
     mode1 = ("""
@@ -274,7 +296,7 @@ def build(lang):
           "Ein konkreter, bebilderter Durchlauf des oben beschriebenen Modus 2, von Anfang bis Ende: ein neues Projekt aus einer Vorlage erstellen, bauen, und wieder bereinigen.") + """</p>
     <h2>""" + T("1. Create the project", "1. Projekt anlegen") + """</h2>
     <p>""" + T("File &rarr; New Project offers six templates: Empty C Project, Shell Project, AmigaOS 1.3 Project, AmigaOS 3.x Project, ReAction Project, and MUI Project. The ReAction and MUI templates already build a small working window with a File menu (About/Quit) - a genuine starting point, not just an empty shell.",
-          "File &rarr; New Project bietet sechs Vorlagen: Empty C Project, Shell Project, AmigaOS 1.3 Project, AmigaOS 3.x Project, ReAction Project und MUI Project. Die ReAction- und MUI-Vorlagen bauen bereits ein kleines, funktionierendes Fenster mit File-Menü (About/Quit) \u2013 ein echter Startpunkt, keine leere Hülle.") + """</p>
+          "File &rarr; New Project bietet sieben Vorlagen: Empty C Project, Shell Project, AmigaOS 1.3 Project, AmigaOS 3.x Project, ReAction Project, MUI Project und New Assembler Project. Die ReAction- und MUI-Vorlagen bauen bereits ein kleines, funktionierendes Fenster mit File-Menü (About/Quit) \u2013 ein echter Startpunkt, keine leere Hülle. New Assembler Project verhält sich etwas anders als die übrigen sechs \u2013 siehe den eigenen bebilderten Durchlauf weiter unten.") + """</p>
     """ + img_tag("qs1", "Choosing a project template", 560) + """
     <p class="caption">""" + T("Picking \u201cAmigaOS 3.x Project\u201d from the New Project submenu.", "Auswahl von \u201cAmigaOS 3.x Project\u201d im New-Project-Untermenü.") + """</p>
     <p>""" + T("After picking a template, AmigaED asks for a target directory and a project name, then (for AmigaOS 1.3/3.x, ReAction, and MUI templates) confirms the default compiler/linker switches for that target before creating anything - the same switches listed in the table further below, pre-filled and ready to adjust.",
@@ -299,6 +321,28 @@ def build(lang):
     <div class="note"><b>""" + T("Note", "Hinweis") + """:</b> """ + T(
         "Your source files, the .aep project file, and the Makefiles themselves are never touched by Clean Project - only the files a build actually produces.",
         "Deine Quelldateien, die .aep-Projektdatei und die Makefiles selbst werden von Clean Project nie angefasst \u2013 nur die Dateien, die ein Build tatsächlich erzeugt.") + """</div>
+
+    <h2>""" + T("5. Creating an Assembler Project", "5. Ein Assembler-Projekt anlegen") + """</h2>
+    <p>""" + T("New Assembler Project is a pure m68k assembler template - no C/C++ at all - and works a little differently from the other six templates above, because AmigaED supports two mutually incompatible assembler dialects: vasm and GNU as (m68k-amigaos-as). Rather than guessing or mixing them, AmigaED asks up front which one this project is for, and locks that choice in for the project's whole lifetime.",
+          "New Assembler Project ist eine reine m68k-Assembler-Vorlage - ganz ohne C/C++ - und verhält sich etwas anders als die sechs Vorlagen oben, da AmigaED zwei zueinander inkompatible Assembler-Dialekte unterstützt: vasm und GNU as (m68k-amigaos-as). Statt zu raten oder beide zu vermischen, fragt AmigaED gleich zu Beginn, für welchen Dialekt dieses Projekt gedacht ist, und legt diese Wahl für die gesamte Lebensdauer des Projekts fest.") + """</p>
+    """ + img_tag("qs5", "Choosing New Assembler Project from the New Project submenu", 560) + """
+    <p class="caption">""" + T("Picking \u201cNew Assembler Project\u201d - the seventh, newest template.", "Auswahl von \u201cNew Assembler Project\u201d \u2013 der siebten, neuesten Vorlage.") + """</p>
+    <p>""" + T("The very first thing AmigaED asks - before the usual directory and project name prompts - is which assembler this project is for:",
+          "Als Allererstes - noch vor den üblichen Abfragen nach Verzeichnis und Projektname - fragt AmigaED, für welchen Assembler dieses Projekt gedacht ist:") + """</p>
+    """ + img_tag("qs6", "The vasm / GNU as choice dialog", 460) + """
+    <p class="caption">""" + T("\u201cDue to Compiler differences, you can't have both a vasm- or GNU as-driven Assembler Project. Do you want to create this assembler Project for vasm or GNU as Compiler?\u201d",
+          "\u201cAufgrund von Compiler-Unterschieden kannst du nicht gleichzeitig ein vasm- und ein GNU-as-basiertes Assembler-Projekt haben. Möchtest du dieses Assembler-Projekt für den vasm- oder den GNU-as-Compiler erstellen?\u201d") + """</p>
+    <p>""" + T("Whichever button you click decides everything that follows: AmigaED generates only the matching Makefile (Makefile.vbcc for vasm, Makefile.gcc for GNU as - never both), writes the freshly generated main .asm file in that dialect's own comment and directive style, and switches the statusbar compiler chooser (and Build &rarr; Select Compiler...) to match automatically.",
+          "Welcher Knopf angeklickt wird, entscheidet über alles Weitere: AmigaED erzeugt nur die passende Makefile (Makefile.vbcc für vasm, Makefile.gcc für GNU as - nie beide), schreibt die frisch erzeugte Hauptdatei .asm im Kommentar- und Direktiven-Stil dieses Dialekts, und schaltet den Compiler-Wähler in der Statusleiste (sowie Build &rarr; Select Compiler...) automatisch passend um.") + """</p>
+    """ + img_tag("qs7", "A freshly created GNU as Assembler Project, built successfully", 560) + """
+    <p class="caption">""" + T("A GNU as Assembler Project after Build Project: assembled with m68k-amigaos-as, linked with m68k-amigaos-ld (its path set in Prefs &rarr; GCC &rarr; \u201cGNU ld:\u201d) - only Makefile.gcc was ever generated for it.",
+          "Ein GNU-as-Assembler-Projekt nach Build Project: assembliert mit m68k-amigaos-as, gelinkt mit m68k-amigaos-ld (Pfad in Prefs &rarr; GCC &rarr; \u201cGNU ld:\u201d) - für dieses Projekt wurde ausschließlich Makefile.gcc erzeugt.") + """</p>
+    <div class="note"><b>""" + T("Note", "Hinweis") + """:</b> """ + T(
+        "Both dialects are fully supported thereafter, each with its own correctly highlighted comment style in the editor: vasm accepts \u201c;\u201d and \u201c*\u201d as comment characters anywhere on the line, while GNU as uses \u201c|\u201d anywhere and \u201c*\u201d/\u201c#\u201d only at the very start of a line (in GNU as, \u201c;\u201d is a statement separator, not a comment). Picking a C compiler (VBCC/GNU C/GNU C++) or the assembler dialect this project was NOT created for - in either the statusbar or Build &rarr; Select Compiler... - is refused with a warning message box and automatically falls back to the project's own locked-in choice, so a mismatched build can never be triggered by accident.",
+        "Ab dann werden beide Dialekte vollständig unterstützt, jeweils mit korrekt hervorgehobenem Kommentarstil im Editor: vasm akzeptiert \u201c;\u201c und \u201c*\u201c als Kommentarzeichen an beliebiger Stelle der Zeile, während GNU as \u201c|\u201c an beliebiger Stelle sowie \u201c*\u201c/\u201c#\u201c ausschließlich am Zeilenanfang verwendet (bei GNU as ist \u201c;\u201c ein Anweisungstrenner, kein Kommentar). Die Auswahl eines C-Compilers (VBCC/GNU C/GNU C++) oder des Assembler-Dialekts, für den dieses Projekt NICHT angelegt wurde - egal ob in der Statusleiste oder über Build &rarr; Select Compiler... - wird mit einer Warnmeldung abgelehnt und automatisch auf die im Projekt festgelegte Wahl zurückgesetzt, sodass ein unpassender Build nie versehentlich ausgelöst werden kann.") + """</div>
+    <div class="note"><b>""" + T("Note", "Hinweis") + """:</b> """ + T(
+        "Reopening an existing Assembler Project - via File &rarr; Load Project... or File &rarr; Recent Projects - automatically switches the compiler chooser to that project's own locked assembler, even if a different project (or a different dialect) was active just before.",
+        "Wird ein bestehendes Assembler-Projekt erneut geöffnet - über File &rarr; Load Project... oder File &rarr; Recent Projects - schaltet der Compiler-Wähler automatisch auf den im Projekt festgelegten Assembler um, selbst wenn unmittelbar zuvor ein anderes Projekt (oder ein anderer Dialekt) aktiv war.") + """</div>
     """)
 
     prefs = ("""
@@ -317,6 +361,8 @@ def build(lang):
              "Linker-Optionen sind ebenso pro Ziel-OS getrennt \u2013 hier wird automatisch eine Mathe-Bibliothek ergänzt, wenn dein Projekt Gleitkommazahlen verwendet (siehe Hinweis unten).") + """</li>
       <li>""" + T("Default Target OS sets which of the two option sets above is used when you do not explicitly pick one.",
              "Default Target OS legt fest, welcher der beiden obigen Optionssätze verwendet wird, wenn du nicht ausdrücklich einen auswählst.") + """</li>
+      <li>""" + T("The GCC tab additionally has \u201cGNU as:\u201d and \u201cGNU ld:\u201d fields (each with its own path field and file selector, right next to the existing gcc/g++ ones) - the assembler and linker used for a GNU-as-dialect Assembler Project, assembling and linking it directly rather than through gcc.",
+             "Der GCC-Reiter besitzt zusätzlich die Felder \u201cGNU as:\u201c und \u201cGNU ld:\u201c (jeweils mit eigenem Pfadfeld und Dateiauswahl, direkt neben den bestehenden gcc-/g++-Feldern) - Assembler und Linker für ein Assembler-Projekt im GNU-as-Dialekt, die es direkt assemblieren und linken, statt über gcc.") + """</li>
     </ol>
     <div class="note"><b>""" + T("Automatic floating-point handling", "Automatische Gleitkommazahlen-Behandlung") + """:</b> """ + T(
         "if AmigaED detects float or double - or the Amiga-typical uppercase FLOAT/DOUBLE typedefs, both are recognized - anywhere in your project's own C/C++ sources, it automatically adds the right math library to the generated Makefiles for you: -lm for gcc/g++, -lmieee for vbcc, and MATH=IEEE for SAS/C (only if no MATH= mode is already set). You do not need to add these yourself.",
@@ -389,6 +435,8 @@ def build(lang):
       <tr><th>""" + T("Compiler", "Compiler") + """</th><th>""" + T("Recognized format", "Erkanntes Format") + """</th></tr>
       <tr><td>VBCC</td><td><span class="code">error 9 in line 24 of "file.c": message</span></td></tr>
       <tr><td>GCC/G++</td><td><span class="code">file.c:24:5: error: message</span></td></tr>
+      <tr><td>vasm</td><td><span class="code">error 9 in line 24 of "file.asm": message</span></td></tr>
+      <tr><td>GNU as</td><td><span class="code">file.asm:24: Error: message</span></td></tr>
     </table>
     <div class="note"><b>""" + T("Note", "Hinweis") + """:</b> """ + T(
         "An error reported inside a generated intermediate file (e.g. VBCC reporting an assembler-level problem in the .asm file it produced from your .c source) still jumps correctly - to that intermediate file, exactly as the compiler itself reported it.",

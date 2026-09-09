@@ -59,7 +59,7 @@ SourceDir=install_src
 ; previously compiled Setup.exe sitting inside it right along with the
 ; rest.
 OutputDir=..\Output
-OutputBaseFilename=AmigaED_rev148_Setup
+OutputBaseFilename=AmigaED4_rev149_Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

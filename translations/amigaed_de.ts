@@ -2662,17 +2662,17 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
 <context>
     <name>PrefsDialog</name>
     <message>
-        <location filename="../prefsdialog.ui" line="156"/>
+        <location filename="../prefsdialog.ui" line="158"/>
         <source>Save Project Files Automatically</source>
         <translation>Projektdateien automatisch speichern</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="153"/>
+        <location filename="../prefsdialog.ui" line="155"/>
         <source>If checked, any open project file (including Makefiles) with unsaved changes is saved automatically before a project build, with no prompt. If unchecked, you are asked each time instead.</source>
         <translation>Wenn aktiviert, wird jede geöffnete Projektdatei (auch Makefiles) mit ungespeicherten Änderungen vor einem Projekt-Build automatisch gespeichert, ohne Nachfrage. Wenn nicht aktiviert, wirst du jedes Mal gefragt.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="411"/>
+        <location filename="../prefsdialog.ui" line="398"/>
         <source>GNU as:</source>
         <translation>GNU as:</translation>
     </message>
@@ -2682,7 +2682,7 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation>Pfad zu GNU as</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="449"/>
+        <location filename="../prefsdialog.ui" line="436"/>
         <source>GNU ld:</source>
         <translation>GNU ld:</translation>
     </message>
@@ -2696,12 +2696,12 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">Einstellungen - Amiga Cross Editor </translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1389"/>
+        <location filename="../prefsdialog.ui" line="1397"/>
         <source>Save Prefs</source>
         <translation>Einstellungen speichern</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1378"/>
+        <location filename="../prefsdialog.ui" line="1386"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
@@ -2716,42 +2716,42 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation>Grundeinstellungen für Makros und Pfade...</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="45"/>
+        <location filename="../prefsdialog.ui" line="47"/>
         <source>Au&amp;thor:</source>
         <translation>&amp;Autor:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="61"/>
+        <location filename="../prefsdialog.ui" line="63"/>
         <source>author_name</source>
         <translation>author_name</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="68"/>
+        <location filename="../prefsdialog.ui" line="70"/>
         <source>Email:</source>
         <translation>E-Mail:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="84"/>
+        <location filename="../prefsdialog.ui" line="86"/>
         <source>someone@somewhere.com</source>
         <translation>someone@somewhere.com</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="91"/>
+        <location filename="../prefsdialog.ui" line="93"/>
         <source>Website:</source>
         <translation>Website:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="107"/>
+        <location filename="../prefsdialog.ui" line="109"/>
         <source>http://www.somewhere.com</source>
         <translation>http://www.somewhere.com</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="114"/>
+        <location filename="../prefsdialog.ui" line="116"/>
         <source>Pro&amp;jects root:</source>
         <translation>&amp;Projektstammverzeichnis:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="137"/>
+        <location filename="../prefsdialog.ui" line="139"/>
         <source>Select default Root Folder for your Projects&lt;br&gt;&lt;b&gt;Tipp:&lt;/b&gt; Should be accessiable by one of your emulated Amiga systems!</source>
         <translation>Standard-Stammverzeichnis für Ihre Projekte auswählen&lt;br&gt;&lt;b&gt;Tipp:&lt;/b&gt; Sollte von einem Ihrer emulierten Amiga-Systeme aus erreichbar sein!</translation>
     </message>
@@ -2764,107 +2764,107 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">Standard-Icon:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="224"/>
+        <location filename="../prefsdialog.ui" line="211"/>
         <source>GCC</source>
         <translation>GCC</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="227"/>
+        <location filename="../prefsdialog.ui" line="214"/>
         <source>Basic settings for gcc and g++</source>
         <translation>Grundeinstellungen für gcc und g++</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="259"/>
+        <location filename="../prefsdialog.ui" line="246"/>
         <source>GNU gcc:</source>
         <translation>GNU gcc:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="297"/>
+        <location filename="../prefsdialog.ui" line="284"/>
         <source>GNU g++:</source>
         <translation>GNU g++:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="335"/>
+        <location filename="../prefsdialog.ui" line="322"/>
         <source>GNU make:</source>
         <translation>GNU make:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="373"/>
+        <location filename="../prefsdialog.ui" line="360"/>
         <source>GNU s&amp;trip:</source>
         <translation>GNU s&amp;trip:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="513"/>
+        <location filename="../prefsdialog.ui" line="500"/>
         <source>Linker options for m68k-amigaos-gcc when targetting AmigaOS 1.3 (used for single-file compiles, the &quot;Linker Options&quot; prompt when creating a new project, and the generated Makefile&apos;s LDFLAGS) Note: -lamiga/-lauto are VBCC library names (amiga.lib/auto.lib) and do not apply to m68k-amigaos-gcc.</source>
         <translation>Linker-Optionen für m68k-amigaos-gcc beim Zielsystem AmigaOS 1.3 (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Linker Options&quot; beim Erstellen eines neuen Projekts sowie die LDFLAGS des erzeugten Makefiles verwendet) Hinweis: -lamiga/-lauto sind VBCC-Bibliotheksnamen (amiga.lib/auto.lib) und gelten nicht für m68k-amigaos-gcc.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="516"/>
-        <location filename="../prefsdialog.ui" line="536"/>
-        <location filename="../prefsdialog.ui" line="596"/>
-        <location filename="../prefsdialog.ui" line="616"/>
+        <location filename="../prefsdialog.ui" line="503"/>
+        <location filename="../prefsdialog.ui" line="523"/>
+        <location filename="../prefsdialog.ui" line="583"/>
+        <location filename="../prefsdialog.ui" line="603"/>
         <source>-noixemul</source>
         <translation>-noixemul</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="533"/>
+        <location filename="../prefsdialog.ui" line="520"/>
         <source>Linker options for m68k-amigaos-gcc when targetting AmigaOS 3.x (used for single-file compiles, the &quot;Linker Options&quot; prompt when creating a new project, and the generated Makefile&apos;s LDFLAGS) Note: -lamiga/-lauto are VBCC library names (amiga.lib/auto.lib) and do not apply to m68k-amigaos-gcc.</source>
         <translation>Linker-Optionen für m68k-amigaos-gcc beim Zielsystem AmigaOS 3.x (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Linker Options&quot; beim Erstellen eines neuen Projekts sowie die LDFLAGS des erzeugten Makefiles verwendet) Hinweis: -lamiga/-lauto sind VBCC-Bibliotheksnamen (amiga.lib/auto.lib) und gelten nicht für m68k-amigaos-gcc.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="593"/>
+        <location filename="../prefsdialog.ui" line="580"/>
         <source>Linker options for m68k-amigaos-g++ when targetting AmigaOS 1.3 (used for single-file compiles, the &quot;Linker Options&quot; prompt when creating a new project, and the generated Makefile&apos;s LDFLAGS) Note: -lamiga/-lauto are VBCC library names (amiga.lib/auto.lib) and do not apply to m68k-amigaos-gcc.</source>
         <translation>Linker-Optionen für m68k-amigaos-g++ beim Zielsystem AmigaOS 1.3 (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Linker Options&quot; beim Erstellen eines neuen Projekts sowie die LDFLAGS des erzeugten Makefiles verwendet) Hinweis: -lamiga/-lauto sind VBCC-Bibliotheksnamen (amiga.lib/auto.lib) und gelten nicht für m68k-amigaos-gcc.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="613"/>
+        <location filename="../prefsdialog.ui" line="600"/>
         <source>Linker options for m68k-amigaos-g++ when targetting AmigaOS 3.x (used for single-file compiles, the &quot;Linker Options&quot; prompt when creating a new project, and the generated Makefile&apos;s LDFLAGS) Note: -lamiga/-lauto are VBCC library names (amiga.lib/auto.lib) and do not apply to m68k-amigaos-gcc.</source>
         <translation>Linker-Optionen für m68k-amigaos-g++ beim Zielsystem AmigaOS 3.x (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Linker Options&quot; beim Erstellen eines neuen Projekts sowie die LDFLAGS des erzeugten Makefiles verwendet) Hinweis: -lamiga/-lauto sind VBCC-Bibliotheksnamen (amiga.lib/auto.lib) und gelten nicht für m68k-amigaos-gcc.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="625"/>
-        <location filename="../prefsdialog.ui" line="945"/>
+        <location filename="../prefsdialog.ui" line="653"/>
+        <location filename="../prefsdialog.ui" line="934"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If set, you will be presented with an options field where you might change options for recent compilation every time compilation is triggered&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Wenn aktiviert, wird bei jedem Compiliervorgang ein Optionsfeld angezeigt, in dem Sie die Optionen für den aktuellen Lauf anpassen können&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="631"/>
-        <location filename="../prefsdialog.ui" line="951"/>
+        <location filename="../prefsdialog.ui" line="659"/>
+        <location filename="../prefsdialog.ui" line="940"/>
         <source>Show/Change Opts at compiler start</source>
         <translation>Optionen beim Compiler-Start anzeigen/ändern</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="653"/>
+        <location filename="../prefsdialog.ui" line="624"/>
         <source>Search directory for GNU as&apos;s &quot;.include&quot; directive, added as -I&lt;path&gt; to the generated Makefile&apos;s assemble rule (only when this field isn&apos;t empty). Only affects hand-written .asm/.s sources assembled with GNU as, not C/C++ compiles. Avoid paths containing spaces - the value is inserted unquoted (quoting it breaks mingw32-make on Windows).</source>
         <translation>Suchverzeichnis für GNU as&apos; &quot;.include&quot;-Direktive, wird als -I&lt;Pfad&gt; in die Assemblier-Regel des generierten Makefiles eingefügt (nur wenn dieses Feld nicht leer ist). Betrifft nur handgeschriebene .asm/.s-Quellen, die mit GNU as assembliert werden, nicht C/C++-Compilierungen. Pfade mit Leerzeichen vermeiden - der Wert wird unquotiert eingesetzt (Anführungszeichen bringen mingw32-make unter Windows zum Absturz).</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="683"/>
+        <location filename="../prefsdialog.ui" line="670"/>
         <source>VBCC</source>
         <translation>VBCC</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="686"/>
+        <location filename="../prefsdialog.ui" line="673"/>
         <source>Basic settings for vc</source>
         <translation>Grundeinstellungen für vc</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="711"/>
+        <location filename="../prefsdialog.ui" line="700"/>
         <source>vc: </source>
         <translation>vc: </translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="732"/>
+        <location filename="../prefsdialog.ui" line="721"/>
         <source>vasm: </source>
         <translation>vasm: </translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="770"/>
+        <location filename="../prefsdialog.ui" line="759"/>
         <source>config dir:</source>
         <translation>Konfigurationsverzeichnis:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="463"/>
+        <location filename="../prefsdialog.ui" line="450"/>
         <source>GCC OS 1.3 compiler opts:</source>
         <translation>GCC OS-1.3-Compiler-Optionen:</translation>
     </message>
@@ -2879,83 +2879,83 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation>Wählt, ob standardmäßig für OS 1.3 oder OS 2.x/3.x compiliert, Makefiles erzeugt und der Emulator gestartet werden. Wird beim Start verwendet sowie immer dann, wenn kein geöffnetes Projekt (oder ein importiertes - siehe Datei &gt; Bestehendes Projekt importieren...) etwas anderes vorgibt.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="473"/>
+        <location filename="../prefsdialog.ui" line="460"/>
         <source>Compiler options for m68k-amigaos-gcc when targetting AmigaOS 1.3 (used for single-file compiles, the &quot;Compiler Options&quot; prompt when creating a new project, and the generated Makefile&apos;s CCARGS). Includes -mcrt=nix13, since it affects code generation and must be present at compile time too, not just when linking.</source>
         <translation>Compiler-Optionen für m68k-amigaos-gcc beim Zielsystem AmigaOS 1.3 (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Compiler Options&quot; beim Erstellen eines neuen Projekts sowie die CCARGS des erzeugten Makefiles verwendet). Enthält -mcrt=nix13, da dieser Schalter die Codegenerierung beeinflusst und daher auch beim Compilieren vorhanden sein muss, nicht nur beim Linken.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="476"/>
+        <location filename="../prefsdialog.ui" line="463"/>
         <source>-std=gnu89 -O2 -Wall -mcrt=nix13</source>
         <translation>-std=gnu89 -O2 -Wall -mcrt=nix13</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="483"/>
+        <location filename="../prefsdialog.ui" line="470"/>
         <source>GCC OS 3.x compiler opts:</source>
         <translation>GCC OS-3.x-Compiler-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="493"/>
+        <location filename="../prefsdialog.ui" line="480"/>
         <source>Compiler options for m68k-amigaos-gcc when targetting AmigaOS 3.x (used for single-file compiles, the &quot;Compiler Options&quot; prompt when creating a new project, and the generated Makefile&apos;s CCARGS)</source>
         <translation>Compiler-Optionen für m68k-amigaos-gcc beim Zielsystem AmigaOS 3.x (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Compiler Options&quot; beim Erstellen eines neuen Projekts sowie die CCARGS des erzeugten Makefiles verwendet)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="496"/>
+        <location filename="../prefsdialog.ui" line="483"/>
         <source>-std=gnu89 -O2 -Wall</source>
         <translation>-std=gnu89 -O2 -Wall</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="503"/>
+        <location filename="../prefsdialog.ui" line="490"/>
         <source>GCC OS 1.3 linker opts:</source>
         <translation>GCC OS-1.3-Linker-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="523"/>
+        <location filename="../prefsdialog.ui" line="510"/>
         <source>GCC OS 3.x linker opts:</source>
         <translation>GCC OS-3.x-Linker-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="543"/>
+        <location filename="../prefsdialog.ui" line="530"/>
         <source>G++ OS 1.3 compiler opts:</source>
         <translation>G++ OS-1.3-Compiler-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="553"/>
+        <location filename="../prefsdialog.ui" line="540"/>
         <source>Compiler options for m68k-amigaos-g++ when targetting AmigaOS 1.3 (used for single-file compiles, the &quot;Compiler Options&quot; prompt when creating a new project, and the generated Makefile&apos;s CCARGS). Includes -mcrt=nix13, since it affects code generation and must be present at compile time too, not just when linking.</source>
         <translation>Compiler-Optionen für m68k-amigaos-g++ beim Zielsystem AmigaOS 1.3 (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Compiler Options&quot; beim Erstellen eines neuen Projekts sowie die CCARGS des erzeugten Makefiles verwendet). Enthält -mcrt=nix13, da dieser Schalter die Codegenerierung beeinflusst und daher auch beim Compilieren vorhanden sein muss, nicht nur beim Linken.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="556"/>
+        <location filename="../prefsdialog.ui" line="543"/>
         <source>-std=c++11 -O2 -Wall -mcrt=nix13</source>
         <translation>-std=c++11 -O2 -Wall -mcrt=nix13</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="563"/>
+        <location filename="../prefsdialog.ui" line="550"/>
         <source>G++ OS 3.x compiler opts:</source>
         <translation>G++ OS-3.x-Compiler-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="573"/>
+        <location filename="../prefsdialog.ui" line="560"/>
         <source>Compiler options for m68k-amigaos-g++ when targetting AmigaOS 3.x (used for single-file compiles, the &quot;Compiler Options&quot; prompt when creating a new project, and the generated Makefile&apos;s CCARGS)</source>
         <translation>Compiler-Optionen für m68k-amigaos-g++ beim Zielsystem AmigaOS 3.x (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Compiler Options&quot; beim Erstellen eines neuen Projekts sowie die CCARGS des erzeugten Makefiles verwendet)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="576"/>
+        <location filename="../prefsdialog.ui" line="563"/>
         <source>-std=c++11 -O2 -Wall</source>
         <translation>-std=c++11 -O2 -Wall</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="583"/>
+        <location filename="../prefsdialog.ui" line="570"/>
         <source>G++ OS 1.3 linker opts:</source>
         <translation>G++ OS-1.3-Linker-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="603"/>
+        <location filename="../prefsdialog.ui" line="590"/>
         <source>G++ OS 3.x linker opts:</source>
         <translation>G++ OS-3.x-Linker-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="643"/>
-        <location filename="../prefsdialog.ui" line="904"/>
+        <location filename="../prefsdialog.ui" line="614"/>
+        <location filename="../prefsdialog.ui" line="893"/>
         <source>Assembler Include Path:</source>
         <translation>Assembler-Include-Pfad:</translation>
     </message>
@@ -2964,62 +2964,62 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">Suchverzeichnis für GNU as&apos; &quot;.include&quot;-Direktive, wird als -I&lt;Pfad&gt; in die Assemblier-Regel des generierten Makefiles eingefügt (nur wenn dieses Feld nicht leer ist). Betrifft nur handgeschriebene .asm/.s-Quellen, die mit GNU as assembliert werden, nicht C/C++-Compilierungen.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="808"/>
+        <location filename="../prefsdialog.ui" line="797"/>
         <source>Compiler options for vbcc when targetting AmigaOS 1.3 (used for single-file compiles, the &quot;Compiler Options&quot; prompt when creating a new project, and the generated Makefile&apos;s CCARGS). &apos;+kick13&apos; must stay the first token.</source>
         <translation>Compiler-Optionen für vbcc beim Zielsystem AmigaOS 1.3 (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Compiler Options&quot; beim Erstellen eines neuen Projekts sowie die CCARGS des erzeugten Makefiles verwendet). &apos;+kick13&apos; muss das erste Token bleiben.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="811"/>
+        <location filename="../prefsdialog.ui" line="800"/>
         <source>+kick13 -cpp-comments -v -O2 -size -cpu=68020 -I$NDK13_INC</source>
         <translation>+kick13 -cpp-comments -v -O2 -size -cpu=68020 -I$NDK13_INC</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="818"/>
+        <location filename="../prefsdialog.ui" line="807"/>
         <source>VBCC OS &amp;1.3 compiler opts:</source>
         <translation>VBCC OS-&amp;1.3-Compiler-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="832"/>
+        <location filename="../prefsdialog.ui" line="821"/>
         <source>Compiler options for vbcc when targetting AmigaOS 3.x (used for single-file compiles, the &quot;Compiler Options&quot; prompt when creating a new project, and the generated Makefile&apos;s CCARGS). &apos;+aos68k&apos; must stay the first token.</source>
         <translation>Compiler-Optionen für vbcc beim Zielsystem AmigaOS 3.x (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Compiler Options&quot; beim Erstellen eines neuen Projekts sowie die CCARGS des erzeugten Makefiles verwendet). &apos;+aos68k&apos; muss das erste Token bleiben.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="835"/>
+        <location filename="../prefsdialog.ui" line="824"/>
         <source>+aos68k -cpp-comments  -v -O2 -size -cpu=68030 -I$NDK39_INC</source>
         <translation>+aos68k -cpp-comments  -v -O2 -size -cpu=68030 -I$NDK39_INC</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="842"/>
+        <location filename="../prefsdialog.ui" line="831"/>
         <source>VBCC OS &amp;3.x compiler opts:</source>
         <translation>VBCC OS-&amp;3.x-Compiler-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="856"/>
+        <location filename="../prefsdialog.ui" line="845"/>
         <source>Linker options for vbcc when targetting AmigaOS 1.3 (used for single-file compiles, the &quot;Linker Options&quot; prompt when creating a new project, and the generated Makefile&apos;s LDFLAGS)</source>
         <translation>Linker-Optionen für vbcc beim Zielsystem AmigaOS 1.3 (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Linker Options&quot; beim Erstellen eines neuen Projekts sowie die LDFLAGS des erzeugten Makefiles verwendet)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="859"/>
+        <location filename="../prefsdialog.ui" line="848"/>
         <source>-noixemul -L$NDK13_LIB -lauto</source>
         <translation>-noixemul -L$NDK13_LIB -lauto</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="866"/>
+        <location filename="../prefsdialog.ui" line="855"/>
         <source>VBCC OS 1.3 linker opts:</source>
         <translation>VBCC OS-1.3-Linker-Optionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="890"/>
+        <location filename="../prefsdialog.ui" line="879"/>
         <source>Linker options for vbcc when targetting AmigaOS 3.x (used for single-file compiles, the &quot;Linker Options&quot; prompt when creating a new project, and the generated Makefile&apos;s LDFLAGS)</source>
         <translation>Linker-Optionen für vbcc beim Zielsystem AmigaOS 3.x (werden für die Einzeldatei-Compilierung, die Abfrage &quot;Linker Options&quot; beim Erstellen eines neuen Projekts sowie die LDFLAGS des erzeugten Makefiles verwendet)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="893"/>
+        <location filename="../prefsdialog.ui" line="882"/>
         <source>-noixemul -L$NDK39_LIB -lmieee -lauto -lamiga</source>
         <translation>-noixemul -L$NDK39_LIB -lmieee -lauto -lamiga</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="880"/>
+        <location filename="../prefsdialog.ui" line="869"/>
         <source>VBCC OS 3.x linker opts:</source>
         <translation>VBCC OS-3.x-Linker-Optionen:</translation>
     </message>
@@ -3047,52 +3047,52 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">Suchverzeichnis für vasms &quot;include&quot;-Direktive, wird als -I&lt;Pfad&gt; in die Assemblier-Regel des generierten Makefiles eingefügt (nur wenn dieses Feld nicht leer ist). Betrifft nur handgeschriebene .asm/.s-Quellen, die mit vasm assembliert werden, nicht C/C++-Compilierungen.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="990"/>
+        <location filename="../prefsdialog.ui" line="964"/>
         <source>SAS/C</source>
         <translation>SAS/C</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="993"/>
+        <location filename="../prefsdialog.ui" line="967"/>
         <source>Basic settings for SAS/C - used only for generating Makefile.sc, never invoked automatically (SAS/C only runs on a real Amiga or emulator)</source>
         <translation>Grundeinstellungen für SAS/C - wird ausschließlich zur Erzeugung von Makefile.sc verwendet, nie automatisch aufgerufen (SAS/C läuft nur auf einem echten Amiga oder Emulator)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1001"/>
+        <location filename="../prefsdialog.ui" line="975"/>
         <source>SAS/C default opts:</source>
         <translation>SAS/C-Standardoptionen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1011"/>
+        <location filename="../prefsdialog.ui" line="985"/>
         <source>Options passed to &quot;sc&quot; in the generated Makefile.sc (e.g. &quot;sc ICONS ERRORREXX file.c LINK TO target&quot;). No OS 1.3/3.x distinction is made for SAS/C.</source>
         <translation>Optionen, die im erzeugten Makefile.sc an &quot;sc&quot; übergeben werden (z.B. &quot;sc ICONS ERRORREXX Datei.c LINK TO Ziel&quot;). Für SAS/C wird nicht zwischen OS 1.3 und OS 3.x unterschieden.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1014"/>
+        <location filename="../prefsdialog.ui" line="988"/>
         <source>ICONS ERRORREXX</source>
         <translation>ICONS ERRORREXX</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1037"/>
+        <location filename="../prefsdialog.ui" line="1011"/>
         <source>Emulator</source>
         <translation>Emulator</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1040"/>
+        <location filename="../prefsdialog.ui" line="1014"/>
         <source>Basic settings for UAE emulation startup</source>
         <translation>Grundeinstellungen für den UAE-Emulationsstart</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1048"/>
+        <location filename="../prefsdialog.ui" line="1022"/>
         <source>UAE:</source>
         <translation>UAE:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1082"/>
+        <location filename="../prefsdialog.ui" line="1056"/>
         <source>OS &amp;1.3 config:</source>
         <translation>OS &amp;1.3 Konfiguration:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1116"/>
+        <location filename="../prefsdialog.ui" line="1090"/>
         <source>OS &amp;3.x config:</source>
         <translation>OS &amp;3.x Konfiguration:</translation>
     </message>
@@ -3113,27 +3113,27 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">AmigaOS 3.x</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1179"/>
+        <location filename="../prefsdialog.ui" line="1153"/>
         <source>Misc</source>
         <translation>Verschiedenes</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1182"/>
+        <location filename="../prefsdialog.ui" line="1156"/>
         <source>Misc settings for GUI look and feel, compiler to use, compiler behaviour...</source>
         <translation>Verschiedene Einstellungen für Oberflächen-Erscheinungsbild, zu verwendenden Compiler, Compiler-Verhalten...</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1188"/>
+        <location filename="../prefsdialog.ui" line="1162"/>
         <source>Application Look and Feel</source>
         <translation>Erscheinungsbild der Anwendung</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1194"/>
+        <location filename="../prefsdialog.ui" line="1170"/>
         <source>Default application style:</source>
         <translation>Standard-Anwendungsstil:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1201"/>
+        <location filename="../prefsdialog.ui" line="1177"/>
         <source>Select default Application style (only styles that are available on your system will be shown!). &quot;Dark&quot; gives the whole application - including the editor - a dark theme.</source>
         <translation>Standard-Anwendungsstil auswählen (nur auf Ihrem System verfügbare Stile werden angezeigt!). &quot;Dark&quot; gibt der gesamten Anwendung - einschließlich des Editors - ein dunkles Erscheinungsbild.</translation>
     </message>
@@ -3146,112 +3146,112 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">Dunkles Stylesheet verwenden:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="914"/>
+        <location filename="../prefsdialog.ui" line="903"/>
         <source>Search directory for vasm&apos;s &quot;include&quot; directive, added as -I&lt;path&gt; to the generated Makefile&apos;s assemble rule (only when this field isn&apos;t empty). Only affects hand-written .asm/.s sources assembled with vasm, not C/C++ compiles. Avoid paths containing spaces - the value is inserted unquoted (quoting it breaks mingw32-make on Windows).</source>
         <translation>Suchverzeichnis für vasms &quot;include&quot;-Direktive, wird als -I&lt;Pfad&gt; in die Assemblier-Regel des generierten Makefiles eingefügt (nur wenn dieses Feld nicht leer ist). Betrifft nur handgeschriebene .asm/.s-Quellen, die mit vasm assembliert werden, nicht C/C++-Compilierungen. Pfade mit Leerzeichen vermeiden - der Wert wird unquotiert eingesetzt (Anführungszeichen bringen mingw32-make unter Windows zum Absturz).</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1208"/>
+        <location filename="../prefsdialog.ui" line="1184"/>
         <source>Use standard text widgets for cursor position</source>
         <translation>Standard-Textfelder für die Cursorposition verwenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1214"/>
+        <location filename="../prefsdialog.ui" line="1190"/>
         <source>Don&apos;t use LCD for cursor position</source>
         <translation>Keine LCD-Anzeige für die Cursorposition verwenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1224"/>
+        <location filename="../prefsdialog.ui" line="1200"/>
         <source>Show indentation guides by default?</source>
         <translation>Einrückungslinien standardmäßig anzeigen?</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1230"/>
+        <location filename="../prefsdialog.ui" line="1206"/>
         <source>Show indentation lines:</source>
         <translation>Einrückungslinien anzeigen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1240"/>
+        <location filename="../prefsdialog.ui" line="1216"/>
         <source>Hide compiler selection and compile buttons from statusbar</source>
         <translation>Compiler-Auswahl und Compilieren-Schaltfläche aus der Statusleiste ausblenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1246"/>
+        <location filename="../prefsdialog.ui" line="1222"/>
         <source>Don&apos;t show compiler buttons in statusbar</source>
         <translation>Keine Compiler-Schaltflächen in der Statusleiste anzeigen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1256"/>
+        <location filename="../prefsdialog.ui" line="1232"/>
         <source>Show debug output (only usefull for developers in order to enhange Amiga Cross Editor!)</source>
         <translation>Debug-Ausgabe anzeigen (nur für Entwickler nützlich, die Amiga Cross Editor weiterentwickeln!)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1262"/>
+        <location filename="../prefsdialog.ui" line="1238"/>
         <source>Show debug output:</source>
         <translation>Debug-Ausgabe anzeigen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1272"/>
+        <location filename="../prefsdialog.ui" line="1248"/>
         <source>use a simple statusbar without any gimmicks</source>
         <translation>Eine einfache Statusleiste ohne Extras verwenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1278"/>
+        <location filename="../prefsdialog.ui" line="1254"/>
         <source>Use simple statusbar</source>
         <translation>Einfache Statusleiste verwenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1288"/>
+        <location filename="../prefsdialog.ui" line="1264"/>
         <source>Default GUI Language:</source>
         <translation>Standard-Oberflächensprache:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1295"/>
+        <location filename="../prefsdialog.ui" line="1271"/>
         <source>Select the GUI language to use the next time the program starts (can also be switched at runtime via View -&gt; GUI Language)</source>
         <translation>Oberflächensprache für den nächsten Programmstart auswählen (kann auch zur Laufzeit über Ansicht -&gt; Oberflächensprache umgeschaltet werden)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1305"/>
+        <location filename="../prefsdialog.ui" line="1283"/>
         <source>Build System</source>
         <translation>Build-System</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1311"/>
+        <location filename="../prefsdialog.ui" line="1328"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Dont&apos; show messageboxes on compilation finished or failed&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Keine Meldungsfenster bei abgeschlossener oder fehlgeschlagener Compilierung anzeigen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1314"/>
+        <location filename="../prefsdialog.ui" line="1331"/>
         <source>Don&apos;t use warn requesters</source>
         <translation>Keine Warnmeldungen anzeigen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1321"/>
+        <location filename="../prefsdialog.ui" line="1291"/>
         <source>Default Cross Compiler:</source>
         <translation>Standard-Cross-Compiler:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1328"/>
+        <location filename="../prefsdialog.ui" line="1318"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open output console on compiler failure only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Ausgabekonsole nur bei Compiler-Fehler öffnen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1331"/>
+        <location filename="../prefsdialog.ui" line="1321"/>
         <source>Open panel on failure only</source>
         <translation>Bereich nur bei Fehler öffnen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1338"/>
+        <location filename="../prefsdialog.ui" line="1298"/>
         <source>Select default cross compiler to use</source>
         <translation>Standardmäßig zu verwendenden Cross-Compiler auswählen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1348"/>
+        <location filename="../prefsdialog.ui" line="1308"/>
         <source>Create an icon for your successfully compiled Amiga program</source>
         <translation>Icon für Ihr erfolgreich compiliertes Amiga-Programm erstellen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1351"/>
+        <location filename="../prefsdialog.ui" line="1311"/>
         <source>create icon</source>
         <translation>Icon erstellen</translation>
     </message>

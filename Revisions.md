@@ -193,6 +193,24 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   `QFrame::NoFrame` to `QFrame::Shape::NoFrame`, `Qt::Horizontal` to
   `Qt::Orientation::Horizontal`) - purely cosmetic, no behaviour
   change.
+- **Updated**: `prefsdialog.ui` (Prefs dialog) reworked cosmetically -
+  Project tab is now the default one shown when the dialog opens
+  (previously GCC); the VBCC tab's field layout is now grouped into a
+  clearer nested structure (the vc/vasm/config-dir/compiler-opts/
+  linker-opts/Assembler-Include-Path fields sit together in their own
+  sub-layout, with the "Show/Change Opts" checkbox and bottom spacer
+  as separate rows around it) instead of one flat list of rows;
+  dialog's default height grew slightly (588x649) to fit the
+  regrouped layout comfortably. No fields, tooltips, or functionality
+  changed - every field introduced earlier this revision (GNU as/GNU
+  ld paths, both Assembler Include Path fields) is unaffected. A
+  follow-up cosmetic pass regrouped the Project, Emulator and Misc
+  tabs the same way (nested sub-layouts instead of flat row lists)
+  and moved the Save Prefs/Cancel buttons to their own row below an
+  extra vertical spacer (dialog now 590x656); one dropped tab-order
+  entry (`checkBoxOpenOnFail`, "Open panel on failure only") was
+  restored to the `<tabstops>` list to match its still-intact
+  position next to `checkBoxWarnRequesters`.
 
 ## rev.147
 - **New**: added a colourful "Open Shell" toolbar icon (`images/open_shell.png`,

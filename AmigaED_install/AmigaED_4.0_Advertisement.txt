@@ -1,0 +1,51 @@
+AmigaED 4.0 – The Modern IDE for Classic Amiga Development
+      interfaces Bebbo's amiga-gcc and its forks
+================================================================
+
+Are you developing for AmigaOS 1.3 or 3.x and tired of switching back and forth between the editor,
+compiler shell, and emulator? AmigaED 4.0 brings
+complete cross-development for the classic Amiga into a
+single, modern interface—built with Qt6, it runs natively on Windows,
+Linux, and macOS.
+
+Two Ways to Reach Your Goal
+---------------------------
+Whether it's a quick ad-hoc test of a single file or a complete,
+multi-file project with a GUI: AmigaED adapts to your workflow.
+For projects, the IDE automatically handles all Makefile management
+—for vbcc, m68k-amigaos-gcc/g++, SAS/C, and now also for
+pure m68k assembler projects in the vasm or GNU-as dialect, including
+correctly configured linker calls.
+
+Everything Under One Roof
+--------------------------------------
+- Five toolchains configured simultaneously and selectable with a single click:
+  vbcc, GCC/G++, SAS/C, vasm, and GNU as
+- Seven project templates—ranging from “Empty C” to AmigaShell, AmigaOS 1.3/3.x,
+  ReAction and MUI GUI skeletons to the new assembler project
+- Custom syntax highlighters for C/C++ (including AmigaOS NDK data types),
+  m68k assembler, AmigaGuide hypertext, and installer scripts
+- Color-coded compiler output with “click-to-jump” directly to the
+  erroneous line—for each of the five toolchains
+- Integrated start/stop for the UAE emulator, directly from the toolbar
+- Automatic program icons, automatic math library detection,
+  and many other small automated features that save you manual work
+	
+Looks great, feels familiar
+----------------------------------------
+Choose between a light and dark theme—or dive right into
+Amiga nostalgia with the lovingly
+recreated Workbench 1.3 and Workbench 3.1 looks. The entire interface can be switched between
+English and German at runtime.
+
+Free. Open. For the community.
+
+----------------------------------------
+AmigaED 4.0 is open-source software. The complete source code is
+freely available and can be used, further developed, and adapted to your own
+needs — entirely in the spirit of the Amiga community from
+which it originates.
+
+Whether you’re a retro hobbyist or a longtime Amiga veteran who wants to dive back into Assembler
+or C for the Kickstart 1.3 or 3.x world: AmigaED 4.0
+makes it fun again.

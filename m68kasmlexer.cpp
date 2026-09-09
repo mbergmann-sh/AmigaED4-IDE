@@ -102,11 +102,22 @@ const QSet<QString> &M68kAsmLexer::mnemonics()
 const QSet<QString> &M68kAsmLexer::directives()
 {
     static const QSet<QString> kw = {
+        // vasm/devpac-style (dotless) directives
         "dc", "ds", "dcb", "equ", "org", "section", "even", "odd",
         "cnop", "include", "incbin", "incdir", "macro", "endm", "mexit",
         "rept", "endr", "if", "ifeq", "ifne", "ifgt", "iflt", "ifd",
         "ifnd", "else", "endif", "public", "xdef", "xref", "extern",
-        "global", "list", "nolist", "module", "end", "fail", "opt"
+        "global", "list", "nolist", "module", "end", "fail", "opt",
+        // GNU as (gas) directives - dotted, confirmed against the
+        // official GNU binutils "Pseudo-Ops" manual (and, for ".even",
+        // its m68k-specific pseudo-op page) - used by
+        // mainFileTemplateContent()'s GNU-as-dialect template
+        ".text", ".data", ".bss", ".section", ".even", ".align",
+        ".globl", ".global", ".equ", ".byte", ".word", ".long",
+        ".ascii", ".asciz", ".string", ".skip", ".space", ".org",
+        ".include", ".macro", ".endm", ".if", ".ifdef", ".ifndef",
+        ".else", ".endif", ".rept", ".endr", ".extern", ".comm",
+        ".file", ".line", ".end"
     };
     return kw;
 }
@@ -156,13 +167,23 @@ void M68kAsmLexer::styleText(int start, int end)
             columnZero = true;
             haveMnemonic = false;
         }
-        else if (c == QLatin1Char(';') || (c == QLatin1Char('*') && columnZero))
+        else if (c == QLatin1Char(';') || c == QLatin1Char('|') ||
+                 ((c == QLatin1Char('*') || c == QLatin1Char('#')) && columnZero))
         {
-            // ';' starts an end-of-line comment anywhere; a '*' as the
-            // very first character of a line is a whole-line comment -
-            // a traditional Motorola-assembler convention (NOT '*' used
-            // as a multiply operator, which never appears in column
-            // zero anyway).
+            // ';' (vasm) and '|' (GNU as) both start an end-of-line
+            // comment anywhere on the line - confirmed against vasm's
+            // syntax_mot.texi and the official GNU binutils m68k docs
+            // respectively (note: ';' means something else entirely to
+            // GNU as itself - a statement separator, not a comment -
+            // but this lexer only has to recognize vasm-syntax and
+            // GNU-as-syntax SOURCE FILES, never mix the two meanings
+            // within one file, so highlighting ';' as a comment
+            // unconditionally is correct for both dialects in practice).
+            // A '*' or '#' as the very first character of a line is a
+            // whole-line comment in their respective dialects (vasm:
+            // '*'; GNU as: both '*' and '#') - NOT '*' used as a
+            // multiply operator or '#' as an immediate-value prefix,
+            // neither of which ever appears in column zero anyway.
             int j = i;
             while (j < n && source.at(j) != QLatin1Char('\n'))
                 ++j;

@@ -30,6 +30,7 @@
 #include <QIcon>
 
 #include "mainwindow.h"
+#include "version.h"
 
 int main(int argc, char *argv[])
 {
@@ -38,9 +39,17 @@ int main(int argc, char *argv[])
     QString cmdFileName = argv[1];
 
     QApplication app(argc, argv);
-    app.setApplicationName("Amiga Cross Editor");
+    // AMIGAED_SETTINGS_APP/AMIGAED_SETTINGS_ORG (version.h) - also what
+    // every explicit QSettings(...) call in mainwindow.cpp uses, so
+    // PrefsDialog's own default-constructed QSettings (which resolves
+    // via these two application-wide names) and MainWindow's explicit
+    // ones always land in the exact same file. Renamed from the app's
+    // old working title "Amiga Cross Editor" to "AmigaED4" in rev.148 -
+    // see MainWindow::migrateLegacySettingsIfNeeded() for how an
+    // existing user's old settings get carried over automatically.
+    app.setApplicationName(AMIGAED_SETTINGS_APP);
     app.setApplicationVersion("4.0");
-    app.setOrganizationName("MB-SoftWorX");
+    app.setOrganizationName(AMIGAED_SETTINGS_ORG);
     app.setOrganizationDomain("http://www.mbergmann-sh.de");
     //QApplication::setStyle(p_default_style);
 

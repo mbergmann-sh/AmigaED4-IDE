@@ -75,13 +75,26 @@ public:
 
     // Which "New Project" template this was created from (see MainWindow's
     // createNewProject(): 0=Empty Amiga C, 1=Shell, 2=AmigaOS 1.3,
-    // 3=AmigaOS 3.x, 4=ReAction, 5=MUI), or -1 if unknown (a hand-
+    // 3=AmigaOS 3.x, 4=ReAction, 5=MUI, 6=Assembler), or -1 if unknown (a hand-
     // assembled .aep, or one saved before this field existed). Some
     // toolchain specifics depend on this - e.g. an AmigaOS 1.3 project's
     // vbcc Makefile must always use '+kick13', regardless of whatever the
     // user's global VBCC preference happens to be set to - see
     // MainWindow::regenerateProjectMakefiles().
     int templateKind = -1;
+
+    // Which assembler dialect a "New Assembler Project" (templateKind 6)
+    // was created for, chosen once by the user at creation time (see
+    // MainWindow::createNewProject()'s vasm/GNU-as messagebox) - vasm's
+    // and GNU as's own syntaxes are mutually incompatible (different
+    // comment characters, different section/alignment directives - see
+    // MainWindow::mainFileTemplateContent(), case 6), so the project is
+    // locked to whichever one was picked: 3 = vasm (only Makefile.vbcc is
+    // ever generated), 4 = GNU as (only Makefile.gcc is ever generated).
+    // -1 for every other project, and for an ASM project's .aep saved
+    // before this field existed (regenerateProjectMakefiles() then falls
+    // back to generating both Makefiles, as it always did before).
+    int asmAssembler = -1;
 
     // Directory the .aep lives in - the natural base directory for the
     // project's Makefiles and relative source paths.

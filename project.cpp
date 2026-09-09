@@ -136,6 +136,7 @@ bool Project::save(const QString &fileName)
     settings.setValue("ExtraVbccCompilerOptions", extraVbccCompilerOptions);
     settings.setValue("ExtraVbccLinkerOptions", extraVbccLinkerOptions);
     settings.setValue("TemplateKind", templateKind);
+    settings.setValue("AsmAssembler", asmAssembler);
     settings.setValue("LastWrittenGccMakefileHash", lastWrittenGccMakefileHash);
     settings.setValue("LastWrittenVbccMakefileHash", lastWrittenVbccMakefileHash);
     settings.setValue("LastWrittenScMakefileHash", lastWrittenScMakefileHash);
@@ -174,6 +175,7 @@ bool Project::load(const QString &fileName)
     QString loadedVbccCompilerOpts;
     QString loadedVbccLinkerOpts;
     int loadedTemplateKind = -1;
+    int loadedAsmAssembler = -1;
     QString loadedGccMakefileHash;
     QString loadedVbccMakefileHash;
     QString loadedScMakefileHash;
@@ -187,6 +189,7 @@ bool Project::load(const QString &fileName)
     loadedVbccCompilerOpts = settings.value("ExtraVbccCompilerOptions").toString();
     loadedVbccLinkerOpts = settings.value("ExtraVbccLinkerOptions").toString();
     loadedTemplateKind = settings.value("TemplateKind", -1).toInt();
+    loadedAsmAssembler = settings.value("AsmAssembler", -1).toInt();
     loadedGccMakefileHash = settings.value("LastWrittenGccMakefileHash").toString();
     loadedVbccMakefileHash = settings.value("LastWrittenVbccMakefileHash").toString();
     loadedScMakefileHash = settings.value("LastWrittenScMakefileHash").toString();
@@ -213,6 +216,7 @@ bool Project::load(const QString &fileName)
     extraVbccCompilerOptions = loadedVbccCompilerOpts;
     extraVbccLinkerOptions = loadedVbccLinkerOpts;
     templateKind = loadedTemplateKind;
+    asmAssembler = loadedAsmAssembler;
     lastWrittenGccMakefileHash = loadedGccMakefileHash;
     lastWrittenVbccMakefileHash = loadedVbccMakefileHash;
     lastWrittenScMakefileHash = loadedScMakefileHash;

@@ -27,12 +27,8 @@ public:
     //explicit PrefsDialog(int tabindex);
     ~PrefsDialog();
 
-    QStringList myPrefs;
     QStringList p_Compilers = {"VBCC (C mode only)", "GNU gcc (C mode)", "GNU g++ (C++ mode)"};    // used for building combobox entries
     QStringList p_style_items;
-
-    QString line;
-    QStringList fields;
 
     QSettings mySettings;
 
@@ -48,6 +44,8 @@ private slots:
     void on_btn_getGPPexefile_clicked();
     void on_btn_getMAKEexefile_clicked();
     void on_btn_getSTRIPexefile_clicked();
+    void on_btn_getASexefile_clicked();
+    void on_btn_getLDexefile_clicked();
     void on_btn_getVCexefile_clicked();
     void on_btn_getVASMexefile_clicked();
     void on_btn_getVCconfigDir_clicked();
@@ -64,7 +62,6 @@ private slots:
 
 private:
     Ui::PrefsDialog *ui;
-    bool p_prefs_changed;
 };
 
 #endif // PREFSDIALOG_H

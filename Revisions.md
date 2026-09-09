@@ -8,6 +8,137 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.148
+- **New**: the app's settings file/registry key is renamed from
+  "Amiga Cross Editor" (its original working title) to "AmigaED4"
+  (`AMIGAED_SETTINGS_APP` in `version.h`, used consistently by every
+  `QSettings` access now - both the explicit ones in `mainwindow.cpp`
+  and `PrefsDialog`'s own default-constructed one, which follows
+  `QApplication::setApplicationName()`/`setOrganizationName()` in
+  `main.cpp`). To spare existing users re-entering every Prefs field,
+  `MainWindow::migrateLegacySettingsIfNeeded()` runs once at startup,
+  before anything else touches settings: if the old file still exists,
+  every key that still has a real counterpart in the current Prefs
+  dialog (window geometry, editor zoom, every Prefs field, Recent
+  Files/Projects) is copied over - anything else left in the old file
+  (a leftover from some earlier schema with no current equivalent) is
+  deliberately left behind, never carried forward. A "migrated" flag in
+  the new file makes this a strictly one-time action, whatever the user
+  decides next: they are then asked, once, whether to delete the now-
+  unused old file - declining leaves it in place untouched and is never
+  asked again. Verified with a standalone fake legacy config file: only
+  current-schema keys were copied, a deliberately planted obsolete key
+  was correctly left behind, the migration never re-runs on a second
+  startup, and a fresh install with no old file at all is unaffected.
+- **New**: full dual-toolchain support for m68k Assembler Projects - vasm
+  and GNU as (`m68k-amigaos-as`) are now two genuinely separate,
+  mutually exclusive dialects instead of routing both through vasm.
+  Prefs > GCC gained "GNU as:" and "GNU ld:" fields (path + file
+  selector, mirroring the existing gcc/g++ fields). The compiler
+  chooser (status bar dropdown and Build > Select Compiler... menu)
+  gained two new entries, "vasm" and "GNU as", after the existing
+  three C/C++ entries.
+- **New**: creating a New Assembler Project now asks, as the very
+  first prompt (before directory/name/anything else), which assembler
+  the project is for - vasm or GNU as - via a dedicated messagebox.
+  That choice locks the project to one dialect for its entire
+  lifetime (`Project::asmAssembler`, persisted as `AsmAssembler` in
+  the `.aep` file): only the matching Makefile (Makefile.vbcc for
+  vasm, Makefile.gcc for GNU as) is ever generated, never both, and
+  the generated main `.asm` file is written in that dialect's own
+  comment/directive style from the start.
+- **New**: GNU-as-dialect Assembler Projects are assembled with
+  `m68k-amigaos-as` and linked directly with the new `m68k-amigaos-ld`
+  ("GNU ld:") field, instead of going through gcc as a frontend -
+  architectural parity with vbcc's own direct `vlink` usage.
+- **Fixed**: `SelectCompiler()` now guards both directions on a locked
+  Assembler Project - picking a C compiler (VBCC/GNU C/GNU C++) on an
+  ASM project, or picking the assembler dialect the project was *not*
+  created for, is refused with a warning messagebox and falls back to
+  a sensible default instead of silently building the wrong thing.
+- **Fixed**: picking vasm or GNU as while a C/C++ project (any
+  templateKind other than the Assembler Project's) is active now also
+  shows a warning and falls back to VBCC - C, instead of silently
+  accepting an assembler that has no idea about C/C++ sources, headers,
+  or the toolchain-specific math-library wiring. The two guards added
+  above only ever caught a C compiler picked on an ASM project - never
+  this reverse direction, which slipped through unwarned.
+- **Fixed**: the settings-file migration added above in this same
+  revision never actually ran on Windows, leaving the new "AmigaED4"
+  settings completely empty and the Prefs dialog showing blank fields
+  on every startup, even with a perfectly good old "Amiga Cross
+  Editor" config present. The cause: the migration only triggered when
+  `QFile::exists()` found the old settings file on disk - correct on
+  Linux/macOS, where `QSettings` is backed by a real `.conf` file, but
+  wrong on Windows, where the default backend is the registry instead;
+  there, `fileName()` returns a registry path, never a real file, so
+  the exists-check was always false and migration silently never
+  fired. The check now uses `QSettings::allKeys().isEmpty()`, which
+  correctly detects existing data on both backends, and the "delete
+  old settings" step is likewise backend-aware (removes the file if
+  there is one, otherwise clears the registry key). Re-verified with
+  the same fake-legacy-settings test as above; the Windows registry
+  path itself follows Qt's documented `QSettings` semantics and could
+  not be run on real Windows in this environment.
+- **Fixed**: the German translation was missing for 12 strings added
+  or changed since the last translation update, most visibly the new
+  "You can't compile your C/C++ Project with an Assembler! ..."
+  warning from this same revision, which was still showing up in
+  English on an otherwise fully German UI. Also filled in: the
+  settings-migration delete-confirmation dialog (also new in this
+  revision), the Prefs dialog's window title and its default-OS
+  tooltip, the "About AmigaED 4.0..." menu entry, and the m68k
+  Assembler/AmigaGuide lexer style names (Mnemonic, Directive,
+  Register, Label, Command, Inline escape/link, Comment) used in the
+  editor style-picker. `translations/amigaed_de.ts` and the compiled
+  `amigaed_de.qm` are both up to date again (594/594 strings
+  translated).
+- **Fixed**: the compiler chooser (status bar + Build menu) now stays
+  in sync when a project is loaded via File > Load Project... or File
+  > Recent Projects, not just when a project is freshly created -
+  previously it could be left showing a stale toolchain/dialect from
+  whatever was active before.
+- **Fixed**: clickable error/warning jump-to-line in the Compiler
+  Output pane now also works for vasm and GNU as output, not just
+  VBCC/GCC/G++ (vasm reuses VBCC's diagnostic format, GNU as reuses
+  GCC's).
+- **Fixed**: the m68k assembler lexer now recognizes "|" as a comment
+  character everywhere on the line, and "#" in column zero, matching
+  GNU as's actual comment rules (previously only ";" and column-zero
+  "*" were recognized, which is correct for vasm but left GNU-as-style
+  source unstyled). The dotted GNU-as directives used by the new
+  template (`.text`, `.globl`, `.asciz`, `.even`, ...) were also added
+  to the lexer's keyword set.
+- **Fixed**: the Syntax menu now tracks the actually active lexer of
+  whichever tab is focused, instead of staying stuck on whatever was
+  last explicitly chosen (usually "C/C++"). Switching tabs now updates
+  the menu's checkmark to match that tab's real syntax, while still
+  allowing the user to override it manually per tab.
+- **Fixed**: Qt's own built-in strings - most visibly the standard
+  QMessageBox button labels (Yes/No/OK/Cancel/...) in the "save
+  changed files?" dialog, and the entire Qt::aboutQt() dialog - now
+  translate correctly to German. AmigaED's own `amigaed_de.qm` never
+  covered these (they're Qt-internal, not routed through AmigaED's own
+  `tr()` calls); a second bundled translation resource,
+  `translations/qtbase_de.qm` (Qt's own German base translation,
+  installed as a second `QTranslator` alongside the existing one in
+  `applyGuiLanguage()`), fixes both - and, being a single global
+  installation, covers every other Qt-internal dialog the same way
+  with no further code changes needed.
+- **Docs**: Quick Start chapter gained a new, illustrated "Creating an
+  Assembler Project" subsection (three new screenshots: the New
+  Assembler Project template pick, the vasm/GNU as choice dialog, and
+  a finished GNU-as build), and its stale "six templates" intro text
+  now correctly lists all seven, including New Assembler Project. The
+  Toolbar Reference chapter gained a new "Choosing a Compiler or
+  Assembler" subsection documenting all five compiler-chooser entries
+  and both new warning dialogs, and now points to the new Prefs GCC
+  fields. The Preferences Editor chapter documents the new "GNU as:"/
+  "GNU ld:" fields. The Compiler Output Pane chapter's recognized-
+  format table now lists vasm and GNU as alongside VBCC/GCC/G++. HTML
+  manuals (`help/manual_en.html`/`manual_de.html`) and both PDFs
+  (`DOC/AmigaED_Guide_EN.pdf`/`AmigaED_Anleitung_DE.pdf`) regenerated.
+
 ## rev.147
 - **New**: added a colourful "Open Shell" toolbar icon (`images/open_shell.png`,
   same visual style/size as Build Project/Clean Project), derived from
@@ -23,21 +154,6 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   image, plus a new warning note that editing files by hand in a shell
   opened this way can leave the project out of sync with what Build
   Project/Clean Project expect.
-	- **New**: Windows-Installer (`AmigaED_install\AmigaED.iss`) zeigt jetzt
-  direkt nach der Sprachauswahl einen Lizenz-Disclaimer-Dialog mit den
-  Buttons "Accept"/"Decline" (deutsch: "Akzeptieren"/"Ablehnen") - ein
-  eigenes Fenster statt einer Standard-MsgBox, da deren OK/Cancel-
-  Beschriftungen sich nicht umbenennen lassen. Wählt der Nutzer
-  "Decline" (oder schließt den Dialog anderweitig, z.B. über Esc oder
-  die Titelleiste - zählt bewusst ebenfalls als Ablehnung), bricht
-  Setup sofort ab, noch bevor die "bereits installiert?"-Prüfung oder
-  irgendetwas anderes läuft. Text und Beschriftungen kommen komplett
-  aus `[CustomMessages]` und folgen damit automatisch der auf der
-  Sprachauswahl-Seite gewählten Setup-Sprache. Sofern `wizard_image.png`
-  vorhanden ist (gleiches Bild wie beim Willkommensfenster), wird es
-  links im Dialog zusätzlich mit angezeigt (`HasDisclaimerImage`-Schalter,
-  Bild wird dafür nach `{tmp}` extrahiert und per `TBitmapImage`
-  geladen) - fehlt die Datei, erscheint der Dialog einfach ohne Bild.
 
 ## rev.146
 - Confirmed working correctly under Linux/KDE (konsole) since rev.144,

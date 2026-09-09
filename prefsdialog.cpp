@@ -146,6 +146,35 @@ void PrefsDialog::on_btn_getSTRIPexefile_clicked()
     ui->lineEdit_getSTRIPexefile->setText(fileName);
 }
 
+void PrefsDialog::on_btn_getASexefile_clicked()
+{
+    QString exestring;
+#if defined(__unix__)
+    exestring = "/opt/amiga/bin/m68k-amigaos-as";
+#else
+    exestring = "m68k-amigaos-as.exe";
+#endif
+    // ToDO: FIX for executable without file extension!
+    QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Path to GNU as"), exestring,
+            tr("All Files (*);;Executable (*.exe)"));
+    ui->lineEdit_getASexefile->setText(fileName);
+}
+
+void PrefsDialog::on_btn_getLDexefile_clicked()
+{
+    QString exestring;
+#if defined(__unix__)
+    exestring = "/opt/amiga/bin/m68k-amigaos-ld";
+#else
+    exestring = "m68k-amigaos-ld.exe";
+#endif
+    QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Path to GNU ld"), exestring,
+            tr("All Files (*);;Executable (*.exe)"));
+    ui->lineEdit_getLDexefile->setText(fileName);
+}
+
 void PrefsDialog::on_btn_getVCexefile_clicked()
 {
     QString exestring;
@@ -258,6 +287,8 @@ void PrefsDialog::save_mySettings()
     mySettings.setValue("GCC/GppPath", ui->lineEdit_getGPPexefile->text());
     mySettings.setValue("GCC/MakePath", ui->lineEdit_getMAKEexefile->text());
     mySettings.setValue("GCC/StripPath", ui->lineEdit_getSTRIPexefile->text());
+    mySettings.setValue("GCC/AsPath", ui->lineEdit_getASexefile->text());
+    mySettings.setValue("GCC/LdPath", ui->lineEdit_getLDexefile->text());
     mySettings.setValue("GCC/Gcc13CompilerOpts", ui->lineEdit_GCC13CompilerOpts->text());
     mySettings.setValue("GCC/Gcc30CompilerOpts", ui->lineEdit_GCC30CompilerOpts->text());
     mySettings.setValue("GCC/Gcc13LinkerOpts", ui->lineEdit_GCC13LinkerOpts->text());
@@ -317,6 +348,8 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_getGPPexefile->setText(mySettings.value("GCC/GppPath").toString());
     ui->lineEdit_getMAKEexefile->setText(mySettings.value("GCC/MakePath").toString());
     ui->lineEdit_getSTRIPexefile->setText(mySettings.value("GCC/StripPath").toString());
+    ui->lineEdit_getASexefile->setText(mySettings.value("GCC/AsPath").toString());
+    ui->lineEdit_getLDexefile->setText(mySettings.value("GCC/LdPath").toString());
     ui->lineEdit_GCC13CompilerOpts->setText(mySettings.value("GCC/Gcc13CompilerOpts").toString());
     ui->lineEdit_GCC30CompilerOpts->setText(mySettings.value("GCC/Gcc30CompilerOpts").toString());
     ui->lineEdit_GCC13LinkerOpts->setText(mySettings.value("GCC/Gcc13LinkerOpts").toString());

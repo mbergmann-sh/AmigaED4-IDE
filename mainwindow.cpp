@@ -84,6 +84,12 @@ static QProcess cmd;            // the process for running the compiler
 // Open MainWindow with given filename...
 MainWindow::MainWindow(QString cmdFileName)
 {
+    // rev.148: carry over an existing user's settings from the old
+    // "Amiga Cross Editor" settings file/registry key to the new
+    // "AmigaED4" one, BEFORE anything below reads from the new one -
+    // see migrateLegacySettingsIfNeeded() for what this does and why.
+    migrateLegacySettingsIfNeeded();
+
     // load preferences
     // restores last saved position and size of the editor window, load other defaults
     readPosSettings();
@@ -690,17 +696,6 @@ void MainWindow::documentWasModified()
 }
 
 //
-// Helper to set approbiate Lexer according to a file's .ext
-//
-void MainWindow::SetLexerAtFileExtension(QString)
-{
-    if(p_mydebug)
-    {
-        qDebug() << "Lexer changed!";
-    }
-}
-
-//
 // you'll need some fucking actions first if you
 // want to create menues!
 //
@@ -743,6 +738,9 @@ void MainWindow::createActions()
 
     newProjectMUIAct = new QAction(tr("MUI Project"), this);
     connect(newProjectMUIAct, SIGNAL(triggered()), this, SLOT(actionNewProjectMUI()));
+
+    newProjectAssemblerAct = new QAction(tr("New Assembler Project"), this);
+    connect(newProjectAssemblerAct, SIGNAL(triggered()), this, SLOT(actionNewProjectAssembler()));
 
     importExistingProjectAct = new QAction(tr("Import existing Project..."), this);
     importExistingProjectAct->setStatusTip(tr("Import an existing C/C++ project folder that AmigaED doesn't know yet"));
@@ -968,6 +966,22 @@ void MainWindow::createActions()
     selectCompilerGPPAct->setChecked(false);
     connect(selectCompilerGPPAct, SIGNAL(triggered()), this, SLOT(actionSelectCompilerGPP()));
 
+    // Assembler-only entries (no shortcut - all the obvious mnemonics are
+    // already taken by the three C/C++ compilers above) - build/link an
+    // ASM project's Makefile.vbcc/Makefile.gcc directly via vasm/GNU as,
+    // see SelectCompiler() and actionBuildProject().
+    selectCompilerVasmAct = new QAction(QIcon(":/images/filetype_asm.png"), tr("vasm (Assembler mode)..."), this);
+    selectCompilerVasmAct->setStatusTip(tr("Set Compiler to vasm (Assembler mode)..."));
+    selectCompilerVasmAct->setCheckable(true);
+    selectCompilerVasmAct->setChecked(false);
+    connect(selectCompilerVasmAct, SIGNAL(triggered()), this, SLOT(actionSelectCompilerVasm()));
+
+    selectCompilerGnuAsAct = new QAction(QIcon(":/images/filetype_asm.png"), tr("GNU as (Assembler mode)..."), this);
+    selectCompilerGnuAsAct->setStatusTip(tr("Set Compiler to GNU as (Assembler mode)..."));
+    selectCompilerGnuAsAct->setCheckable(true);
+    selectCompilerGnuAsAct->setChecked(false);
+    connect(selectCompilerGnuAsAct, SIGNAL(triggered()), this, SLOT(actionSelectCompilerGnuAs()));
+
     toggleGccDefaultOptsAct = new QAction(tr("Show gcc/g++ options dialog..."), this);
     toggleGccDefaultOptsAct->setCheckable(true);
     toggleGccDefaultOptsAct->setChecked(p_show_gcc_opts);
@@ -986,6 +1000,8 @@ void MainWindow::createActions()
     compilerGroup->addAction(selectCompilerVBCCAct);
     compilerGroup->addAction(selectCompilerGCCAct);
     compilerGroup->addAction(selectCompilerGPPAct);
+    compilerGroup->addAction(selectCompilerVasmAct);
+    compilerGroup->addAction(selectCompilerGnuAsAct);
 
     // GUI Language (I18n) - "English" is the source language (no QTranslator
     // needed), "Deutsch" installs amigaed_de.qm. p_guiLanguage was already
@@ -1268,6 +1284,8 @@ void MainWindow::createMenus()
     newProjectMenue->addAction(newProjectAmigaOS3xAct);
     newProjectMenue->addAction(newProjectReActionAct);
     newProjectMenue->addAction(newProjectMUIAct);
+    newProjectMenue->addSeparator();
+    newProjectMenue->addAction(newProjectAssemblerAct);
     fileMenue->addAction(loadProjectAct);
     fileMenue->addAction(saveProjectAct);
     fileMenue->addAction(closeProjectAct);
@@ -1357,6 +1375,9 @@ void MainWindow::createMenus()
     compilerMenue->addAction(selectCompilerGCCAct);
     compilerMenue->addSeparator();
     compilerMenue->addAction(selectCompilerGPPAct);
+    compilerMenue->addSeparator();
+    compilerMenue->addAction(selectCompilerVasmAct);
+    compilerMenue->addAction(selectCompilerGnuAsAct);
     buildMenue->addSeparator();
     buildMenue->addAction(compileAct);
     buildMenue->addAction(buildProjectAct);
@@ -1517,6 +1538,7 @@ void MainWindow::retranslateUi()
     newProjectAmigaOS3xAct->setText(tr("AmigaOS 3.x Project"));
     newProjectReActionAct->setText(tr("ReAction Project"));
     newProjectMUIAct->setText(tr("MUI Project"));
+    newProjectAssemblerAct->setText(tr("New Assembler Project"));
     importExistingProjectAct->setText(tr("Import existing Project..."));
     importExistingProjectAct->setStatusTip(tr("Import an existing C/C++ project folder that AmigaED doesn't know yet"));
     loadProjectAct->setText(tr("Load Project..."));
@@ -1557,6 +1579,8 @@ void MainWindow::retranslateUi()
     selectCompilerVBCCAct->setText(tr("VBCC vc (C mode only)..."));
     selectCompilerGCCAct->setText(tr("GNU gcc (C mode)..."));
     selectCompilerGPPAct->setText(tr("GNU g++ (C++ mode)..."));
+    selectCompilerVasmAct->setText(tr("vasm (Assembler mode)..."));
+    selectCompilerGnuAsAct->setText(tr("GNU as (Assembler mode)..."));
     toggleGccDefaultOptsAct->setText(tr("Show gcc/g++ options dialog..."));
     toggleVbccDefaultOptsAct->setText(tr("Show vbcc options dialog..."));
     compileAct->setText(tr("Comp&ile..."));
@@ -1640,6 +1664,8 @@ void MainWindow::retranslateUi()
     selectCompilerVBCCAct->setStatusTip(tr("Set Compiler to VBCC (C mode only)..."));
     selectCompilerGCCAct->setStatusTip(tr("Set Compiler to GNU gcc (C mode)..."));
     selectCompilerGPPAct->setStatusTip(tr("Set Compiler to GNU g++ (C++ mode)..."));
+    selectCompilerVasmAct->setStatusTip(tr("Set Compiler to vasm (Assembler mode)..."));
+    selectCompilerGnuAsAct->setStatusTip(tr("Set Compiler to GNU as (Assembler mode)..."));
     toggleGccDefaultOptsAct->setStatusTip(tr("Show or hide gcc/g++ options dialog"));
     toggleVbccDefaultOptsAct->setStatusTip(tr("Show or hide vbcc options dialog"));
     compileAct->setStatusTip(tr("Compile current file..."));
@@ -1807,9 +1833,139 @@ void MainWindow::createStatusBarMessage(QString statusmessage, int timeout)
     statusBar()->showMessage(statusmessage, timeout);
 }
 
+//
+// rev.148: the app's settings file/registry key moved from
+// "Amiga Cross Editor" (its original working title) to "AmigaED4" (see
+// AMIGAED_SETTINGS_APP/AMIGAED_LEGACY_SETTINGS_APP in version.h), so
+// existing users don't wake up to a blank Prefs dialog. Called ONCE,
+// right at the top of the constructor, before readPosSettings()/
+// readSettings() ever touch the NEW file.
+//
+// Runs at most once per install: a "Migration/LegacyImported" flag is
+// written into the NEW settings the first time this does anything, and
+// checked here to skip straight past on every later startup - cheap,
+// and it also means a user who declines the delete offer below is only
+// ever asked that once, not nagged on every future start.
+//
+// Only keys this exact revision still actually reads (the full list
+// readPosSettings()/readSettings() cover - window geometry, editor zoom,
+// every Prefs dialog field, and the Recent Files/Projects lists) are
+// carried over - anything else left in the old file is, by definition,
+// a leftover from some older schema with no "correspondence in the new
+// Prefs dialog" any more, and is deliberately left behind rather than
+// carried forward as dead weight. A key already present in the new file
+// is never overwritten (shouldn't normally happen this early, but costs
+// nothing to guard against).
+//
+// rev.148 bugfix: the "does the old settings still exist" check used to
+// be QFile::exists(oldSettings.fileName()) - correct on Linux/macOS,
+// where QSettings' NativeFormat is backed by a real .conf file, but
+// WRONG on Windows, where NativeFormat is backed by the registry
+// instead. fileName() there returns a registry path string (e.g.
+// "HKEY_CURRENT_USER\\Software\\MB-SoftWorX\\Amiga Cross Editor"), which
+// is never an actual file - QFile::exists() on it is always false, so
+// migration silently never ran for any Windows user with real settings
+// in the registry, leaving a completely empty new file/key and a blank
+// Prefs dialog. oldSettings.allKeys() is the portable equivalent - it
+// enumerates whatever backend is actually in use (INI file content or
+// registry values alike) and is empty in exactly the "nothing to
+// migrate" case on every platform.
+//
+void MainWindow::migrateLegacySettingsIfNeeded()
+{
+    QSettings oldSettings(AMIGAED_SETTINGS_ORG, AMIGAED_LEGACY_SETTINGS_APP);
+    if (oldSettings.allKeys().isEmpty())
+        return;   // nothing to migrate - either a brand new install, or already cleaned up
+
+    QString oldFileName = oldSettings.fileName();   // only meaningful for the file-backend delete step below
+    QSettings newSettings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
+
+    if (!newSettings.value("Migration/LegacyImported", false).toBool())
+    {
+        static const QStringList currentSchemaKeys = {
+            // window geometry / editor state (readPosSettings())
+            "pos", "size", "EditorZoomLevel",
+            // TAB: Project
+            "Project/Author", "Project/Email", "Project/Website",
+            "Project/ProjectRootDir", "Project/SaveFilesAutomatically",
+            // TAB: GCC
+            "GCC/GccPath", "GCC/GppPath", "GCC/MakePath", "GCC/StripPath",
+            "GCC/AsPath", "GCC/LdPath",
+            "GCC/Gcc13CompilerOpts", "GCC/Gcc30CompilerOpts",
+            "GCC/Gcc13LinkerOpts", "GCC/Gcc30LinkerOpts",
+            "GCC/Gpp13CompilerOpts", "GCC/Gpp30CompilerOpts",
+            "GCC/Gpp13LinkerOpts", "GCC/Gpp30LinkerOpts",
+            "GCC/ShowGccDefaultOpts",
+            // TAB: VBCC (+ SAS/C's one field, which lives in the same tab)
+            "VBCC/VcPath", "VBCC/VasmPath", "VBCC/VcConfigPath",
+            "VBCC/VcDefaultOpts13", "VBCC/VcDefaultOpts30",
+            "VBCC/Vc13LinkerOpts", "VBCC/Vc30LinkerOpts",
+            "VBCC/VcDefaultTarget", "VBCC/ShowVbccDefaultOpts",
+            "SASC/DefaultOpts",
+            // TAB: Emulator
+            "UAE/UaePath", "UAE/Os13ConfigPath", "UAE/Os30ConfigPath",
+            // TAB: Misc
+            "MISC/DefaultStyle", "MISC/ShowIndentGuide", "MISC/IndentationWidth",
+            "MISC/ShowDebugOutput", "MISC/NoLCDstatusbar", "MISC/DefaultCrossCompiler",
+            "MISC/NoCompileButton", "MISC/SimpleStatusbar", "MISC/CreateIcon",
+            "MISC/OpenConsoleOnFail", "MISC/NoWarnRequester", "MISC/DefaultGUILanguage",
+            // Recent files/projects
+            "RecentFiles/List", "RecentProjects/List",
+        };
+
+        int migratedCount = 0;
+        for (const QString &key : currentSchemaKeys)
+        {
+            if (oldSettings.contains(key) && !newSettings.contains(key))
+            {
+                newSettings.setValue(key, oldSettings.value(key));
+                migratedCount++;
+            }
+        }
+
+        newSettings.setValue("Migration/LegacyImported", true);
+        newSettings.sync();
+
+        if (p_mydebug)
+            qDebug() << "migrateLegacySettingsIfNeeded(): migrated" << migratedCount
+                      << "key(s) from" << oldFileName << "to" << newSettings.fileName();
+
+        QMessageBox::StandardButton ret = QMessageBox::question(this, tr(AMIGAED_VERSION_STRING),
+            tr("AmigaED found settings from an older version (\"%1\") and has copied "
+               "everything still applicable into the new settings file (\"%2\").\n\n"
+               "Delete the old settings file now? It is no longer used.")
+                .arg(QFileInfo(oldFileName).fileName(), QFileInfo(newSettings.fileName()).fileName()),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+
+        if (ret == QMessageBox::Yes)
+        {
+            // File-backed (Linux/macOS INI, or Windows if ever run with
+            // an explicit IniFormat): just delete it. Registry-backed
+            // (plain Windows NativeFormat, the normal case there): there
+            // is no file to remove - clear() + sync() wipes every value
+            // under that registry key instead, the closest equivalent to
+            // "delete the old settings" the API actually offers.
+            bool removed;
+            if (QFile::exists(oldFileName))
+                removed = QFile::remove(oldFileName);
+            else
+            {
+                oldSettings.clear();
+                oldSettings.sync();
+                removed = (oldSettings.status() == QSettings::NoError);
+            }
+            if (!removed && p_mydebug)
+                qDebug() << "migrateLegacySettingsIfNeeded(): failed to remove/clear old settings at" << oldFileName;
+        }
+        // If the user said No, the old file is simply left in place - the
+        // "Migration/LegacyImported" flag above already guarantees this
+        // whole prompt never fires again, whatever they chose.
+    }
+}
+
 void MainWindow::readPosSettings()
 {
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
     QSize size = settings.value("size", QSize(400, 400)).toSize();
     resize(size);
@@ -1826,7 +1982,7 @@ void MainWindow::readPosSettings()
 //
 void MainWindow::readSettings()
 {
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     // TAB: Project
     p_author = (settings.value("Project/Author").toString());
     p_email = (settings.value("Project/Email").toString());
@@ -1839,6 +1995,8 @@ void MainWindow::readSettings()
     p_compiler_gpp = (settings.value("GCC/GppPath").toString());
     p_make = (settings.value("GCC/MakePath").toString());
     p_strip = (settings.value("GCC/StripPath").toString());
+    p_compiler_as = (settings.value("GCC/AsPath").toString());
+    p_compiler_ld = (settings.value("GCC/LdPath").toString());
     // Defaults below target the m68k-amigaos-gcc ("Bebbo") toolchain.
     // -mcrt=nix13/-noixemul select which C runtime to link against -
     // libnix built for Kickstart 1.3 vs. Kickstart 2.0+ respectively -
@@ -1944,7 +2102,7 @@ void MainWindow::readSettings()
 //
 void MainWindow::writeSettings()
 {
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("EditorZoomLevel", static_cast<int>(textEdit->SendScintilla(textEdit->QsciScintilla::SCI_GETZOOM)));
@@ -2075,7 +2233,7 @@ void MainWindow::updateRecentFilesMenu()
     connect(forgetAct, &QAction::triggered, this, [this]()
     {
         p_recentFiles.clear();
-        QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+        QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
         settings.setValue("RecentFiles/List", p_recentFiles);
         updateRecentFilesMenu();
     });
@@ -2097,7 +2255,7 @@ void MainWindow::addToRecentFiles(const QString &fileName)
     while (p_recentFiles.count() > MaxRecentFiles)
         p_recentFiles.removeFirst();
 
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     settings.setValue("RecentFiles/List", p_recentFiles);
 
     updateRecentFilesMenu();
@@ -2110,7 +2268,7 @@ void MainWindow::removeFromRecentFiles(const QString &fileName)
 {
     p_recentFiles.removeAll(fileName);
 
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     settings.setValue("RecentFiles/List", p_recentFiles);
 
     updateRecentFilesMenu();
@@ -2146,7 +2304,7 @@ void MainWindow::updateRecentProjectsMenu()
     connect(forgetAct, &QAction::triggered, this, [this]()
     {
         p_recentProjects.clear();
-        QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+        QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
         settings.setValue("RecentProjects/List", p_recentProjects);
         updateRecentProjectsMenu();
     });
@@ -2167,7 +2325,7 @@ void MainWindow::addToRecentProjects(const QString &fileName)
     while (p_recentProjects.count() > MaxRecentProjects)
         p_recentProjects.removeFirst();
 
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     settings.setValue("RecentProjects/List", p_recentProjects);
 
     updateRecentProjectsMenu();
@@ -2180,7 +2338,7 @@ void MainWindow::removeFromRecentProjects(const QString &fileName)
 {
     p_recentProjects.removeAll(fileName);
 
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     settings.setValue("RecentProjects/List", p_recentProjects);
 
     updateRecentProjectsMenu();
@@ -2665,6 +2823,81 @@ void MainWindow::onTabChanged(int index)
     updateWindowTitle();
     setWindowModified(textEdit->isModified());
     showCurrendCursorPosition();
+    // Each tab already has its own lexer attached (set once when it was
+    // created/opened, via newEditorTab()/applyLexerForFileExtension()/a
+    // manual Syntax menu choice) - switching TO that tab doesn't change
+    // it, but the Syntax menu itself is a single, app-wide set of
+    // actions that has to be re-pointed at whichever lexer THIS tab
+    // actually has every time the active tab changes. Confirmed a real,
+    // reported bug otherwise: the menu stayed showing "C/C++" (or
+    // whatever was last chosen) regardless of which tab/lexer was
+    // actually active.
+    syncSyntaxMenuToCurrentLexer();
+}
+
+//
+// Points the Syntax menu's checked entry at whichever lexer 'textEdit'
+// (the currently active tab) actually has attached right now, by
+// runtime type - the menu itself has no per-tab memory of its own, so
+// this is the one place that reconciles "which lexer is this tab
+// showing" with "which menu entry should look checked". Called from
+// onTabChanged() (switching tabs never re-runs any initializeLexerXxx()
+// itself) and, for the same reason, would be redundant-but-harmless if
+// also called right after one of them runs (they already set their own
+// action's checked state directly - see initializeLexerCPP()'s comment).
+//
+// AmigaLexerCPP has no Q_OBJECT of its own (see amigalexercpp.h), so it
+// shares QsciLexerCPP's own metaobject identity - matched against that
+// base class instead of itself, which is safe here since AmigaLexerCPP
+// is the only QsciLexerCPP ever instantiated anywhere in AmigaED.
+//
+void MainWindow::syncSyntaxMenuToCurrentLexer()
+{
+    if (!textEdit)
+        return;
+
+    QsciLexer *lexer = textEdit->lexer();
+
+    if (!lexer)
+    {
+        if (lexPlainTextAct)
+            lexPlainTextAct->setChecked(true);
+    }
+    else if (qobject_cast<M68kAsmLexer *>(lexer))
+    {
+        if (lexM68kAsmAct)
+            lexM68kAsmAct->setChecked(true);
+    }
+    else if (qobject_cast<AmigaGuideLexer *>(lexer))
+    {
+        if (lexAmigaGuideAct)
+            lexAmigaGuideAct->setChecked(true);
+    }
+    else if (qobject_cast<AmigaInstallerLexer *>(lexer))
+    {
+        if (lexInstallerAct)
+            lexInstallerAct->setChecked(true);
+    }
+    else if (qobject_cast<QsciLexerMakefile *>(lexer))
+    {
+        if (lexMakefileAct)
+            lexMakefileAct->setChecked(true);
+    }
+    else if (qobject_cast<QsciLexerPascal *>(lexer))
+    {
+        if (lexPascalAct)
+            lexPascalAct->setChecked(true);
+    }
+    else if (qobject_cast<QsciLexerCPP *>(lexer))
+    {
+        if (lexCPPAct)
+            lexCPPAct->setChecked(true);
+    }
+    // Anything else (e.g. QsciLexerBatch, used for AmigaShell scripts -
+    // never offered as a Syntax menu choice at all, see
+    // applyLexerForFileExtension()'s own comment) has no menu entry to
+    // check - left as whatever it was, same as before this function
+    // existed.
 }
 
 //
@@ -2872,6 +3105,12 @@ void MainWindow::applyGuiLanguage(const QString &langCode, bool persist)
         delete p_guiTranslator;
         p_guiTranslator = nullptr;
     }
+    if (p_qtBaseTranslator)
+    {
+        qApp->removeTranslator(p_qtBaseTranslator);
+        delete p_qtBaseTranslator;
+        p_qtBaseTranslator = nullptr;
+    }
 
     if (langCode == "de")
     {
@@ -2885,6 +3124,28 @@ void MainWindow::applyGuiLanguage(const QString &langCode, bool persist)
             qDebug() << "Could not load amigaed_de.qm - staying with English.";
             delete p_guiTranslator;
             p_guiTranslator = nullptr;
+        }
+
+        // Qt's OWN German translation - covers strings AmigaED's own
+        // amigaed_de.qm has no control over, most importantly
+        // QMessageBox's standard button labels ("&Yes"/"&No"/"Cancel"/
+        // "OK"/...) built by every QMessageBox::question()/etc. call
+        // using QMessageBox::Yes|QMessageBox::No|... (confirmed a real,
+        // reported bug: those stayed in English even with amigaed_de.qm/
+        // German fully active - they never go through AmigaED's own
+        // tr() calls at all). Loaded independently of p_guiTranslator
+        // above/its success - a missing or unloadable qtbase_de.qm
+        // should never take amigaed_de.qm down with it.
+        p_qtBaseTranslator = new QTranslator(this);
+        if (p_qtBaseTranslator->load(QLocale(QLocale::German), "qtbase", "_", ":/translations"))
+        {
+            qApp->installTranslator(p_qtBaseTranslator);
+        }
+        else
+        {
+            qDebug() << "Could not load qtbase_de.qm - Qt's own strings (e.g. QMessageBox standard buttons) stay in English.";
+            delete p_qtBaseTranslator;
+            p_qtBaseTranslator = nullptr;
         }
     }
 
@@ -2904,7 +3165,7 @@ void MainWindow::applyGuiLanguage(const QString &langCode, bool persist)
     // default now.
     if (persist)
     {
-        QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+        QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
         settings.setValue("MISC/DefaultGUILanguage", p_guiLanguage);
     }
 
@@ -3097,6 +3358,34 @@ void MainWindow::actionSelectCompilerGPP()
 }
 
 //
+// select a compiler to use: vasm (Assembler mode)
+//
+void MainWindow::actionSelectCompilerVasm()
+{
+    qDebug() << "vasm selection called.";
+    if(!(p_no_compilerbuttons))    // react on user prefs: show or hide compiler combo and -button
+    {
+        compilerCombo->setCurrentIndex(3);
+    }
+    p_defaultCompiler = 3;
+    SelectCompiler(3);
+}
+
+//
+// select a compiler to use: GNU as (Assembler mode)
+//
+void MainWindow::actionSelectCompilerGnuAs()
+{
+    qDebug() << "GNU as selection called.";
+    if(!(p_no_compilerbuttons))    // react on user prefs: show or hide compiler combo and -button
+    {
+        compilerCombo->setCurrentIndex(4);
+    }
+    p_defaultCompiler = 4;
+    SelectCompiler(4);
+}
+
+//
 // Remove duplicate whitespace-separated tokens from 'args', keeping the
 // first occurrence of each. Several sources of compiler/linker options
 // can legitimately overlap (a toolchain's Prefs-driven baseline, its
@@ -3185,15 +3474,71 @@ QString MainWindow::compilerDisplayLabel(int compiler) const
     case 0: return QStringLiteral("vbcc");
     case 1: return QStringLiteral("gcc");
     case 2: return QStringLiteral("g++");
+    case 3: return QStringLiteral("vasm");
+    case 4: return QStringLiteral("gnu as");
     default: return QString();
     }
 }
 
 //
-// select a compiler to use (vbcc, gcc, g++)
+// select a compiler to use (vbcc, gcc, g++, vasm, GNU as)
 //
 void MainWindow::SelectCompiler(int index)
 {
+    // An open ASM project (templateKind 6, see createNewProject()) has no
+    // C/C++ source at all - vc/gcc acting as a C COMPILER make no sense
+    // for it (see asmOnlyProject in regenerateProjectMakefiles(), which
+    // already refuses to inject either toolchain's C baseline for such a
+    // project) - only vasm (index 3) or GNU as (index 4), which are what
+    // actually assemble/link its Makefile.vbcc/Makefile.gcc (see
+    // actionBuildProject()). Catch an attempt to pick a C compiler here,
+    // before anything else changes - this runs for both the statusbar
+    // combobox and the Build > Select Compiler menu, since both funnel
+    // through this same function. Falls back to vasm - the same entry
+    // createNewProject() itself selects right after generating a new
+    // Assembler project.
+    if (currentProject && currentProject->templateKind == 6 && index != 3 && index != 4)
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("You can't compile your ASM-Project with a C-Compiler! Please choose vasm or GNU as."));
+        index = 3;   // vasm
+    }
+
+    // An Assembler Project is further locked to whichever single
+    // assembler (vasm or GNU as) the user picked when it was created -
+    // only that one's Makefile was ever generated (see
+    // createNewProject()'s vasm/GNU-as messagebox and
+    // regenerateProjectMakefiles()). Picking the OTHER one here would
+    // try to build a Makefile that was never written at all - caught
+    // with the same warning pattern as the C-compiler case above,
+    // falling back to the project's own locked-in choice instead.
+    if (currentProject && currentProject->asmAssembler != -1 &&
+        (index == 3 || index == 4) && index != currentProject->asmAssembler)
+    {
+        QString lockedName = (currentProject->asmAssembler == 3) ? tr("vasm") : tr("GNU as");
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("This Assembler Project was created for \"%1\" - only its Makefile was generated. "
+                                 "Start a new Assembler Project to use a different assembler.").arg(lockedName));
+        index = currentProject->asmAssembler;
+    }
+
+    // The reverse case (rev.148 bugfix): a C/C++ project (any
+    // templateKind other than 6 - see createNewProject()) can't be
+    // built with a pure assembler either - vasm/GNU as have no idea
+    // about C/C++ sources, headers, or the math library wiring that
+    // getCompilerAndLinkerOptsForTarget() sets up per C toolchain. The
+    // two guards above only ever caught a C compiler picked on an ASM
+    // project, never this direction. Falls back to VBCC - C, a fixed
+    // default like the guard above uses (NOT Prefs' own "Default cross
+    // compiler" - MISC/DefaultCrossCompiler shares this exact same
+    // 5-entry list, so it could itself already be set to vasm/GNU as).
+    if (currentProject && currentProject->templateKind != 6 && (index == 3 || index == 4))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("You can't compile your C/C++ Project with an Assembler! Please choose VBCC, GNU C or GNU C++."));
+        index = 0;   // VBCC - C
+    }
+
     if(p_mydebug)
     {
         qDebug() << "in SelectCompiler(index)";
@@ -3222,6 +3567,14 @@ void MainWindow::SelectCompiler(int index)
         case 2: // G++
             osCombo->setEnabled(true);
             p_defaultCompiler = 2;
+            break;
+        case 3: // vasm
+            osCombo->setEnabled(false);   // no OS 1.3/3.x distinction for a pure assembler
+            p_defaultCompiler = 3;
+            break;
+        case 4: // GNU as
+            osCombo->setEnabled(false);   // no OS 1.3/3.x distinction for a pure assembler
+            p_defaultCompiler = 4;
             break;
         }
     }
@@ -3262,6 +3615,31 @@ void MainWindow::SelectCompiler(int index)
         p_compiledFileSuffix = "_g++";
         // check selected menu item, uncheck others
         selectCompilerGPPAct->setChecked(true);
+        break;
+    }
+    // vasm (Assembler mode) - assembles/links an ASM project via
+    // Makefile.vbcc directly (see regenerateProjectMakefiles()/
+    // actionBuildProject()), never via vc - no C-toolchain opts apply.
+    case 3:
+    {
+        p_selected_compiler = p_compiler_vasm.isEmpty() ? QStringLiteral("vasmm68k_mot") : p_compiler_vasm;
+        p_selected_compiler_args = QStringLiteral("-Fhunk -kick1hunks");
+        p_compiledFileSuffix = "_vasm";
+        // check selected menu item, uncheck others
+        selectCompilerVasmAct->setChecked(true);
+        break;
+    }
+    // GNU as (Assembler mode) - assembles/links an ASM project via
+    // Makefile.gcc directly (see regenerateProjectMakefiles()/
+    // actionBuildProject()), never via gcc's own C frontend - no
+    // C-toolchain opts apply.
+    case 4:
+    {
+        p_selected_compiler = p_compiler_as.isEmpty() ? QStringLiteral("m68k-amigaos-as") : p_compiler_as;
+        p_selected_compiler_args.clear();
+        p_compiledFileSuffix = "_as";
+        // check selected menu item, uncheck others
+        selectCompilerGnuAsAct->setChecked(true);
         break;
     }
     }
@@ -4752,7 +5130,6 @@ void MainWindow::killExternalEmulatorProcess()
 void MainWindow::actionShowCaretLine()
 {
     qDebug() << "in carret line";
-    //popNotImplemented();
     if(showCaretLineAct->isChecked())
     {
         // show caret line
@@ -4772,7 +5149,6 @@ void MainWindow::actionShowLineNumbers()
 {
     QFontMetrics fontmetrics = QFontMetrics(textEdit->font());
     qDebug() << "in line numbers";
-    // popNotImplemented();
     if(showLineNumbersAct->isChecked())
     {
         // show line numbers
@@ -5207,7 +5583,7 @@ void MainWindow::actionSelectIndentation()
 
     p_indentationWidth = act->data().toInt();
 
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     settings.setValue("MISC/IndentationWidth", p_indentationWidth);
 
     applyIndentationWidth();
@@ -5248,7 +5624,7 @@ void MainWindow::actionSelectTheme()
 
     p_default_style = act->text();
 
-    QSettings settings("MB-SoftWorX", "Amiga Cross Editor");
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
     settings.setValue("MISC/DefaultStyle", p_default_style);
 
     applyApplicationStyle();
@@ -5720,6 +6096,14 @@ void MainWindow::initializeLexerNone(QsciScintilla *editor, bool announceChange)
     {
         qDebug() << "Faltstatus: " << state;
         createStatusBarMessage(tr("Syntax changed to PlainText"), 0);
+        // Keep the Syntax menu's checked entry in sync - guarded by
+        // announceChange (not just "editor == textEdit") for the same
+        // reason the status message above is: reapplyEditorTheme()'s
+        // bulk recolor pass calls this with announceChange=false for
+        // EVERY already-plain-text tab it re-themes, not just the
+        // active one, and that must never touch the menu.
+        if (lexPlainTextAct)
+            lexPlainTextAct->setChecked(true);
     }
 }
 
@@ -5776,6 +6160,16 @@ void MainWindow::initializeLexerCPP()
     initializeMargin();
 
     createStatusBarMessage(tr("Syntax changed to C/C++"), 0);
+    // Keep the Syntax menu's checked entry in sync - needed because this
+    // function is also called directly (not via lexCPPAct's own
+    // triggered() signal, which QActionGroup would handle on its own)
+    // from newEditorTab() and applyLexerForFileExtension() - a plain
+    // C++ function call never goes through the QAction at all, so
+    // without this the menu kept showing whatever was checked before,
+    // regardless of which lexer actually got applied. Confirmed a real,
+    // reported bug (the menu stuck on "C/C++" for every tab).
+    if (lexCPPAct)
+        lexCPPAct->setChecked(true);
 }
 
 //
@@ -5793,6 +6187,8 @@ void MainWindow::initializeLexerMakefile()
     textEdit->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     initializeMargin();
     createStatusBarMessage(tr("Syntax changed to Makefiles"), 0);
+    if (lexMakefileAct)
+        lexMakefileAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
 }
 
 //
@@ -5831,6 +6227,8 @@ void MainWindow::initializeLexerInstaller()
     textEdit->setFolding(QsciScintilla::NoFoldStyle);
     initializeMargin();
     createStatusBarMessage(tr("Syntax changed to Amiga installer"), 0);
+    if (lexInstallerAct)
+        lexInstallerAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
 }
 
 //
@@ -5851,6 +6249,8 @@ void MainWindow::initializeLexerAmigaGuide()
     textEdit->setFolding(QsciScintilla::NoFoldStyle);
     initializeMargin();
     createStatusBarMessage(tr("Syntax changed to AmigaGuide"), 0);
+    if (lexAmigaGuideAct)
+        lexAmigaGuideAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
 }
 
 //
@@ -5869,6 +6269,8 @@ void MainWindow::initializeLexerM68kAsm()
     textEdit->setFolding(QsciScintilla::NoFoldStyle);
     initializeMargin();
     createStatusBarMessage(tr("Syntax changed to m68k Assembler"), 0);
+    if (lexM68kAsmAct)
+        lexM68kAsmAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
 }
 
 //
@@ -5886,6 +6288,8 @@ void MainWindow::initializeLexerPascal()
     textEdit->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     initializeMargin();
     createStatusBarMessage(tr("Syntax changed to Pascal"), 0);
+    if (lexPascalAct)
+        lexPascalAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
 }
 
 //
@@ -6420,16 +6824,29 @@ bool MainWindow::promptCompilerLinkerOptions(QString &compilerOpts, QString &lin
 {
     bool ok = false;
 
-    int effectiveTarget = p_compiler_vc_default_target;
-    if (templateKind == 2)
-        effectiveTarget = 0;   // "AmigaOS 1.3 Project" -> OS 1.3, regardless of the gadget's current state
-    else if (templateKind == 3)
-        effectiveTarget = 1;   // "AmigaOS 3.x Project" -> OS 3.x, regardless of the gadget's current state
-
     QString defaultCompilerOpts, defaultLinkerOpts;
-    getCompilerAndLinkerOptsForTarget(p_defaultCompiler, effectiveTarget, defaultCompilerOpts, defaultLinkerOpts);
-    defaultCompilerOpts = dedupTokens(defaultCompilerOpts);
-    defaultLinkerOpts = dedupTokens(defaultLinkerOpts);
+
+    // Assembler Project: none of the C-toolchain baseline options (vbcc's
+    // "+aos68k -c99 ...", gcc's "-mcrt=..." etc.) apply to a project with
+    // no C/C++ source at all - regenerateProjectMakefiles() links a pure-
+    // assembly project directly (vlink, or gcc with -nostartfiles
+    // -nostdlib), bypassing the C compiler frontend and its options
+    // entirely. Pre-filling C-specific flags here would just be
+    // misleading, so both fields start blank instead - left empty (the
+    // fields are optional either way) unless the user has something
+    // genuinely relevant to add (e.g. extra vlink/ld flags).
+    if (templateKind != 6)
+    {
+        int effectiveTarget = p_compiler_vc_default_target;
+        if (templateKind == 2)
+            effectiveTarget = 0;   // "AmigaOS 1.3 Project" -> OS 1.3, regardless of the gadget's current state
+        else if (templateKind == 3)
+            effectiveTarget = 1;   // "AmigaOS 3.x Project" -> OS 3.x, regardless of the gadget's current state
+
+        getCompilerAndLinkerOptsForTarget(p_defaultCompiler, effectiveTarget, defaultCompilerOpts, defaultLinkerOpts);
+        defaultCompilerOpts = dedupTokens(defaultCompilerOpts);
+        defaultLinkerOpts = dedupTokens(defaultLinkerOpts);
+    }
 
     compilerOpts = QInputDialog::getText(this, tr("Compiler Options"),
                                           tr("Additional compiler options for this project (optional):"),
@@ -6525,16 +6942,63 @@ void MainWindow::regenerateProjectMakefiles()
             sources << QFileInfo(f.path).fileName();
 
     // .asm/.s (m68k assembler) sources build alongside the C/C++ ones -
-    // each toolchain needs its own assembler invoked for them though
-    // (see the AS variable and %.o: %.asm/%.o: %.s rules in
-    // writeMakefile() below): vasm directly for vbcc (vc itself doesn't
-    // assemble hand-written .asm files), gcc's own "-x assembler" for
-    // m68k-amigaos-gcc (which otherwise only recognizes ".s"/".S" by
-    // extension, not ".asm").
+    // each toolchain assembles them with its OWN assembler, invoked
+    // directly rather than through vc's/gcc's C frontend (see the AS
+    // variable and %.o: %.asm/%.o: %.s rules in writeMakefile() below):
+    // vasm (Prefs > VBCC > "vasm") for Makefile.vbcc, GNU as (Prefs > GCC
+    // > "GNU as", e.g. m68k-amigaos-as) for Makefile.gcc - matching the
+    // "vasm"/"GNU as" entries in the compiler chooser (see
+    // SelectCompiler()/actionBuildProject(), which pick one Makefile or
+    // the other for an ASM project).
+    //
+    // vasm's Motorola-syntax dialect (';'/'*' comments, dotless "section
+    // code"/"even") and GNU as's own dialect ('|' comments, dotted
+    // ".text"/".even") are NOT the same - confirmed with a real
+    // GCC-toolchain build that failed outright on exactly these when
+    // handed vasm-syntax source. A "New Assembler Project" is therefore
+    // locked to ONE dialect at creation time (Project::asmAssembler, see
+    // createNewProject()'s vasm/GNU-as messagebox), with
+    // mainFileTemplateContent() (case 6) generating the matching syntax
+    // and only that one Makefile ever being (re)generated below.
     QStringList asmSources;
     for (const ProjectFile &f : currentProject->files)
         if (f.type == ProjectFileType::Assembly)
             asmSources << QFileInfo(f.path).fileName();
+
+    // A project with assembler sources and NO C/C++ sources at all (the
+    // "New Assembler Project" template, or a C project whose last .c file
+    // was removed) must NOT be linked via vc/gcc as if it were a C
+    // program: both compiler frontends unconditionally pull in their own
+    // startup code/C runtime when used as the final linker, which expects
+    // a "_main" (vbcc/vc) or "main" (gcc) entry symbol our raw assembly
+    // template never defines - confirmed: vc failed with "Error 21:
+    // ...vc.lib(_main.c)... Reference to undefined symbol _main" trying
+    // to link a pure-assembly .o this way. writeMakefile() below links
+    // such a project directly with vlink/ld instead, bypassing the C
+    // frontend and its runtime entirely - our template needs neither, it
+    // talks to exec.library/dos.library itself via hard-coded LVOs.
+    bool asmOnlyProject = sources.isEmpty() && !asmSources.isEmpty();
+
+    // vlink ships alongside vc/vasm in every VBCC distribution's own bin
+    // directory (confirmed: vc's own internally-generated link command
+    // already invokes "<same dir as vc.exe>/vlink") - derived from
+    // p_compiler_vc's own path/extension rather than requiring yet another
+    // Prefs field, since it is never anywhere else.
+    QString vlinkPath;
+    {
+        QFileInfo vcInfo(p_compiler_vc.isEmpty() ? QStringLiteral("vc") : p_compiler_vc);
+        QString dirPart = vcInfo.absolutePath();
+        if (!p_compiler_vc.isEmpty() && !dirPart.isEmpty())
+            vlinkPath = vcInfo.absoluteDir().filePath(QStringLiteral("vlink") + (vcInfo.suffix().isEmpty() ? QString() : ("." + vcInfo.suffix())));
+        else
+            vlinkPath = QStringLiteral("vlink");   // no path configured for vc either - fall back to relying on PATH
+    }
+
+    // Unlike vlink (derived above), GNU ld isn't reliably reachable next
+    // to m68k-amigaos-gcc/-as by convention alone, so it gets its own
+    // explicit Prefs field (Prefs > GCC > "GNU ld", p_compiler_ld) rather
+    // than being guessed from another tool's path.
+    QString ldPath = p_compiler_ld.isEmpty() ? QStringLiteral("m68k-amigaos-ld") : p_compiler_ld;
 
     if (sources.isEmpty() && asmSources.isEmpty())
     {
@@ -6675,6 +7139,30 @@ void MainWindow::regenerateProjectMakefiles()
     QString gccAlwaysFirstArgs = dedupTokens(gccCompilerOptsBaseline);
     QString gccLDFlags = dedupTokens(gccLinkerOptsBaseline + " " + currentProject->extraGccLinkerOptions);
 
+    // A pure-assembler project (asmOnlyProject) is linked directly via
+    // vlink/GNU ld, never via vc/gcc acting as a C frontend (see
+    // asmOnlyProject above) - so neither toolchain's own
+    // configured C baseline (Prefs > VBCC/GCC > OS target, e.g. "+aos68k
+    // -c99 ...", "-lauto -lamiga") belongs in CCARGS/LDFLAGS here: those
+    // are vc/gcc FRONTEND options, meaningless once the frontend is
+    // bypassed - and "-lauto -lamiga" hunting for libauto.a/libamiga.a is
+    // actively broken when handed straight to vlink. Confirmed needed: a
+    // freshly generated "New Assembler Project"'s Makefile still shipped
+    // the full vc C-baseline in CCARGS/LDFLAGS despite the "New Project"
+    // dialog itself already defaulting to empty (see
+    // promptCompilerLinkerOptions()) - that only covers the project's own
+    // EXTRA options, not this separate baseline injection, which runs
+    // every time the Makefile is (re)generated regardless. Only whatever
+    // the user explicitly typed into the project's own extra linker
+    // options survives for such a project.
+    if (asmOnlyProject)
+    {
+        vbccAlwaysFirstArgs.clear();
+        vbccLDFlags = dedupTokens(currentProject->extraVbccLinkerOptions);
+        gccAlwaysFirstArgs.clear();
+        gccLDFlags = dedupTokens(currentProject->extraGccLinkerOptions);
+    }
+
     // Final safety pass for BOTH toolchains: drop from CFLAGS/LDFLAGS
     // anything already present in CCARGS - both appear together on the
     // same command line ("$(CC) $(CCARGS) $(CFLAGS) ..." /
@@ -6714,7 +7202,7 @@ void MainWindow::regenerateProjectMakefiles()
 
     auto writeMakefile = [&](const QString &fileBaseName, const QString &toolchainLabel, const QString &ccPath,
                               const QString &alwaysFirstArgs, const QString &cflags, const QString &ldflags,
-                              bool useSeparateAssembler, const QString &asPath, QString *lastWrittenHash)
+                              const QString &asPath, QString *lastWrittenHash)
     {
         QString content;
         QTextStream out(&content);
@@ -6728,15 +7216,47 @@ void MainWindow::regenerateProjectMakefiles()
             out << "# AmigaOS 1.3 project - '+kick13' is fixed and other '+' switches are stripped.\n";
         if (currentProject->templateKind == 2 && toolchainLabel.startsWith("m68k-amigaos-gcc"))
             out << "# AmigaOS 1.3 project - includes Prefs > GCC > \"default OS 1.3 opts\" (-mcrt=nix13).\n";
-        out << "# CCARGS includes the toolchain's configured Prefs baseline; CFLAGS/LDFLAGS\n";
-        out << "# hold this project's own extra options, with anything already in CCARGS removed.\n";
-        if (!asmSources.isEmpty() && useSeparateAssembler)
-            out << "# AS is vasm (Prefs > VBCC > \"Path to vasm\") - vc itself doesn't assemble\n"
+        if (asmOnlyProject)
+            out << "# Pure-assembler project: neither toolchain's C baseline (Prefs > OS\n"
+                   "# target) applies here - CCARGS is omitted and LDFLAGS holds only this\n"
+                   "# project's own extra linker options, if any.\n";
+        else
+            out << "# CCARGS includes the toolchain's configured Prefs baseline; CFLAGS/LDFLAGS\n"
+                   "# hold this project's own extra options, with anything already in CCARGS removed.\n";
+        if (!asmSources.isEmpty() && toolchainLabel.startsWith("vbcc"))
+            out << "# AS is vasm (Prefs > VBCC > \"vasm\") - vc itself doesn't assemble\n"
                    "# hand-written .asm/.s sources, only its own C-generated ones.\n";
+        if (!asmSources.isEmpty() && toolchainLabel.startsWith("m68k-amigaos-gcc"))
+            out << "# AS is GNU as (Prefs > GCC > \"GNU as\", e.g. m68k-amigaos-as) - called\n"
+                   "# directly, not via gcc's own \"-x assembler\" frontend.\n";
+        if (asmOnlyProject && toolchainLabel.startsWith("vbcc"))
+            out << "# Pure-assembly project (no C/C++ source): linked directly with vlink,\n"
+                   "# NOT vc - vc's own link step always pulls in its startup.o/C runtime,\n"
+                   "# which expects a \"_main\" symbol this project never defines. vlink is\n"
+                   "# assumed to sit next to vc itself (true for every VBCC distribution).\n";
+        if (asmOnlyProject && toolchainLabel.startsWith("m68k-amigaos-gcc"))
+            out << "# Pure-assembly project (no C/C++ source): linked directly with GNU ld\n"
+                   "# (Prefs > GCC > \"GNU ld\"), NOT gcc - mirrors vbcc's own vlink-direct\n"
+                   "# link recipe above. No extra flags are passed: this toolchain's ld\n"
+                   "# is built specifically for the m68k-amigaos target, and (like AS/GNU\n"
+                   "# as needing no \"-Fhunk\"-equivalent flag) is assumed to default to the\n"
+                   "# right output format on its own - unlike vlink's \"-bamigahunk -x -R\n"
+                   "# short -s\", this has NOT been confirmed against real ld output yet.\n";
         out << "\n";
-        out << "CC      = " << ccPath << "\n";
-        if (!asmSources.isEmpty() && useSeparateAssembler)
+        // For a pure-assembler project on EITHER toolchain, "vc"/gcc
+        // (ccPath) is never actually invoked anywhere below any more -
+        // assembling goes through $(AS) (vasm/GNU as) and linking through
+        // $(LINK) (vlink/GNU ld) directly - so the CC line is omitted
+        // entirely rather than left in as unused, possibly misleading
+        // clutter.
+        if (!(asmOnlyProject && (toolchainLabel.startsWith("vbcc") || toolchainLabel.startsWith("m68k-amigaos-gcc"))))
+            out << "CC      = " << ccPath << "\n";
+        if (!asmSources.isEmpty())
             out << "AS      = " << asPath << "\n";
+        if (asmOnlyProject && toolchainLabel.startsWith("vbcc"))
+            out << "LINK    = " << vlinkPath << "\n";
+        if (asmOnlyProject && toolchainLabel.startsWith("m68k-amigaos-gcc"))
+            out << "LINK    = " << ldPath << "\n";
         out << "TARGET  = " << targetName << "\n";
         out << "SRCS    = " << srcList << (asmSources.isEmpty() ? QString() : (QStringLiteral(" ") + asmSources.join(" "))) << "\n";
         out << "OBJS    = " << objList << "\n";
@@ -6747,7 +7267,12 @@ void MainWindow::regenerateProjectMakefiles()
         out << ".PHONY: all clean\n\n";
         out << "all: $(TARGET)\n\n";
         out << "$(TARGET): $(OBJS)\n";
-        out << "\t$(CC) $(CCARGS) $(OBJS) $(LDFLAGS) -o $(TARGET)\n";
+        if (asmOnlyProject && toolchainLabel.startsWith("vbcc"))
+            out << "\t$(LINK) -bamigahunk -x -R short -s $(OBJS) $(LDFLAGS) -o $(TARGET)\n";
+        else if (asmOnlyProject && toolchainLabel.startsWith("m68k-amigaos-gcc"))
+            out << "\t$(LINK) $(OBJS) $(LDFLAGS) -o $(TARGET)\n";
+        else
+            out << "\t$(CC) $(CCARGS) $(OBJS) $(LDFLAGS) -o $(TARGET)\n";
         // Icon creation (Prefs > Misc > "create icon") no longer happens
         // here: AmigaED writes its own built-in tool icon directly, in
         // Qt/C++, right after a successful build (single-file compile or
@@ -6762,27 +7287,36 @@ void MainWindow::regenerateProjectMakefiles()
         out << "\t$(CC) $(CCARGS) $(CFLAGS) -c $< -o $@\n\n";
         if (!asmSources.isEmpty())
         {
-            if (useSeparateAssembler)
+            if (toolchainLabel.startsWith("vbcc"))
             {
-                // vasm assembles directly - it knows nothing about CCARGS/
-                // CFLAGS (those are gcc/vc-specific compiler options), and
-                // "-Fhunk" is the classic AmigaOS executable/object format
-                // every m68k Amiga toolchain (vbcc, gcc, SAS/C) expects.
+                // vasm assembles directly (see the AS comment above) - it
+                // knows nothing about CCARGS/CFLAGS (those are gcc/vc-
+                // specific compiler options), and "-Fhunk" is the classic
+                // AmigaOS executable/object format every m68k Amiga
+                // toolchain (vbcc, gcc, SAS/C) expects as input.
+                // "-kick1hunks" restricts vasm to only those hunk/external-
+                // reference types that were already valid on Kickstart 1.x,
+                // for maximum compatibility with old linkers and real
+                // 68000-class hardware - confirmed as a genuine vasm Hunk-
+                // format output module option (vasm manual, chapter
+                // "Hunk-format output module"), not a guess.
                 out << "%.o: %.asm\n";
-                out << "\t$(AS) -Fhunk -o $@ $<\n\n";
+                out << "\t$(AS) -Fhunk -kick1hunks -o $@ $<\n\n";
                 out << "%.o: %.s\n";
-                out << "\t$(AS) -Fhunk -o $@ $<\n\n";
+                out << "\t$(AS) -Fhunk -kick1hunks -o $@ $<\n\n";
             }
             else
             {
-                // gcc IS the assembler driver here (invokes gas itself) -
-                // no separate AS needed. It only recognizes ".s"/".S" as
-                // assembler source by extension, not ".asm" - "-x assembler"
-                // tells it explicitly what a .asm file actually is.
+                // GNU as assembles directly too (see the AS comment above) -
+                // no "-x assembler"/gcc frontend involved, so no CCARGS
+                // either. Unlike vasm, GNU as needs no "-Fhunk"-equivalent
+                // flag: its own default output format for the m68k-amigaos
+                // target is already what this toolchain's own linker
+                // (invoked via gcc, see the $(TARGET) recipe above) expects.
                 out << "%.o: %.asm\n";
-                out << "\t$(CC) $(CCARGS) -x assembler -c $< -o $@\n\n";
+                out << "\t$(AS) -o $@ $<\n\n";
                 out << "%.o: %.s\n";
-                out << "\t$(CC) $(CCARGS) -c $< -o $@\n\n";
+                out << "\t$(AS) -o $@ $<\n\n";
             }
         }
         out << "clean:\n";
@@ -6874,15 +7408,44 @@ void MainWindow::regenerateProjectMakefiles()
         }
     };
 
-    writeMakefile("Makefile.gcc", "m68k-amigaos-gcc",
-                   p_compiler_gcc.isEmpty() ? QStringLiteral("m68k-amigaos-gcc") : p_compiler_gcc,
-                   gccAlwaysFirstArgs, gccCFlags, gccLDFlags,
-                   false, QString(), &currentProject->lastWrittenGccMakefileHash);
-    writeMakefile("Makefile.vbcc", "vbcc (vc)",
-                   p_compiler_vc.isEmpty() ? QStringLiteral("vc") : p_compiler_vc,
-                   vbccAlwaysFirstArgs, vbccCFlags, vbccLDFlags,
-                   true, p_compiler_vasm.isEmpty() ? QStringLiteral("vasmm68k_mot") : p_compiler_vasm,
-                   &currentProject->lastWrittenVbccMakefileHash);
+    // Makefile.vbcc assembles .asm/.s with vasm (Prefs > VBCC > "vasm"),
+    // Makefile.gcc assembles them with GNU as (Prefs > GCC > "GNU as",
+    // e.g. m68k-amigaos-as) - two DISTINCT assemblers now, matching the
+    // "vasm"/"GNU as" entries in the compiler chooser (see SelectCompiler()/
+    // actionBuildProject(), which pick one Makefile or the other). Each
+    // has its own template written in the dialect that assembler actually
+    // accepts (see mainFileTemplateContent(), case 6).
+    QString vasmPath = p_compiler_vasm.isEmpty() ? QStringLiteral("vasmm68k_mot") : p_compiler_vasm;
+    QString asPath = p_compiler_as.isEmpty() ? QStringLiteral("m68k-amigaos-as") : p_compiler_as;
+
+    // A pure-assembler project (asmOnlyProject) created via "New Assembler
+    // Project" is locked to ONE assembler dialect for its whole lifetime
+    // (Project::asmAssembler, set once by the vasm/GNU-as messagebox in
+    // createNewProject() - see its own comment for why: vasm's and GNU
+    // as's syntaxes are mutually incompatible, so there's no such thing
+    // as a project that builds cleanly with both). Only the Makefile
+    // matching that choice is ever (re)generated - the other toolchain's
+    // Makefile is skipped entirely, never even written once, so there's
+    // no stale/broken Makefile lying around inviting a doomed build.
+    // asmAssembler stays -1 (skip nothing, generate both as before) for
+    // every non-Assembler-template project, and for an Assembler project
+    // saved before this field existed - and if C/C++ sources are ever
+    // added to a locked Assembler project later, asmOnlyProject itself
+    // goes false and both Makefiles resume being generated normally,
+    // same as any ordinary mixed project.
+    bool skipGccMakefile = asmOnlyProject && currentProject->asmAssembler == 3;
+    bool skipVbccMakefile = asmOnlyProject && currentProject->asmAssembler == 4;
+
+    if (!skipGccMakefile)
+        writeMakefile("Makefile.gcc", "m68k-amigaos-gcc",
+                       p_compiler_gcc.isEmpty() ? QStringLiteral("m68k-amigaos-gcc") : p_compiler_gcc,
+                       gccAlwaysFirstArgs, gccCFlags, gccLDFlags,
+                       asPath, &currentProject->lastWrittenGccMakefileHash);
+    if (!skipVbccMakefile)
+        writeMakefile("Makefile.vbcc", "vbcc (vc)",
+                       p_compiler_vc.isEmpty() ? QStringLiteral("vc") : p_compiler_vc,
+                       vbccAlwaysFirstArgs, vbccCFlags, vbccLDFlags,
+                       vasmPath, &currentProject->lastWrittenVbccMakefileHash);
 
     // SAS/C (Makefile.sc): only for the project's plain .c files (SAS/C
     // doesn't support C++) - skip entirely if there are none (e.g. a pure
@@ -7004,7 +7567,7 @@ void MainWindow::regenerateProjectMakefiles()
 // relevant libraries where applicable) rather than complete, tested
 // ReAction/MUI applications - fill in the marked TODOs.
 //
-QString MainWindow::mainFileTemplateContent(int templateKind, const QString &baseName) const
+QString MainWindow::mainFileTemplateContent(int templateKind, const QString &baseName, int asmAssembler) const
 {
     QString header;
 
@@ -7539,6 +8102,181 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             "\treturn rc;\n"
             "}\n";
 
+    case 6: // Assembler Project
+    {
+        // A "New Assembler Project" is locked to ONE assembler dialect,
+        // chosen by the user in createNewProject()'s vasm/GNU-as
+        // messagebox - vasm and GNU as use mutually incompatible
+        // syntax (confirmed against vasm's syntax_mot.texi and GNU
+        // binutils' official m68k docs): vasm's mot syntax takes ';'/'*'
+        // comments (anywhere on the line) and dotless directives
+        // ("section code", "even"); GNU as takes '|' comments (anywhere
+        // on the line - ';' is a STATEMENT SEPARATOR, not a comment, in
+        // GNU as) and dotted directives (".text", ".even" - ".even" is a
+        // real, documented m68k-specific pseudo-op, not a guess). There
+        // is no syntax that satisfies both at once, so the two branches
+        // below are genuinely separate files, not just cosmetic variants.
+        bool gnuAs = (asmAssembler == 4);
+        QString commentChar = gnuAs ? QStringLiteral("|") : QStringLiteral(";");
+
+        // Own header block, built separately from 'header' above: an
+        // assembler source needs a comment character appropriate to its
+        // chosen dialect and a ".asm" filename in the banner, not '/* */'
+        // and ".c" like every C-based template.
+        QString asmHeader;
+        if (!p_author.trimmed().isEmpty() || !p_email.trimmed().isEmpty() || !p_website.trimmed().isEmpty())
+        {
+            asmHeader =
+                commentChar + " ------------------------------------------------------------------\n" +
+                commentChar + " " + pad("File:") + baseName + ".asm\n" +
+                commentChar + " " + pad("Description:") + "AmigaED assembler project main file\n";
+            if (!p_author.trimmed().isEmpty())
+                asmHeader += commentChar + " " + pad("Author:") + p_author.trimmed() + "\n";
+            if (!p_email.trimmed().isEmpty())
+                asmHeader += commentChar + " " + pad("Email:") + p_email.trimmed() + "\n";
+            if (!p_website.trimmed().isEmpty())
+                asmHeader += commentChar + " " + pad("Web:") + p_website.trimmed() + "\n";
+            asmHeader += commentChar + " ------------------------------------------------------------------\n\n";
+        }
+        else
+        {
+            asmHeader =
+                commentChar + " ------------------------------------------------------------------\n" +
+                commentChar + " " + pad("File:") + baseName + ".asm\n" +
+                commentChar + " " + pad("Description:") + "AmigaED assembler project main file\n" +
+                commentChar + " " + pad("TODO:") + "Fill in author/description as needed\n" +
+                commentChar + " ------------------------------------------------------------------\n\n";
+        }
+
+        if (gnuAs)
+        {
+            return asmHeader +
+                "| Minimal, dependency-free \"Hello World\" for real AmigaOS m68k\n"
+                "| assembly - deliberately uses no NDK/include files at all, just the\n"
+                "| small set of permanently fixed exec.library/dos.library LVO\n"
+                "| (Library Vector Offset) call numbers that have been stable since\n"
+                "| AmigaOS 1.0 and are safe to hard-code here:\n"
+                "|   -552 = exec.library  OpenLibrary\n"
+                "|   -414 = exec.library  CloseLibrary\n"
+                "|    -60 = dos.library   Output\n"
+                "|    -48 = dos.library   Write\n"
+                "|\n"
+                "| Written for GNU as (m68k-amigaos-as, part of the amiga-gcc\n"
+                "| toolchain) - assembled via AmigaED's \"GNU as\" compiler entry\n"
+                "| (Makefile.gcc: assembled with the GNU as binary configured in\n"
+                "| Prefs > GCC > \"GNU as\", then linked directly with GNU ld (Prefs >\n"
+                "| GCC > \"GNU ld\") - never via gcc, which would pull in its own C\n"
+                "| runtime/startup that this project neither needs nor wants).\n"
+                "|\n"
+                "| This project was created for GNU as specifically - see the vasm/\n"
+                "| GNU as choice in the \"New Assembler Project\" dialog. It uses GNU\n"
+                "| as's own dialect throughout ('|' comments, dotted \".text\"/\".even\")\n"
+                "| and will NOT assemble with vasm - start a new Assembler Project\n"
+                "| and choose \"vasm\" there if you need that dialect instead.\n"
+                "|\n"
+                "| TODO: Write your code!\n"
+                "\n"
+                "\t.text\n"
+                "\t.globl\tstart\n"
+                "\n"
+                "start:\n"
+                "\t\tmove.l\t4.w,a6\t\t\t| a6 = SysBase (ExecBase always lives at address 4)\n"
+                "\t\tlea\tdosname(pc),a1\n"
+                "\t\tmoveq\t#0,d0\t\t\t| any dos.library version will do\n"
+                "\t\tjsr\t-552(a6)\t\t| OpenLibrary()\n"
+                "\t\tmove.l\td0,d7\t\t\t| keep DosBase safe in d7 (a6 gets reused below)\n"
+                "\t\tbeq\tnodos\t\t\t| NULL -> dos.library failed to open (should never happen)\n"
+                "\n"
+                "\t\tmove.l\td7,a6\t\t\t| a6 = DosBase for the two calls below\n"
+                "\t\tjsr\t-60(a6)\t\t\t| Output() -> d0 = current output file handle\n"
+                "\t\tmove.l\td0,d1\t\t\t| Write()'s file-handle argument\n"
+                "\t\tlea\tmsg(pc),a0\n"
+                "\t\tmove.l\ta0,d2\t\t\t| Write()'s buffer argument\n"
+                "\t\tmove.l\t#msglen,d3\t\t| Write()'s length argument\n"
+                "\t\tjsr\t-48(a6)\t\t\t| Write()\n"
+                "\n"
+                "\t\tmove.l\td7,a1\t\t\t| CloseLibrary()'s library-base argument\n"
+                "\t\tmove.l\t4.w,a6\n"
+                "\t\tjsr\t-414(a6)\t\t| CloseLibrary()\n"
+                "\n"
+                "nodos:\n"
+                "\t\tmoveq\t#0,d0\t\t\t| DOS RETURN_OK\n"
+                "\t\trts\n"
+                "\n"
+                "dosname:\n"
+                "\t\t.asciz\t\"dos.library\"\n"
+                "\t\t.even\n"
+                "\n"
+                "msg:\n"
+                "\t\t.ascii\t\"Hello! I am written in Assembler!\\n\"\n"
+                "msgend:\n"
+                "\t\t.even\n"
+                "\n"
+                "msglen\t\t=\tmsgend-msg\n";
+        }
+
+        return asmHeader +
+            "; Minimal, dependency-free \"Hello World\" for real AmigaOS m68k\n"
+            "; assembly - deliberately uses no NDK/include files at all, just the\n"
+            "; small set of permanently fixed exec.library/dos.library LVO\n"
+            "; (Library Vector Offset) call numbers that have been stable since\n"
+            "; AmigaOS 1.0 and are safe to hard-code here:\n"
+            ";   -552 = exec.library  OpenLibrary\n"
+            ";   -414 = exec.library  CloseLibrary\n"
+            ";    -60 = dos.library   Output\n"
+            ";    -48 = dos.library   Write\n"
+            ";\n"
+            "; Written in vasm's Motorola/mot syntax (vasmm68k_mot) - confirmed to\n"
+            "; assemble and link cleanly via AmigaED's \"vasm\" compiler entry\n"
+            "; (Makefile.vbcc: assembled with vasm as AS using \"-Fhunk -kick1hunks\",\n"
+            "; then linked directly with vlink - never via vc, which always pulls in\n"
+            "; its own C runtime/startup.o that this project neither needs nor wants).\n"
+            ";\n"
+            "; This project was created for vasm specifically - see the vasm/GNU as\n"
+            "; choice in the \"New Assembler Project\" dialog. It will NOT assemble\n"
+            "; with GNU as - start a new Assembler Project and choose \"GNU as\" there\n"
+            "; if you need that dialect instead.\n"
+            ";\n"
+            "; TODO: Write your code!\n"
+            "\n"
+            "\t\tsection\tcode\n"
+            "\n"
+            "start:\n"
+            "\t\tmove.l\t4.w,a6\t\t\t; a6 = SysBase (ExecBase always lives at address 4)\n"
+            "\t\tlea\tdosname(pc),a1\n"
+            "\t\tmoveq\t#0,d0\t\t\t; any dos.library version will do\n"
+            "\t\tjsr\t-552(a6)\t\t; OpenLibrary()\n"
+            "\t\tmove.l\td0,d7\t\t\t; keep DosBase safe in d7 (a6 gets reused below)\n"
+            "\t\tbeq\tnodos\t\t\t; NULL -> dos.library failed to open (should never happen)\n"
+            "\n"
+            "\t\tmove.l\td7,a6\t\t\t; a6 = DosBase for the two calls below\n"
+            "\t\tjsr\t-60(a6)\t\t\t; Output() -> d0 = current output file handle\n"
+            "\t\tmove.l\td0,d1\t\t\t; Write()'s file-handle argument\n"
+            "\t\tlea\tmsg(pc),a0\n"
+            "\t\tmove.l\ta0,d2\t\t\t; Write()'s buffer argument\n"
+            "\t\tmove.l\t#msglen,d3\t\t; Write()'s length argument\n"
+            "\t\tjsr\t-48(a6)\t\t\t; Write()\n"
+            "\n"
+            "\t\tmove.l\td7,a1\t\t\t; CloseLibrary()'s library-base argument\n"
+            "\t\tmove.l\t4.w,a6\n"
+            "\t\tjsr\t-414(a6)\t\t; CloseLibrary()\n"
+            "\n"
+            "nodos:\n"
+            "\t\tmoveq\t#0,d0\t\t\t; DOS RETURN_OK\n"
+            "\t\trts\n"
+            "\n"
+            "dosname:\n"
+            "\t\tdc.b\t\"dos.library\",0\n"
+            "\t\teven\n"
+            "\n"
+            "msg:\n"
+            "\t\tdc.b\t\"Hello! I am written in Assembler!\",10\n"
+            "msgend:\n"
+            "\t\teven\n"
+            "\n"
+            "msglen\t\t=\tmsgend-msg\n";
+    }
+
     case 0: // Empty Amiga C Project
     default:
         return header +
@@ -7695,6 +8433,35 @@ void MainWindow::applyProjectTargetOSIfNeeded(int forcedTarget)
 
 void MainWindow::createNewProject(int templateKind)
 {
+    // An Assembler Project is locked to ONE assembler dialect for its
+    // whole lifetime (see mainFileTemplateContent(), case 6, and
+    // regenerateProjectMakefiles()) - vasm and GNU as use mutually
+    // incompatible syntax, so there is no such thing as a project that
+    // works with both. Ask up front which one this project is for -
+    // first, before anything else (the directory/name/options prompts
+    // below) - rather than generating something that can only ever
+    // build with one of them by accident. Defaults to vasm (the same
+    // fallback SelectCompiler()'s own C-compiler warning uses) if the
+    // dialog is dismissed without a choice (e.g. via Escape/the
+    // window's close button) - but createNewProject() otherwise never
+    // aborts partway through for an Assembler Project, so this only
+    // affects which Makefile/template dialect gets used, never whether
+    // the project is created at all.
+    int asmAssemblerChoice = 3;   // vasm
+    if (templateKind == 6)
+    {
+        QMessageBox asmChoiceBox(this);
+        asmChoiceBox.setWindowTitle(tr(AMIGAED_VERSION_STRING));
+        asmChoiceBox.setIcon(QMessageBox::Question);
+        asmChoiceBox.setText(tr("Due to Compiler differences, you can't have both a vasm- or GNU as-driven Assembler Project. \n"
+                                 "Do you want to create this assembler Project for vasm or GNU as Compiler?"));
+        QPushButton *vasmButton = asmChoiceBox.addButton(tr("vasm"), QMessageBox::AcceptRole);
+        QPushButton *gnuAsButton = asmChoiceBox.addButton(tr("GNU as"), QMessageBox::AcceptRole);
+        asmChoiceBox.setDefaultButton(vasmButton);
+        asmChoiceBox.exec();
+        asmAssemblerChoice = (asmChoiceBox.clickedButton() == gnuAsButton) ? 4 : 3;
+    }
+
     QString startDir = p_projectsRootDir.isEmpty() ? QDir::currentPath() : p_projectsRootDir;
     QString dir = QFileDialog::getExistingDirectory(this, tr("Choose a directory for the new project"), startDir);
     if (dir.isEmpty())
@@ -7712,7 +8479,11 @@ void MainWindow::createNewProject(int templateKind)
 
     QString mainFileName = name;
     mainFileName.replace(QRegularExpression("[^A-Za-z0-9_\\-]"), "_");
-    QString mainFilePath = dir + QDir::separator() + mainFileName + ".c";
+    // Every template's main file is a ".c" - except the Assembler template
+    // (templateKind 6), whose main file is hand-written m68k assembly, not
+    // C - see mainFileTemplateContent().
+    QString mainFileExt = (templateKind == 6) ? QStringLiteral(".asm") : QStringLiteral(".c");
+    QString mainFilePath = dir + QDir::separator() + mainFileName + mainFileExt;
 
     QFile file(mainFilePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
@@ -7724,7 +8495,7 @@ void MainWindow::createNewProject(int templateKind)
     {
         QTextStream out(&file);
         out.setEncoding(QStringConverter::Latin1);
-        out << mainFileTemplateContent(templateKind, mainFileName);
+        out << mainFileTemplateContent(templateKind, mainFileName, asmAssemblerChoice);
     }
     file.close();
 
@@ -7732,8 +8503,13 @@ void MainWindow::createNewProject(int templateKind)
     project->name = name;
     // Makefile.gcc always invokes gcc itself, never g++ (see
     // regenerateProjectMakefiles()) - so both GCC and G++ map to the
-    // same "gcc" toolchain slot here; only VBCC gets its own.
-    if (p_defaultCompiler == 0)
+    // same "gcc" toolchain slot here; VBCC and vasm (which builds via
+    // Makefile.vbcc too, see actionBuildProject()) share the "vbcc" slot.
+    // In practice this only ever matters for a non-Assembler template -
+    // promptCompilerLinkerOptions() always returns empty opts for
+    // templateKind 6 regardless, and vasm/GNU as (indices 3/4) get no
+    // baseline of their own either way (see getCompilerAndLinkerOptsForTarget()).
+    if (p_defaultCompiler == 0 || p_defaultCompiler == 3)
     {
         project->extraVbccCompilerOptions = compilerOpts;
         project->extraVbccLinkerOptions = linkerOpts;
@@ -7744,6 +8520,8 @@ void MainWindow::createNewProject(int templateKind)
         project->extraGccLinkerOptions = linkerOpts;
     }
     project->templateKind = templateKind;
+    if (templateKind == 6)
+        project->asmAssembler = asmAssemblerChoice;   // locked in for this project's lifetime, see the messagebox above
     project->addFile(mainFilePath);
     project->mainFile = mainFilePath;
 
@@ -7778,6 +8556,25 @@ void MainWindow::createNewProject(int templateKind)
 
     applyProjectTargetOSIfNeeded();
 
+    // Match the compiler chooser to what this new project actually needs:
+    // an ASM project (templateKind 6) can only be built with the single
+    // assembler it was created for (see the vasm/GNU-as messagebox
+    // above, project->asmAssembler, and SelectCompiler()'s own warnings
+    // for either a C compiler or the OTHER assembler chosen on such a
+    // project). Any other template needs a real C compiler, so make sure
+    // the chooser reflects the user's own configured Prefs default again -
+    // left showing vasm/GNU as from a previously created ASM project, it
+    // would immediately trip one of those same warnings right back.
+    if (templateKind == 6)
+    {
+        SelectCompiler(asmAssemblerChoice);   // vasm (3) or GNU as (4), per the choice above
+    }
+    else
+    {
+        QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
+        SelectCompiler(settings.value("MISC/DefaultCrossCompiler").toInt());
+    }
+
     openFileInTab(mainFilePath);
     if (tabWidget->count() == 0)
         newEditorTab();   // safety net - shouldn't normally trigger, see closeProjectTabs()
@@ -7792,6 +8589,7 @@ void MainWindow::actionNewProjectAmigaOS13() { createNewProject(2); }
 void MainWindow::actionNewProjectAmigaOS3x() { createNewProject(3); }
 void MainWindow::actionNewProjectReAction()  { createNewProject(4); }
 void MainWindow::actionNewProjectMUI()       { createNewProject(5); }
+void MainWindow::actionNewProjectAssembler() { createNewProject(6); }
 
 //
 // True for a file an "Import existing Project..." scan should leave out:
@@ -8017,6 +8815,27 @@ void MainWindow::loadProjectFile(const QString &fileName)
 
     applyProjectTargetOSIfNeeded();
 
+    // Match the compiler chooser to the project that was just loaded -
+    // the same sync createNewProject() does right after creating one
+    // (see its own comment). Without this, loading project B while the
+    // chooser is still showing whatever project A last had it set to
+    // (e.g. "GNU as" from a GNU-as Assembler project) left it stuck
+    // there even if B is a vasm Assembler project, or an ordinary C/C++
+    // one entirely - confirmed a real, reported bug otherwise.
+    if (currentProject->templateKind == 6)
+    {
+        // asmAssembler is -1 for a legacy ASM project saved before that
+        // field existed (see Project::asmAssembler) - falls back to
+        // vasm, the same default createNewProject()'s messagebox and
+        // SelectCompiler()'s own C-compiler guard use.
+        SelectCompiler(currentProject->asmAssembler == 4 ? 4 : 3);
+    }
+    else
+    {
+        QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
+        SelectCompiler(settings.value("MISC/DefaultCrossCompiler").toInt());
+    }
+
     for (const ProjectFile &f : currentProject->files)
         openFileInTab(f.path);
     if (tabWidget->count() == 0)
@@ -8109,7 +8928,11 @@ void MainWindow::actionBuildProject()
     // last time the file list itself changed.
     regenerateProjectMakefiles();
 
-    QString makefileName = (p_defaultCompiler == 0) ? "Makefile.vbcc" : "Makefile.gcc";
+    // 0 (VBCC-C) and 3 (vasm) both build via Makefile.vbcc; 1/2 (GCC/G++)
+    // and 4 (GNU as) both build via Makefile.gcc - see SelectCompiler()
+    // for what each index means and regenerateProjectMakefiles() for how
+    // each Makefile actually assembles/links an ASM-only project.
+    QString makefileName = (p_defaultCompiler == 0 || p_defaultCompiler == 3) ? "Makefile.vbcc" : "Makefile.gcc";
     QString makefilePath = currentProject->projectDir() + QDir::separator() + makefileName;
 
     if (!QFileInfo::exists(makefilePath))
@@ -8826,8 +9649,11 @@ void MainWindow::actionSetAsMainFile()
         return;
 
     QString path = item->data(0, Qt::UserRole).toString();
-    if (path.isEmpty() || Project::typeForFile(path) != ProjectFileType::CSource)
+    if (path.isEmpty())
         return;
+    ProjectFileType type = Project::typeForFile(path);
+    if (type != ProjectFileType::CSource && type != ProjectFileType::Assembly)
+        return;   // only a C/C++ or assembler source can be the project's main file
 
     currentProject->mainFile = path;
     markProjectModified();
@@ -9099,6 +9925,8 @@ void MainWindow::initializeGUI()
         compilerCombo->setItemIcon(0, QIcon(":/images/c-logo.png"));
         compilerCombo->setItemIcon(1, QIcon(":/images/c-logo.png"));
         compilerCombo->setItemIcon(2, QIcon(":/images/cpp-logo.png"));
+        compilerCombo->setItemIcon(3, QIcon(":/images/filetype_asm.png"));
+        compilerCombo->setItemIcon(4, QIcon(":/images/filetype_asm.png"));
         compilerCombo->setCurrentIndex(p_defaultCompiler);
         compilerCombo->setStatusTip(tr("Select compiler to use for this file"));
 
@@ -9217,17 +10045,6 @@ void MainWindow::printFile()
                                         "<br>There's allways a unicorn dying if you waste things, ya know?!",
                                         QMessageBox::Ok);
     }
-}
-
-//
-// inform user about unimplemented feature
-//
-void MainWindow::popNotImplemented()
-{
-    (void)QMessageBox::information(this,
-                                    "Not implemented - " AMIGAED_VERSION_STRING, "You have requested a feature that is <i><b>not</b></i> fully<br>implemented yet! The requested feature might not work as expected...",
-                                    QMessageBox::Ok);
-
 }
 
 //
@@ -9384,34 +10201,6 @@ int MainWindow::startCompiler()
     return 0;
 }
 
-
-void MainWindow::readyReadStandardError()
-{
-    if(p_mydebug)
-        qDebug() << "ReadyError";
-}
-
-void MainWindow::readyReadStandardOutput()
-{
-    if(p_mydebug)
-    {
-        qDebug() << "readyOut";
-    }
-    QProcess *myProcess = (QProcess *)sender();
-    QByteArray buf = myProcess->readAllStandardOutput();
-
-    QFile data(p_projectsRootDir + QDir::separator() + "compiler_out.txt");
-
-    if(p_mydebug)
-    {
-        qDebug() << "logfile: " << p_projectsRootDir + QDir::separator() + "compiler_out.txt";
-    }
-    if (data.open(QFile::WriteOnly | QFile::Truncate))
-    {
-        QTextStream out(&data);
-        out << buf;
-    }
-}
 
 //
 // Generic QProcess::started() handler - currently only wired to the
@@ -9594,6 +10383,8 @@ void MainWindow::debugVars()
         // TAB: VBCC
         qDebug() << "p_compiler_vc: " << p_compiler_vc;
         qDebug() << "pp_compiler_vasm: " << p_compiler_vasm;
+        qDebug() << "p_compiler_as: " << p_compiler_as;
+        qDebug() << "p_compiler_ld: " << p_compiler_ld;
         qDebug() << "p_vbcc_config_dir: " << p_vbcc_config_dir;
         qDebug() << "p_compiler_vc13_call: " << p_compiler_vc13_call;
         qDebug() << "p_compiler_vc30_call: " << p_compiler_vc30_call;
@@ -9788,6 +10579,7 @@ int MainWindow::stopCommand(int exitCode, QProcess::ExitStatus exitStatus)
                 case 2:  stackSize = 4096;  break;   // AmigaOS 1.3
                 case 4:  stackSize = 16000; break;   // ReAction
                 case 5:  stackSize = 34000; break;   // MUI
+                case 6:  stackSize = 4096;  break;   // Assembler (no C runtime, minimal stack needed)
                 default: stackSize = 8192;  break;   // Empty C / Shell / AmigaOS 3.x
                 }
                 writeProgramIcon(expectedTarget, stackSize);
@@ -9970,11 +10762,6 @@ void MainWindow::compilerError(QProcess::ProcessError error)
     (void)QMessageBox::critical(this, tr(AMIGAED_VERSION_STRING), reason, QMessageBox::Ok);
 }
 
-void MainWindow::stateChanged(QProcess::ProcessState state)
-{
-    qDebug() << "Process::stateChanged" << state;
-}
-
 //
 // prefDialog start helper
 //
@@ -10122,6 +10909,29 @@ void MainWindow::on_output_cursorPositionChanged()
             if (checkGCC(text_to_search))
                 jumpToError(line_nr, column_nr - 1);
             break;
+        case 3:
+            // vasm's own diagnostic format ("error N in line M of
+            // "file": message") is byte-for-byte the same shape as
+            // VBCC's ("warning N in line M of "file": message") -
+            // confirmed against vasm's error.c source - so the same
+            // parser applies unchanged.
+            if(p_mydebug)
+                qDebug() << "Now checking for vasm";
+
+            if (checkVBCC(text_to_search))
+                jumpToError(line_nr, 0);
+            break;
+        case 4:
+            // GNU as emits the familiar "file:line: Error: message"
+            // form (confirmed against a real m68k-amigaos-as build
+            // log), which checkGCC() already parses via its columnless
+            // fallback regex.
+            if(p_mydebug)
+                qDebug() << "Now checking for GNU as";
+
+            if (checkGCC(text_to_search))
+                jumpToError(line_nr, column_nr - 1);
+            break;
         }
     }
 
@@ -10188,7 +10998,12 @@ void MainWindow::highlightOutputDiagnostics()
     while (block.isValid())
     {
         const QString lineText = block.text();
-        bool matched = (p_defaultCompiler == 0) ? checkVBCC(lineText) : checkGCC(lineText);
+        // vasm (3) shares VBCC's (0) "N in line M of "file"" diagnostic
+        // shape; GNU as (4) shares GCC/G++'s (1/2) "file:line: type:"
+        // shape - see on_output_cursorPositionChanged() for the same
+        // routing, confirmed against real vasm/GNU-as output.
+        bool matched = (p_defaultCompiler == 0 || p_defaultCompiler == 3)
+                        ? checkVBCC(lineText) : checkGCC(lineText);
 
         cursor.setPosition(block.position());
         cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
@@ -10205,7 +11020,9 @@ void MainWindow::highlightOutputDiagnostics()
 }
 
 //
-// RegEx parse VBCC output
+// RegEx parse VBCC output - also reused for vasm (compiler index 3),
+// whose own diagnostics use the identical "TYPE N in line M of
+// "file": message" shape (confirmed against vasm's error.c source).
 //
 bool MainWindow::checkVBCC(QString str_to_search)
 {
@@ -10259,7 +11076,10 @@ bool MainWindow::checkVBCC(QString str_to_search)
 } // END checkVBCC()
 
 //
-// RegEx parse GCC/G++ output
+// RegEx parse GCC/G++ output - also reused for GNU as (compiler
+// index 4), whose diagnostics use the same columnless "file:line:
+// type: message" shape (confirmed against a real m68k-amigaos-as
+// build log).
 //
 bool MainWindow::checkGCC(QString str_to_search)
 {

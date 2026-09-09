@@ -19,6 +19,12 @@
 //               lea     Table(pc),a0
 //   * a whole-line comment, alternative to leading ';'
 //
+// Also recognizes GNU as's own dialect (used by an Assembler Project
+// created for "GNU as" - see MainWindow::mainFileTemplateContent(),
+// case 6): '|' as an end-of-line comment anywhere, '#' as a whole-line
+// comment in column zero (alongside vasm's '*'), and dotted directives
+// (".text", ".even", ...) - see directives() below.
+//
 // A LABEL is whatever starts in column zero (no leading whitespace) on
 // a line; a MNEMONIC or DIRECTIVE is the first identifier token after
 // leading whitespace (optionally following a label on the same line);

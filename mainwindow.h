@@ -150,8 +150,6 @@ public:
 
     explicit MainWindow(QString cmdFileName);
     bool fileExists(QString path);
-    bool allready_selected = false;
-    int last_selected_line = -1;
     #define MY_MARKER_ID 0
 
     // Layout and content for searchGroup
@@ -167,15 +165,12 @@ public:
     QPushButton *btn_replace;
     QPushButton *btn_replace_all;
     QPushButton *btn_hide;
-    QFormLayout *formLayout;
     QCheckBox *checkBox_CaseSensitive;
     QCheckBox *checkBox_WholeWords;
     QCheckBox *checkBox_SearchForwards;
     QSpacerItem *horizontalSpacer_2;
     QWidget *centerSearchForm;
 
-    QString line;
-    QStringList fields;
     QElapsedTimer timerCompile; // Timer for compilation time
     int nMilliseconds;          // keeping compile time
     QString successMessage;     // build success message with compile time
@@ -190,12 +185,13 @@ public:
     QString p_website;
     QString p_version = "1.0";
     QString p_revision = "0";
-    QString p_compiler ;                     // C-Compiler to call...
     QString p_compiler_call;
     QString p_compiler_gcc;             // Path to gcc executable
     QString p_compiler_gpp;             // Path to g++ executable
     QString p_compiler_vc;              // Path to vc executable
-    QString p_compiler_vasm;            // Path to vasm executable - used directly (not via vc) to assemble .asm/.s project sources, see regenerateProjectMakefiles()
+    QString p_compiler_vasm;            // Path to vasm executable - assembles .asm/.s sources for a project built with the "vasm" compiler entry (Makefile.vbcc), see regenerateProjectMakefiles()
+    QString p_compiler_as;              // Path to GNU as (m68k-amigaos-as) executable - assembles .asm/.s sources for a project built with the "GNU as" compiler entry (Makefile.gcc), see regenerateProjectMakefiles()
+    QString p_compiler_ld;               // Path to GNU ld (m68k-amigaos-ld) executable - links a pure-assembly "GNU as" project directly (Makefile.gcc's asmOnlyProject case), instead of going through gcc's own "-nostartfiles -nostdlib" frontend - see regenerateProjectMakefiles()
     // Compiler + linker opts, split per compiler AND per target OS (OS 1.3
     // vs OS 3.x) - used for single-file compiles, the "New Project"
     // Compiler/Linker Options prompts, and the generated Makefiles' CCARGS
@@ -227,7 +223,6 @@ public:
     QString p_strip;                            // Path to strip, unused ATM
     QString p_compiledFile;                     // keep the currently compiled file for file checking
     QString p_compiledFileSuffix;               // keep filename suffix for compiled output
-    QFileInfo p_stripped_name;                  // stripped filename for constructing exe file name and icon
     QString p_emulator;             // path to emulator to start, used as 'command'
     QString p_os13_config;          // path to OS 1.3 emulator config-file, used as 'argument'
     QString p_os30_config;          // path to OS 3.x emulator config-file, used as 'argument'
@@ -235,7 +230,13 @@ public:
     QString p_emulator_to_start;    // Argument for default OS to start in UAE
     QString p_projectsRootDir;      // Path to default folder to store projects in (use that path as a hd mount in UAE in order to test compiled app!)
     bool p_saveProjectFilesAutomatically = false;   // Prefs > Project > "Save Project Files Automatically" - see saveModifiedProjectFiles()
-    QStringList p_Compilers = {"VBCC - C", "GNU - C", "GNU - C++"};    // used for building compiler preselection combobox entries
+    // used for building compiler preselection combobox entries - indices
+    // 0-2 are C/C++ compilers (VBCC/GCC/G++, see getCompilerAndLinkerOptsForTarget()),
+    // 3-4 are the two pure assemblers (see SelectCompiler()) - appended
+    // after the existing three rather than inserted, so any saved
+    // MISC/DefaultCrossCompiler index from before this change keeps
+    // meaning the same C compiler it always did.
+    QStringList p_Compilers = {"VBCC - C", "GNU - C", "GNU - C++", "vasm", "GNU as"};
     QStringList p_targetOS = {"OS 1.3", "OS 3.x"};
     int p_defaultCompiler;          // set from prefs file
     QString p_default_style;        // set from prefs file
@@ -262,20 +263,13 @@ public:
     bool p_show_vbcc_opts;          // show options requester every time compilation with vbcc is triggered?
     QString p_guiLanguage = "en";   // GUI language: "en" (default/source language) or "de"
 
-    // Setter for prefs vars
-    void setCompilerGCC(QString compiler);
-
-
 public slots:
     // Custom context menue:
     void showCustomContextMenue(const QPoint &pos); // implements custom context menu for QScintilla
     // methods for launching a compiler
     void error(QProcess::ProcessError error);
     void compilerError(QProcess::ProcessError error);   // reports a failed compiler start (wrong path in Prefs)
-    void stateChanged(QProcess::ProcessState state);
 
-    void readyReadStandardError();
-    void readyReadStandardOutput();
     void started();
     void emu_started();                                 // emulator-specific "process actually started" handling - kept separate from started() so a compiler run no longer disables the emulator toolbar buttons (see actionEmulator())
     void emu_finished(int exitCode, QProcess::ExitStatus exitStatus);
@@ -289,6 +283,7 @@ public slots:
     int stopCommand(int exitCode, QProcess::ExitStatus exitStatus);
     void actionKillEmulator();
     void finished(int exitCode, QProcess::ExitStatus exitStatus);
+    void migrateLegacySettingsIfNeeded();                // rev.148: one-time carry-over from the old "Amiga Cross Editor" settings file to the new "AmigaED4" one
     void readPosSettings();
     void readSettings();                                // read app settings
     void jumpCompilerWarnings();                        // jump to error or warning, load file of occurance if not opened (unfinisched yet!)
@@ -307,6 +302,7 @@ public slots:
     void actionNewProjectAmigaOS3x();
     void actionNewProjectReAction();
     void actionNewProjectMUI();
+    void actionNewProjectAssembler();   // "New Assembler Project" - dependency-free m68k asm "Hello World", buildable with both vasm (VBCC) and gas (GCC) - see mainFileTemplateContent()
     void actionImportExistingProject();
     void actionLoadProject();
     void loadProjectFile(const QString &fileName);   // shared implementation behind actionLoadProject()/openRecentProject()
@@ -340,7 +336,6 @@ private slots:
     void call_do_search_and_replace();
     void clearMarkers();                            // clear marked occourances in case of new search
     int startCompiler();                            // starts a process (f.e. Compiler)
-    void popNotImplemented();                       // shows "not implemented" MessageBox
     void newFile();                                 // sets editor into new file mode
     void open();                                    // loads a file
     void openRecentFile();                          // loads a file from the "Recent files" submenu
@@ -369,6 +364,7 @@ private slots:
     void initializeLexerAmigaGuide();
     void initializeLexerM68kAsm();
     void initializeLexerNone(QsciScintilla *editor = nullptr, bool announceChange = true);   // 'editor' defaults to the active tab; 'announceChange' set to false by reapplyEditorTheme() to suppress the status/debug messages when just recoloring an already-plain-text tab
+    void syncSyntaxMenuToCurrentLexer();   // checks the Syntax menu entry matching textEdit->lexer()'s actual runtime type - see onTabChanged()
     void initializeFolding();
     void initializeMargin(QsciScintilla *editor = nullptr);      // 'editor' defaults to the active tab - see reapplyEditorTheme()
     void initializeCaretLine(QsciScintilla *editor = nullptr);   // 'editor' defaults to the active tab - see reapplyEditorTheme()
@@ -433,6 +429,8 @@ private slots:
     void actionSelectCompilerVBCC();
     void actionSelectCompilerGCC();
     void actionSelectCompilerGPP();
+    void actionSelectCompilerVasm();
+    void actionSelectCompilerGnuAs();
     void actionToggleGccDefaultOptsDialog();
     void actionToggleVbccDefaultOptsDialog();
     void actionSetGuiLanguageEnglish();             // switch GUI language to English (source language, no translator)
@@ -490,8 +488,6 @@ private:
     void applyGuiLanguage(const QString &langCode, bool persist = true);   // installs/removes the QTranslator for "en"/"de", calls retranslateUi(); persist=false for a session-only switch (View menu) that must NOT change Prefs' own default
     void createStatusBarMessage(QString statusmessage, int timeout);    // sets up the statusbar with a custom message
     // GUI methods...
-    void SetLexerAtFileExtension(QString fileName);     // Helper to set approbiate Lexer according to a file's .ext
-    void actionSelectCompiler(int index);               // Helper for selcting a compiler to use
     void writeSettings();                               // write app settings
     bool maybeSave(QsciScintilla *editor = nullptr);    // will be called if user quits while text has changed; defaults to the active tab
     int loadNonExistantFile(const QString &fileName);   // ask for creation if a file does NOT exist (used for command line loading)
@@ -575,7 +571,7 @@ private:
     bool eventFilter(QObject *obj, QEvent *event) override;                // handles drag'n'drop of .c/.h/.cpp files and Makefiles onto the project tree
     bool isDragDropAcceptableProjectFile(const QString &path) const;       // true for .c/.h/.cpp (and common variants incl. .c++/.h++), .guide, .txt/.readme (or a bare "README"), .asm/.s, .pas, or a Makefile - see eventFilter()
     bool projectUsesFloatingPoint() const;   // heuristic scan for "float"/"double" in the project's own C/C++ sources - see regenerateProjectMakefiles()
-    QString mainFileTemplateContent(int templateKind, const QString &baseName) const; // skeleton content for a new project's main file
+    QString mainFileTemplateContent(int templateKind, const QString &baseName, int asmAssembler = 3) const; // skeleton content for a new project's main file - asmAssembler (3=vasm, 4=GNU as) only matters for templateKind 6, see its case
     bool writeProgramIcon(const QString &executablePath, long stackSize) const;   // writes AmigaED's own built-in tool icon (see resources/amigaed_tool.info) to "<executablePath>.info", with do_StackSize patched to the given value
     void maybeOfferAddToProject(const QString &fileName); // called after a successful save - offers to add an untracked file
 
@@ -628,7 +624,6 @@ private:
     QActionGroup *themeActionGroup = nullptr;   // enforces the mutual exclusion (radio-button behaviour) for themeMenue's entries
     QMenu *indentationMenue = nullptr;          // View/Indentation - "2/4/8 Characters", mutually exclusive (see buildIndentationMenu())
     QActionGroup *indentationActionGroup = nullptr;   // enforces the mutual exclusion (radio-button behaviour) for indentationMenue's entries
-    QMenu *tabwidthMenue;       // Submenu of viewMenu, holds different values for tab width
     QMenu *syntaxMenue;         // holds actions to change syntax lexers
     QMenu *toolsMenue;          // holds misc actions
     QMenu *emulatorMenue;       // Submenue of toolsMenue, holds startups for different Amiga emulation models
@@ -649,9 +644,8 @@ private:
     QToolBar *toolsToolBar;         // holds misc actions
     QToolBar *searchToolBar;        // holds search/replace
 
-    // synatxMenue/tabwithMenue mutual exclude ActionGroups
+    // synatxMenue mutual exclude ActionGroups
     QActionGroup *syntaxGroup;      // holds different Lexers for mutual exclusion in menue
-    QActionGroup *tabwidthGroup;     // holds different values for tab with
     QActionGroup *compilerGroup;     // holds different values for compiler to use: 0 = vc, 1 = gcc, 2 = g++
 
     // GUI Language (I18n) - View menue, top entry
@@ -660,6 +654,7 @@ private:
     QAction *guiLanguageGermanAct = nullptr;
     QActionGroup *guiLanguageGroup = nullptr;   // holds English/Deutsch for mutual exclusion in menue
     QTranslator *p_guiTranslator = nullptr;   // currently installed translator (nullptr while English/source language is active)
+    QTranslator *p_qtBaseTranslator = nullptr;   // Qt's own German translation (qtbase_de.qm) - covers QMessageBox's standard button labels and other Qt-internal strings amigaed_de.qm has no control over, see applyGuiLanguage()
 
     // Manual viewer (Help > Manual, F1) - non-modal, single instance. nullptr
     // while closed; reset back to nullptr via its destroyed() signal once
@@ -682,6 +677,7 @@ private:
     QAction *newProjectAmigaOS3xAct;
     QAction *newProjectReActionAct;
     QAction *newProjectMUIAct;
+    QAction *newProjectAssemblerAct;
     QAction *importExistingProjectAct;
     QAction *loadProjectAct;
     QAction *saveProjectAct;
@@ -726,17 +722,12 @@ private:
     QAction *zoomResetAct;              // reset editor font size to normal
     QAction *showEOLAct;                // toggle visbility of EOL
     QAction *showUnprintableAct;        // toggle visibility of unprintable characters
-    QAction *toggleAutoIndentAct;       // toggle automatic indentation
-    QAction *toggleIndentUsesTabAct;    // use TAB or whitespace for indentation
-    QAction *tabWith2Act;               // to be used in submenu tabwithMenue, sets tab with to 2
-    QAction *tabWith4Act;               // to be used in submenu tabwithMenue, sets tab with to 4 (default)
-    QAction *tabWith6Act;               // to be used in submenu tabwithMenue, sets tab with to 6
-    QAction *tabWith8Act;               // to be used in submenu tabwithMenue, sets tab with to 8
     // Actions for buildMenue
-    QAction *selectCompilerAct;          // select the compiler to use (vbcc, gcc, g++)
     QAction *selectCompilerVBCCAct;      // select the compiler to use (vbcc, gcc, g++)
     QAction *selectCompilerGCCAct;       // select the compiler to use (vbcc, gcc, g++)
     QAction *selectCompilerGPPAct;       // select the compiler to use (vbcc, gcc, g++)
+    QAction *selectCompilerVasmAct;      // select vasm - assembles/links an ASM project via Makefile.vbcc, see SelectCompiler()/actionBuildProject()
+    QAction *selectCompilerGnuAsAct;     // select GNU as - assembles/links an ASM project via Makefile.gcc, see SelectCompiler()/actionBuildProject()
     QAction *compileAct;                 // calls compilation of current file
     QAction *showOutputAct;              // pops up compiler output pane
     QAction *hideOutputAct;              // pops up compiler output pane
@@ -820,13 +811,11 @@ private:
     // reliably alternates fold/unfold even after the user manually folded
     // or expanded individual blocks by hand in between clicks.
     bool foldall = false;
-    bool p_show_compilerbutton = true;  // enable or disable Button in statusbar via prefs
 
     // check if there is allready a main() function in a file
     bool p_main_set = false;
     bool p_versionstring_set = false;
     int p_proc_is_started = 0;
-    int p_index = 0;
 
 protected:
     void closeEvent(QCloseEvent *event);        // catch close() event

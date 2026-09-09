@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>588</width>
-    <height>544</height>
+    <height>579</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,33 +23,11 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <layout class="QGridLayout" name="gridLayout_4">
-   <item row="1" column="2">
-    <widget class="QPushButton" name="btn_SavePrefs">
-     <property name="text">
-      <string>Save Prefs</string>
-     </property>
-     <property name="icon">
-      <iconset resource="application.qrc">
-       <normaloff>:/images/save.png</normaloff>:/images/save.png</iconset>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QPushButton" name="btn_CancelSave">
-     <property name="text">
-      <string>Cancel</string>
-     </property>
-     <property name="icon">
-      <iconset resource="application.qrc">
-       <normaloff>:/images/fileexit.png</normaloff>:/images/fileexit.png</iconset>
-     </property>
-    </widget>
-   </item>
+  <layout class="QGridLayout" name="gridLayout_14">
    <item row="0" column="0" colspan="3">
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tabProject">
       <attribute name="title">
@@ -248,7 +226,7 @@
       <attribute name="toolTip">
        <string>Basic settings for gcc and g++</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_14">
+      <layout class="QGridLayout" name="gridLayout_4">
        <item row="0" column="0">
         <layout class="QGridLayout" name="gridLayout_6">
          <item row="0" column="1">
@@ -402,6 +380,82 @@
         </layout>
        </item>
        <item row="4" column="0">
+        <layout class="QGridLayout" name="gridLayout_33">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getASexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getASexefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_29">
+           <property name="text">
+            <string>GNU as:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="5" column="0">
+        <layout class="QGridLayout" name="gridLayout_34">
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEdit_getLDexefile">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_getLDexefile">
+           <property name="maximumSize">
+            <size>
+             <width>31</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="application.qrc">
+             <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_30">
+           <property name="text">
+            <string>GNU ld:</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_projectsRootDir</cstring>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="6" column="0">
         <layout class="QGridLayout" name="gridLayout_3">
          <item row="0" column="0">
           <widget class="QLabel" name="label_8">
@@ -565,7 +619,7 @@
          </item>
         </layout>
        </item>
-       <item row="5" column="0">
+       <item row="7" column="0">
         <widget class="QCheckBox" name="checkBox_ShowGccOpts">
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If set, you will be presented with an options field where you might change options for recent compilation every time compilation is triggered&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1236,6 +1290,28 @@
      </property>
     </spacer>
    </item>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="btn_CancelSave">
+     <property name="text">
+      <string>Cancel</string>
+     </property>
+     <property name="icon">
+      <iconset resource="application.qrc">
+       <normaloff>:/images/fileexit.png</normaloff>:/images/fileexit.png</iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QPushButton" name="btn_SavePrefs">
+     <property name="text">
+      <string>Save Prefs</string>
+     </property>
+     <property name="icon">
+      <iconset resource="application.qrc">
+       <normaloff>:/images/save.png</normaloff>:/images/save.png</iconset>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -1256,6 +1332,10 @@
   <tabstop>btn_getMAKEexefile</tabstop>
   <tabstop>lineEdit_getSTRIPexefile</tabstop>
   <tabstop>btn_getSTRIPexefile</tabstop>
+  <tabstop>lineEdit_getASexefile</tabstop>
+  <tabstop>btn_getASexefile</tabstop>
+  <tabstop>lineEdit_getLDexefile</tabstop>
+  <tabstop>btn_getLDexefile</tabstop>
   <tabstop>lineEdit_GCC13CompilerOpts</tabstop>
   <tabstop>lineEdit_GCC30CompilerOpts</tabstop>
   <tabstop>lineEdit_GCC13LinkerOpts</tabstop>

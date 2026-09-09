@@ -1,5 +1,20 @@
 <RCC>
     <qresource prefix="/translations">
         <file alias="amigaed_de.qm">translations/amigaed_de.qm</file>
+        <!-- Qt's OWN German translation for its built-in strings - most
+             importantly QMessageBox's standard button labels ("&Yes"/
+             "&No"/"OK"/"Cancel"/...), which amigaed_de.qm has no control
+             over (they're never passed through AmigaED's own tr() calls
+             at all - QMessageBox::question()/etc. with QMessageBox::Yes|
+             QMessageBox::No|... builds them from Qt's own internal
+             strings). Confirmed a real, reported bug otherwise: those
+             buttons stayed in English even with amigaed_de.qm/German
+             fully active. Bundled as a resource (copied from this Qt
+             installation's own QT_INSTALL_TRANSLATIONS) rather than
+             loaded from the end user's Qt install at runtime, exactly
+             like amigaed_de.qm itself - guaranteed to be present
+             regardless of how/where AmigaED is deployed. See
+             applyGuiLanguage() in mainwindow.cpp. -->
+        <file alias="qtbase_de.qm">translations/qtbase_de.qm</file>
     </qresource>
 </RCC>

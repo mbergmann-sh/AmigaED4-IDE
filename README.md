@@ -3,7 +3,7 @@ A cross-platform C/C++ and m68k Assembler Tabbed Editor/IDE for m68k-amigaos-gcc
 
 AmigaED 4.0 development consumes a huge amount of my lifetime and even some money. If you want to support my work, please consider making a small donation via PayPal. Thanks for your support!
 
-[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?business=mbergmann-sh%40gmx.de&currency_code=EUR)
+[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?business=mb%40mbergmann-sh.de&currency_code=EUR)
 
 <img width="1405" height="961" alt="grafik" src="https://github.com/user-attachments/assets/11037a21-2197-4a6a-87f8-bdbfd7426478" />
 <img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/31e3cd55-fbad-43d4-b8c2-1e2daec18ee0" />

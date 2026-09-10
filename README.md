@@ -11,7 +11,7 @@ AmigaED brings project management, syntax highlighting, and one-click builds to 
 
 ## Features
 
-> **Status:** BETA. Core functionality and enhancements work and have been tested during development, but it hasn't seen broad real-world use yet — expect rough edges, and please [file an issue](../../issues) if you hit one.
+> **Status:** beta. Core functionality is stable and has been exercised through many revisions of active development, including real project builds across all supported toolchains — but it still hasn't seen broad real-world use outside that, so please [file an issue](../../issues) if you hit one.
 
 ### Editor
 - Tabbed editor (multiple files open at once), powered by Qt6 + QScintilla
@@ -23,7 +23,7 @@ AmigaED brings project management, syntax highlighting, and one-click builds to 
   - Makefiles, AmigaShell scripts, Pascal, plain text
   - Automatic syntax selection by file extension on open (`.c`/`.cpp`/`.h`, `.asm`/`.s`, `.guide`, `.pas`, `Makefile*`, …), with a status-bar confirmation
 - Light and Dark application themes
-- English and German UI, switchable at runtime (View → GUI Language)
+- English and German UI, switchable at runtime (View → GUI Language) — covers AmigaED's own strings as well as Qt's built-in dialogs (message box buttons, the About Qt dialog, …)
 - Function list widget — lists every C/C++ function in the current project for quick navigation
 - Drag-and-drop: drop supported source/doc files (C/C++, headers, `.asm`/`.s`, `.guide`, `.pas`, `.txt`/`.readme`, Makefiles) straight onto the project tree to add them
 - Recently opened files/projects, each with a one-click "Forget recent…" to clear the list
@@ -37,7 +37,6 @@ AmigaED brings project management, syntax highlighting, and one-click builds to 
   - AmigaOS 3.x (NDK 3.2R4) — dual Shell/Workbench entry point out of the box
   - ReAction GUI skeleton
   - MUI 5 GUI skeleton
-  - Assembler Project Templates for vasm and GNU as
 - "Import existing Project…" — turn an existing, non-AmigaED C/C++ folder into an AmigaED project, auto-detecting its main file and correctly sorting oddities like SAS/C build artifacts, stray executables, or `.info` icons into the right category instead of miscategorizing them
 - "Add files to Project…" (multi-select dialog, also reachable via the project panel's Add button)
 - Automatic `Makefile.gcc` (m68k-amigaos-gcc) / `Makefile.vbcc` (vbcc) generation on every file add/remove, with:
@@ -45,7 +44,19 @@ AmigaED brings project management, syntax highlighting, and one-click builds to 
   - Automatic detection of floating-point usage in the project's own sources, adding the right math library per toolchain (`-lm` for gcc/g++, `-lmieee` for vbcc, `MATH=IEEE` for SAS/C) only when actually needed
   - Optional automatic `.info` icon creation for the built executable (from a configurable default icon), handled per-platform (`copy` on Windows, `cp` on Linux/macOS) — including the Windows-specific quirks of `make` sometimes running recipes through a bundled `sh.exe` instead of `cmd.exe`
   - A `Makefile.sc` (SAS/C) generated alongside for manual on-Amiga builds
-  - Sensible, research-backed default compiler/linker flags per toolchain and target OS (including `-lamiga`/`-lauto` for Workbench-capable
+  - Sensible, research-backed default compiler/linker flags per toolchain and target OS (including `-lamiga`/`-lauto` for Workbench-capable executables)
+- Existing user settings are migrated automatically and silently on first startup after an upgrade — nothing to reconfigure
+
+### Assembler Projects
+- Dedicated "New Assembler Project" template with a choice, made once at creation, between two independent, mutually exclusive m68k assembler dialects: **vasm** or **GNU as** (`m68k-amigaos-as`) — the choice is locked in for the project's lifetime, so the right Makefile and source dialect are generated every time, never a wrong or mixed one
+- Prefs > GCC gained "GNU as:" and "GNU ld:" fields (path + file selector), so GNU-as-dialect projects are assembled and linked directly, with the same architectural parity vbcc already had via `vlink`
+- Prefs > GCC and Prefs > VBCC each gained an "Assembler Include Path:" field, wired straight into the generated Makefile, so hand-written `.asm`/`.s` sources can `include`/`.include` NDK-style headers (e.g. from the NDK's separate assembler-include tree) without a hardcoded absolute path
+- The compiler/assembler chooser (status bar + Build menu) gained "vasm" and "GNU as" entries alongside the existing C/C++ ones, with guardrails that refuse to build a C/C++ project with an assembler (or an Assembler Project with the wrong toolchain/dialect) instead of silently doing the wrong thing
+- The m68k Assembler syntax highlighter now recognizes GNU as's own comment/directive style (`|` comments, column-zero `#`, dotted directives like `.text`/`.globl`/`.asciz`) alongside vasm's
+
+### Compiler Output pane
+- Clickable, colour-highlighted jump-to-line now also covers vasm's and GNU as's diagnostic output, including vasm's most serious "fatal error" level, not just VBCC/GCC/G++
+- Context menu gained two new entries alongside Qt's own: **Mark all and copy** (select-all + copy in one click) and **Empty Console** (clears the pane outright)
 
 ## Building AmigaED
 

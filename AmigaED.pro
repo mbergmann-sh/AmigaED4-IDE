@@ -14,6 +14,7 @@ macx {
 HEADERS      = mainwindow.h \
     prefsdialog.h \
     aboutdialog.h \
+    autodocreader.h \
     amigalexercpp.h \
     amigainstallerlexer.h \
     amigaguidelexer.h \
@@ -23,6 +24,7 @@ HEADERS      = mainwindow.h \
 SOURCES      = main.cpp mainwindow.cpp \
     prefsdialog.cpp \
     aboutdialog.cpp \
+    autodocreader.cpp \
     amigainstallerlexer.cpp \
     amigaguidelexer.cpp \
     m68kasmlexer.cpp \

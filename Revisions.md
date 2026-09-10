@@ -8,7 +8,13 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
-## rev.149
+## rev.151
+> **rev.150** was an internal test build only, never released to users - it
+> only ever existed during a single active development session. Every
+> change made along the way (new features and the fixes they needed) is
+> folded into this rev.151 entry below, which is the version actually
+> released.
+
 - **New**: the app's settings file/registry key is renamed from
   "Amiga Cross Editor" (its original working title) to "AmigaED4"
   (`AMIGAED_SETTINGS_APP` in `version.h`, used consistently by every
@@ -211,6 +217,131 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   entry (`checkBoxOpenOnFail`, "Open panel on failure only") was
   restored to the `<tabstops>` list to match its still-intact
   position next to `checkBoxWarnRequesters`.
+- **New**: Prefs > Emulator gained an "Edit" button next to both the
+  "OS 1.3 config:" and "OS 3.x config:" file requesters, opening the
+  file currently entered in that field directly in the platform's own
+  text editor (Notepad on Windows, TextEdit on macOS, the user's
+  configured default text editor via `xdg-open` on Linux, falling back
+  to a short list of common GUI editors if none is configured) - lets a
+  UAE config file be hand-tweaked without leaving AmigaED to go find a
+  text editor. Deliberately launches a concrete editor per platform
+  instead of going through the OS's own file-association lookup, since
+  UAE config files typically have none; mirrors the same per-platform
+  QProcess approach already used by Build > Open Shell.
+- **New**: AutoDoc Reader - a new non-modal, single-instance window
+  (`autodocreader.h`/`.cpp`), opened via Build > AutoDoc Reader..., for
+  browsing and live-filtering the AmigaOS NDK AutoDocs (the `*.doc`
+  files under the NDK's "Autodocs" drawer - one per library, e.g.
+  exec.doc/dos.doc/graphics.doc, each holding every function of that
+  library back to back) without leaving AmigaED - inspired by, though
+  not a pixel clone of, the classic Workbench tool MinAD. Prefs >
+  Emulator gained a matching "AutoDocs folder:" field (directory
+  selector, next to the existing OS 1.3/3.x config fields) that Build >
+  AutoDoc Reader... reads on open; if it's empty or no longer exists, a
+  warning points the user at that field instead of opening an empty
+  window. Every `*.doc` file found (recursively) under that folder is
+  parsed into individual function entries and grouped into a tree by
+  source file (one group per `*.doc` file, e.g. everything in exec.doc
+  groups under "exec"). A live filter field narrows the tree by function
+  name as you type, with Prev/Next buttons to step through matches and a
+  running "Filter showing X/Y Funcs in A/B Files" count in the window
+  title (Enter in the filter field jumps to the first/next match); Open
+  All/Close All expand or collapse the whole tree. The right-hand pane
+  shows the selected function's complete, unmodified AutoDoc text in a
+  guaranteed-monospace font (needed for SYNOPSIS's column-aligned
+  register names to line up correctly).
+  - The first version of the entry parser assumed each entry's marker
+    line was the function's "library.name/FunctionName" identifier
+    literally repeated twice, and derived the tree grouping from that
+    same identifier's own "library.name/" prefix - both wrong, as a
+    real NDK 3.2R4 `exec.doc` supplied by the user showed: the grouping
+    assumption doesn't hold at all for `*.doc` files whose own filename
+    differs from the library prefix inside it (confirmed once the user
+    also supplied MinAD's own source, whose listtree.c groups strictly
+    by filename), and the "repeated twice" assumption, while cosmetically
+    true for exec.doc's own marker lines, isn't what actually delimits
+    an entry - the real delimiter (also confirmed against MinAD's
+    listtree.c, and against the raw bytes of the user's exec.doc: 116 of
+    them, one per function) is a raw form-feed byte (0x0C, a legacy
+    "start new printed page" marker) immediately before each marker
+    line. Rewritten to scan for that byte directly and group by source
+    filename instead, matching MinAD's own proven approach; re-verified
+    against the real exec.doc (115 of its 116 form-feed-delimited
+    entries parsed - the 116th is a lone trailing form-feed at end of
+    file with nothing after it, correctly skipped - all unique, no
+    cross-entry leakage, exec.library/Wait's own body confirmed
+    byte-for-byte correct including SYNOPSIS's tab alignment).
+- **New**: the AutoDoc Reader got its own toolbar/menu icon
+  (`images/autodoc_reader.png`, a new 64x64 RGBA pictogram - an open
+  book with a magnifying glass accent, matching the flat/colorful style
+  of the existing `build_project.png`/`clean_project.png`/
+  `open_shell.png` toolbar icons and reusing their shared light-blue
+  circular backdrop), so Build > AutoDoc Reader... is no longer the one
+  plain-text entry in that menu. The same action was also added to the
+  Build toolbar, placed immediately before the existing "Open Shell"
+  button.
+- **New**: the AutoDoc Reader window now remembers its own size and
+  position across sessions (`QSettings`, key
+  "MISC/AutodocReaderGeometry") - saved on close, restored the next
+  time Build > AutoDoc Reader... is opened; falls back to the original
+  950x650 default the first time it's ever opened, or if nothing was
+  saved yet.
+- Both manuals' cover page (`docbuild/html_assets/cover-000.png`)
+  replaced with a newly designed full title page (screenshot montage,
+  "AmigaED 4.0 User Manual" title/tagline, and author credit already
+  baked into the artwork), shown standalone at a larger size instead
+  of the old small logo plus a separate `<h1>`/tagline underneath it.
+  The `<title>` of both HTML manuals was updated to match ("AmigaED
+  4.0 User Manual" / "AmigaED 4.0 Benutzerhandbuch", previously "...
+  Quick Manual" / "... Kurzanleitung"). `docbuild/gen_html_manual2.py`
+  regenerated both `docbuild/manual_en.html`/`manual_de.html` and the
+  embedded app copies (`help/manual_en.html`/`manual_de.html`), and
+  both PDFs (`DOC/AmigaED_Guide_EN.pdf`, `DOC/AmigaED_Anleitung_DE.pdf`)
+  were re-rendered from them - verified by rendering each PDF's cover
+  page to an image.
+
+- **New**: editor context menu gained **Jump to Explanation**, right
+  below "Search and Replace..." - opens (or, if already open, raises
+  and reuses) the AutoDoc Reader and jumps it straight to the entry for
+  the NDK/MUI function under the click (e.g. right-clicking
+  `OpenWindow` in a `.c` file jumps to `intuition.library/OpenWindow`),
+  instead of having to open the AutoDoc Reader and type the name into
+  its filter by hand. Works identically whether the reader is already
+  open or not: `MainWindow::showAutodocReaderAndJumpTo()` - the shared
+  implementation now behind both this and Build > AutoDoc Reader... -
+  opens/raises the existing single instance either way, then hands the
+  function name to a new `AutodocReader::showFunction()`, which clears
+  any active filter (so the rest of the tree isn't left hidden behind
+  an unrelated leftover search term), expands the right group, and
+  selects the matching entry. The match is exact (case-insensitive, on
+  the part of the entry's own identifier after the last "/") rather
+  than a substring search, so jumping to "OpenWindow" lands on that
+  entry specifically instead of also matching e.g.
+  "OpenWindowTagList" or leaving several candidates to pick from. If
+  the word under the click isn't a documented function (or the
+  AutoDocs folder isn't configured yet, or no word was under the
+  cursor at all), a status-bar message says so instead of silently
+  doing nothing. The word itself comes from `wordAtPoint()` on the
+  click position, captured into the existing
+  `p_contextMenuWordAtClick` right alongside "Search and Replace..."'s
+  own use of it.
+- **Fixed**: "Jump to Explanation" (and Build > AutoDoc Reader...
+  itself) failed to un-minimize the AutoDoc Reader window when it was
+  already open but minimized - `show()`/`raise()`/`activateWindow()`
+  alone all silently no-op against a minimized widget (Qt already
+  considers it "visible"), so the window stayed iconified in the
+  taskbar no matter how many times either action was used afterwards.
+  `showAutodocReaderAndJumpTo()` now calls `showNormal()` instead of
+  `show()` whenever `isMinimized()` is true, which explicitly clears
+  the minimized state and restores the window's normal (pre-minimize)
+  size and position before raising/activating it.
+- **New**: the AutoDoc Reader window gained a resize grip ("Eselsohr")
+  in its bottom-right corner (`QSizeGrip`, in its own thin row below
+  the splitter) - the window was already freely resizable from any
+  edge/corner via the window manager, but nothing made that obvious at
+  a glance; this is the same familiar diagonal-dots handle every
+  `QStatusBar` shows by default; this dialog just has no status bar of
+  its own to host one in, hence the dedicated row.
 
 ## rev.147
 - **New**: added a colourful "Open Shell" toolbar icon (`images/open_shell.png`,

@@ -76,6 +76,7 @@
 #include "version.h"
 #include "prefsdialog.h"
 #include "aboutdialog.h"
+#include "autodocreader.h"
 
 // Processes to start:
 static QProcess myProcess;      // the process for using as spare for further extensions
@@ -684,6 +685,112 @@ void MainWindow::actionShowManual()
 }
 
 //
+// Open (or, if already open, simply raise) the non-modal AutoDoc Reader
+// window (Build > AutoDoc Reader..., rev.150) - browses and live-filters
+// the NDK AutoDocs (the *.doc files under the configured AutoDocs
+// folder). Thin wrapper around showAutodocReaderAndJumpTo() (rev.151),
+// which also backs the editor context menu's "Jump to Explanation" -
+// this one just doesn't ask it to jump anywhere afterwards.
+//
+void MainWindow::actionShowAutodocReader()
+{
+    showAutodocReaderAndJumpTo();
+}
+
+//
+// Editor context menu entry "Jump to Explanation" (rev.151, see
+// showCustomContextMenue()) - opens/raises the AutoDoc Reader and jumps
+// it straight to the entry for whatever word was under the mouse when
+// the context menu was opened. p_contextMenuWordAtClick is captured by
+// showCustomContextMenue() itself (the same value actionSearchReplace
+// FromContext() above also reads), since by the time this slot runs -
+// after the user has picked the menu entry - the click position no
+// longer means anything.
+//
+void MainWindow::actionJumpToExplanation()
+{
+    if (p_contextMenuWordAtClick.isEmpty())
+    {
+        createStatusBarMessage(tr("No word under the cursor to look up."), 4000);
+        return;
+    }
+
+    showAutodocReaderAndJumpTo(p_contextMenuWordAtClick);
+}
+
+//
+// Shared implementation behind both Build > AutoDoc Reader... and the
+// editor context menu's "Jump to Explanation" (rev.151). Opens the
+// AutoDoc Reader if it isn't open yet, or simply raises the existing
+// single instance if it already is - same "only once, non-modal"
+// pattern as actionShowManual() (p_autodocReader enforces a single
+// instance, its destroyed() signal resets the pointer back to nullptr
+// once the user closes it, and show()/raise()/activateWindow(), never
+// exec(), keeps the rest of AmigaED fully usable while it's open). This
+// reuse is exactly what makes "Jump to Explanation" work whether the
+// reader was already open or not: either way, the same single instance
+// ends up raised and pointed at functionName.
+//
+// If functionName isn't empty, AutodocReader::showFunction() is then
+// asked to jump straight to that function's entry; if nothing matches
+// (the word under the click wasn't actually a documented NDK/MUI
+// function - or was, but under a different folder than the one
+// currently configured), a status-bar message says so instead of
+// silently doing nothing.
+//
+void MainWindow::showAutodocReaderAndJumpTo(const QString &functionName)
+{
+    if (!p_autodocReader)
+    {
+        QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
+        const QString autodocsDir = settings.value("NDK/AutodocsPath").toString();
+
+        if (autodocsDir.isEmpty() || !QFileInfo::exists(autodocsDir))
+        {
+            QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                                  tr("No AutoDocs folder is configured yet (or it no longer "
+                                     "exists).\n\nSet one under Prefs > Emulator > "
+                                     "\"AutoDocs folder:\" first - point it at the NDK's "
+                                     "\"Autodocs\" drawer."));
+            return;
+        }
+
+        p_autodocReader = new AutodocReader(autodocsDir, this);
+
+        connect(p_autodocReader, &QDialog::destroyed, this, [this]() {
+            p_autodocReader = nullptr;
+        });
+    }
+
+    // show()/raise()/activateWindow() alone (the original rev.150 code
+    // here) do NOT undo a minimized window - Qt already considers a
+    // minimized widget "visible", so show() is a no-op for it, and it
+    // stays iconified in the taskbar even though raise()+activateWindow()
+    // technically succeed against it. That's exactly what rev.151's
+    // "Jump to Explaination" surfaced: minimizing the reader (its only
+    // way to get it out from in front of the editor, since it's a
+    // transient-for-MainWindow dialog that otherwise always stays above
+    // it) left it minimized forever after, however many times "Jump to
+    // Explaination" was used afterwards. showNormal() explicitly clears
+    // Qt::WindowMinimized (restoring the window's normal, non-maximized
+    // geometry - not just un-minimizing into whatever state it happened
+    // to be in before) whenever the window actually is minimized; a
+    // plain show() still covers the first-open/not-yet-visible case
+    // exactly as before.
+    if (p_autodocReader->isMinimized())
+        p_autodocReader->showNormal();
+    else
+        p_autodocReader->show();
+    p_autodocReader->raise();
+    p_autodocReader->activateWindow();
+
+    if (!functionName.isEmpty() && !p_autodocReader->showFunction(functionName))
+    {
+        createStatusBarMessage(tr("No AutoDoc entry found for \"%1\".").arg(functionName), 4000);
+    }
+}
+
+//
 // react on SIGNAL textChanged() if text was modified
 //
 // Since AmigaED v3.2, this is connected per-tab (see newEditorTab()), so
@@ -871,6 +978,15 @@ void MainWindow::createActions()
     contextSearchReplaceAct->setStatusTip(tr("Open Search and Replace, using the word under the click as the search term"));
     connect(contextSearchReplaceAct, SIGNAL(triggered()), this, SLOT(actionSearchReplaceFromContext()));
 
+    // Context-menu-only entry (rev.151, see showCustomContextMenue()):
+    // opens/raises the AutoDoc Reader and jumps it straight to the NDK
+    // function under the click - e.g. right-clicking "OpenWindow" jumps
+    // to "intuition.library/OpenWindow" without the user having to open
+    // the AutoDoc Reader and type the name into its filter by hand.
+    jumpToExplanationAct = new QAction(QIcon(":/images/autodoc_reader.png"), tr("Jump to Explanation"), this);
+    jumpToExplanationAct->setStatusTip(tr("Open the AutoDoc Reader and jump to the entry for the word under the click"));
+    connect(jumpToExplanationAct, SIGNAL(triggered()), this, SLOT(actionJumpToExplanation()));
+
     /* --- Navigation -------------------------------------------------------------------*/
     gotoTopAct = new QAction( tr("&Goto top..."), this);
     gotoTopAct->setShortcut(tr("Ctrl+Home"));
@@ -999,6 +1115,10 @@ void MainWindow::createActions()
     toggleVbccDefaultOptsAct->setChecked(p_show_vbcc_opts);
     toggleVbccDefaultOptsAct->setStatusTip(tr("Show or hide vbcc options dialog"));
     connect(toggleVbccDefaultOptsAct, SIGNAL(triggered()), this, SLOT(actionToggleVbccDefaultOptsDialog()));
+
+    autodocReaderAct = new QAction(QIcon(":/images/autodoc_reader.png"), tr("AutoDoc Reader..."), this);
+    autodocReaderAct->setStatusTip(tr("Browse and filter the NDK AutoDocs (see Prefs > Emulator > \"AutoDocs folder:\")"));
+    connect(autodocReaderAct, SIGNAL(triggered()), this, SLOT(actionShowAutodocReader()));
 
     // this will put the compilers in our menue into a mutual exclusive
     // group for automatically checking/unchecking each other:
@@ -1394,6 +1514,8 @@ void MainWindow::createMenus()
     buildMenue->addAction(toggleVbccDefaultOptsAct);
     buildMenue->addSeparator();
     buildMenue->addAction(openShellAct);
+    buildMenue->addSeparator();
+    buildMenue->addAction(autodocReaderAct);
 
 
     menuBar()->addSeparator();
@@ -1513,6 +1635,7 @@ void MainWindow::createToolBars()
     buildToolBar->addAction(compileAct);
     buildToolBar->addAction(buildProjectAct);   // mirrors menu entry Build/Build Project
     buildToolBar->addAction(cleanProjectAct);   // mirrors menu entry Build/Clean Project
+    buildToolBar->addAction(autodocReaderAct);  // mirrors menu entry Build/AutoDoc Reader...
     buildToolBar->addAction(openShellAct);      // mirrors menu entry Build/Open Shell
     buildToolBar->addSeparator();
     buildToolBar->addAction(emulatorAct);
@@ -1568,6 +1691,7 @@ void MainWindow::retranslateUi()
     pasteAct->setText(tr("&Paste"));
     searchAct->setText(tr("Sea&rch..."));
     contextSearchReplaceAct->setText(tr("Search and Replace..."));
+    jumpToExplanationAct->setText(tr("Jump to Explanation"));
     gotoTopAct->setText(tr("&Goto top..."));
     gotoBottomAct->setText(tr("&Goto bottom..."));
     gotoLineAct->setText(tr("&Goto Line..."));
@@ -1589,6 +1713,7 @@ void MainWindow::retranslateUi()
     selectCompilerGnuAsAct->setText(tr("GNU as (Assembler mode)..."));
     toggleGccDefaultOptsAct->setText(tr("Show gcc/g++ options dialog..."));
     toggleVbccDefaultOptsAct->setText(tr("Show vbcc options dialog..."));
+    autodocReaderAct->setText(tr("AutoDoc Reader..."));
     compileAct->setText(tr("Comp&ile..."));
     showOutputAct->setText(tr("Show output pane..."));
     hideOutputAct->setText(tr("Hide output pane..."));
@@ -1653,6 +1778,7 @@ void MainWindow::retranslateUi()
     exitAct->setStatusTip(tr("Exit the application"));
     searchAct->setStatusTip(tr("Search text in document"));
     contextSearchReplaceAct->setStatusTip(tr("Open Search and Replace, using the word under the click as the search term"));
+    jumpToExplanationAct->setStatusTip(tr("Open the AutoDoc Reader and jump to the entry for the word under the click"));
     gotoTopAct->setStatusTip(tr("Goto top of file..."));
     gotoBottomAct->setStatusTip(tr("Goto bottom of file..."));
     gotoLineAct->setStatusTip(tr("Goto line X..."));
@@ -1674,6 +1800,7 @@ void MainWindow::retranslateUi()
     selectCompilerGnuAsAct->setStatusTip(tr("Set Compiler to GNU as (Assembler mode)..."));
     toggleGccDefaultOptsAct->setStatusTip(tr("Show or hide gcc/g++ options dialog"));
     toggleVbccDefaultOptsAct->setStatusTip(tr("Show or hide vbcc options dialog"));
+    autodocReaderAct->setStatusTip(tr("Browse and filter the NDK AutoDocs (see Prefs > Emulator > \"AutoDocs folder:\")"));
     compileAct->setStatusTip(tr("Compile current file..."));
     showOutputAct->setStatusTip(tr("Show Compiler output..."));
     hideOutputAct->setStatusTip(tr("Hide Compiler output..."));
@@ -10137,6 +10264,7 @@ void MainWindow::showCustomContextMenue(const QPoint &pos)
     // contextMenu.addAction(&pseudo_action) further down) since
     // searching/replacing isn't a code-insertion template.
     contextMenu.addAction(contextSearchReplaceAct);
+    contextMenu.addAction(jumpToExplanationAct);
     contextMenu.addSeparator();
 
     // define a pseudo action to show some kind of menue title - disabled,

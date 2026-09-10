@@ -1,11 +1,15 @@
 # AmigaED4-IDE
 A cross-platform C/C++ and m68k Assembler Tabbed Editor/IDE for m68k-amigaos-gcc and vbcc for classic Amiga development, built with Qt6.
+
+AmigaED 4.0 development consumes a huge amount of my lifetime and even some money. If you want to support my work, please consider making a small donation via PayPal. Thanks for your support!
+
+[![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?business=mbergmann-sh%40gmx.de&currency_code=EUR)
+
 <img width="1405" height="961" alt="grafik" src="https://github.com/user-attachments/assets/11037a21-2197-4a6a-87f8-bdbfd7426478" />
 <img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/31e3cd55-fbad-43d4-b8c2-1e2daec18ee0" />
 <img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/fb3adcde-01fa-4950-9b4e-6c3563941029" />
 <img width="1456" height="1017" alt="grafik" src="https://github.com/user-attachments/assets/955756d1-02e7-48ff-a9ab-838b644e7817" />
 <img width="1491" height="982" alt="grafik" src="https://github.com/user-attachments/assets/6aeb2f9d-503e-4a30-ab23-95cbbbd24c7c" />
-
 
 AmigaED brings project management, syntax highlighting, and one-click builds to AmigaOS 1.3/3.x cross-development, with out-of-the-box support for vbcc, vasm, m68k-amigaos-gcc, m68k-amigaos-as and SAS/C — plus integrated UAE emulator launching, so you can edit, compile, and test your Amiga software without ever leaving the editor.
 
@@ -57,6 +61,11 @@ AmigaED brings project management, syntax highlighting, and one-click builds to 
 ### Compiler Output pane
 - Clickable, colour-highlighted jump-to-line now also covers vasm's and GNU as's diagnostic output, including vasm's most serious "fatal error" level, not just VBCC/GCC/G++
 - Context menu gained two new entries alongside Qt's own: **Mark all and copy** (select-all + copy in one click) and **Empty Console** (clears the pane outright)
+
+### Emulator & NDK AutoDocs
+- Prefs > Emulator's "OS 1.3 Config" and "OS 3.x Config" fields each gained an **Edit** button, opening that UAE config file directly in the platform's native text editor for hand-tweaking, without leaving AmigaED to go find one
+- **AutoDoc Reader** (Build menu and toolbar, own icon) — a non-modal browser for the AmigaOS NDK AutoDocs (the `*.doc` files under the NDK's "Autodocs" drawer, e.g. `exec.doc`/`dos.doc`/`graphics.doc`), inspired by the classic Workbench tool MinAD. Point Prefs > Emulator's new "AutoDocs folder:" field at your NDK's Autodocs drawer once, then browse every documented function from a filterable, filename-grouped tree, with Prev/Next match navigation and the complete AutoDoc text (in a guaranteed-monospace font, so SYNOPSIS's column-aligned register names line up correctly) shown alongside. Only one AutoDoc Reader window is ever open at a time, but it doesn't block the rest of AmigaED — keep editing and building while it's up; it can be resized from any edge or corner (a grip in its bottom-right corner marks this), and remembers its own size and position across sessions.
+- **Jump to Explanation** — new entry in the editor's context menu, right below "Search and Replace...": right-click an NDK/MUI function name (e.g. `OpenWindow`) and jump straight to its AutoDoc Reader entry (opening or reusing the single AutoDoc Reader window either way, un-minimizing it if needed), instead of opening it yourself and typing the name into its filter by hand.
 
 ## Building AmigaED
 

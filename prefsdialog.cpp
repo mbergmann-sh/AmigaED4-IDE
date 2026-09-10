@@ -280,6 +280,97 @@ void PrefsDialog::on_btn_getOS3Configfile_clicked()
     ui->lineEdit_getOS3Configfile->setText(fileName);
 }
 
+//
+// Opens filePath in the platform's own text editor - used by the two
+// "Edit" buttons added next to the OS 1.3/3.x UAE config fields above,
+// so the user can quickly hand-edit an existing (or not-yet-existing)
+// UAE config file without having to go hunting for a text editor
+// themselves outside AmigaED. Deliberately launches a concrete, known
+// editor per platform rather than going through
+// QDesktopServices::openUrl()'s OS-level file-association lookup - UAE
+// config files typically have no file association at all (unlike a
+// well-known extension like .txt), so openUrl() would often either do
+// nothing or make the OS ask the user to pick an application, which
+// defeats the point of a dedicated "Edit" button. Mirrors the same
+// per-platform QProcess approach MainWindow::actionOpenShell() already
+// uses for opening a terminal.
+//
+void PrefsDialog::openFileInSystemEditor(const QString &filePath)
+{
+    if (filePath.trimmed().isEmpty())
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("Please select a config file first."));
+        return;
+    }
+
+    bool started = false;
+
+#if defined(Q_OS_WIN)
+    started = QProcess::startDetached(QStringLiteral("notepad.exe"), { filePath });
+#elif defined(Q_OS_MAC)
+    // "-e" is Apple's documented way of forcing TextEdit specifically,
+    // regardless of whatever application (if any) is actually
+    // associated with the file.
+    started = QProcess::startDetached(QStringLiteral("open"),
+                                       { QStringLiteral("-e"), filePath });
+#else
+    // Linux has no single canonical default text editor, the same
+    // problem actionOpenShell() already solves for terminals. xdg-open
+    // is tried first - on a properly configured desktop it respects
+    // whatever the user has set as their own default text editor - with
+    // a short list of common GUI editors as a fallback for a system
+    // with no such default configured at all. Note this only confirms
+    // the chosen program itself could be launched, same as
+    // actionOpenShell()'s own terminal candidates - it can't detect
+    // xdg-open silently failing to find a handler internally once it's
+    // running as its own detached process.
+    static const QStringList candidates = {
+        QStringLiteral("xdg-open"),
+        QStringLiteral("gnome-text-editor"),
+        QStringLiteral("gedit"),
+        QStringLiteral("kate"),
+        QStringLiteral("mousepad"),
+        QStringLiteral("leafpad")
+    };
+    for (const QString &editor : candidates)
+    {
+        started = QProcess::startDetached(editor, { filePath });
+        if (started)
+            break;
+    }
+#endif
+
+    if (!started)
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("Could not open a text editor for:\n%1").arg(filePath));
+    }
+}
+
+void PrefsDialog::on_btn_editOS13Configfile_clicked()
+{
+    openFileInSystemEditor(ui->lineEdit_getOS13Configfile->text());
+}
+
+void PrefsDialog::on_btn_editOS3Configfile_clicked()
+{
+    openFileInSystemEditor(ui->lineEdit_getOS3Configfile->text());
+}
+
+// Prefs > Emulator > "AutoDocs folder:" - a directory, not a single file
+// (an NDK AutoDocs drawer holds one *.doc per library, e.g. exec.doc,
+// dos.doc, ...) - see AutodocReader::parseAutodocsFolder() for how
+// Build > AutoDoc Reader... consumes this setting.
+void PrefsDialog::on_btn_getAutodocsDir_clicked()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Open NDK AutoDocs Folder"),
+                                                 ui->lineEdit_getAutodocsDir->text(),
+                                                 QFileDialog::ShowDirsOnly
+                                                 | QFileDialog::DontResolveSymlinks);
+    if (!dir.isEmpty())
+        ui->lineEdit_getAutodocsDir->setText(dir);
+}
 
 
 void PrefsDialog::on_btn_CancelSave_clicked()
@@ -336,6 +427,9 @@ void PrefsDialog::save_mySettings()
      mySettings.setValue("UAE/UaePath", ui->lineEdit_getEmulatorExefile->text());
      mySettings.setValue("UAE/Os13ConfigPath", ui->lineEdit_getOS13Configfile->text());
      mySettings.setValue("UAE/Os30ConfigPath", ui->lineEdit_getOS3Configfile->text());
+     // Not a UAE setting itself (kept in its own "NDK" group), just placed
+     // on this same tab - see AutodocReader for what consumes it.
+     mySettings.setValue("NDK/AutodocsPath", ui->lineEdit_getAutodocsDir->text());
 
      // TAB: Misc
      mySettings.setValue("MISC/DefaultStyle", ui->comboBoxDefaultStyle->currentText());
@@ -399,6 +493,7 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_getEmulatorExefile->setText(mySettings.value("UAE/UaePath").toString());
     ui->lineEdit_getOS13Configfile->setText(mySettings.value("UAE/Os13ConfigPath").toString());
     ui->lineEdit_getOS3Configfile->setText(mySettings.value("UAE/Os30ConfigPath").toString());
+    ui->lineEdit_getAutodocsDir->setText(mySettings.value("NDK/AutodocsPath").toString());
 
     // TAB: Misc
     ui->comboBoxDefaultStyle->setCurrentText(mySettings.value("MISC/DefaultStyle").toString());

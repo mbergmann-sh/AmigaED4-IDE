@@ -124,6 +124,7 @@ class QsciScintilla;
 class QsciLexer;
 class PrefsDialog;
 class aboutDialog;
+class AutodocReader;
 class QTimer;
 class QTime;
 class QElapsedTimer;
@@ -348,6 +349,8 @@ private slots:
     bool saveAs();                                  // saves current file as...
     void about();                                   // pops up "about" MessageBox
     void actionShowManual();                        // opens (or raises) the non-modal Manual viewer window, in the current GUI language
+    void actionShowAutodocReader();                 // Build > AutoDoc Reader... - opens (or raises) the non-modal NDK AutoDocs browser (needs Prefs > Emulator > "AutoDocs folder:" set)
+    void actionJumpToExplanation();                 // editor context-menu entry "Jump to Explanation" - opens/raises the AutoDoc Reader and jumps straight to the entry for the word under the click (see showAutodocReaderAndJumpTo())
     void startPrefs();                              // Workaround to start prefsDialog with a parameter
     void setEmulatorMenu();                         // disable emulator menu entries if no config was specified
     void actionResetFontSize();                      // zoomTo(0) wrapper, since QAction::triggered() has no args
@@ -492,6 +495,7 @@ private:
     void retranslateUi();                                               // re-applies all tr() strings after a runtime GUI-language change
     void applyGuiLanguage(const QString &langCode, bool persist = true);   // installs/removes the QTranslator for "en"/"de", calls retranslateUi(); persist=false for a session-only switch (View menu) that must NOT change Prefs' own default
     void createStatusBarMessage(QString statusmessage, int timeout);    // sets up the statusbar with a custom message
+    void showAutodocReaderAndJumpTo(const QString &functionName = QString());   // shared implementation behind Build > AutoDoc Reader... and the editor context menu's "Jump to Explanation" (rev.151) - opens/raises the single AutoDoc Reader instance, then, if functionName isn't empty, jumps it straight to that function's entry (see AutodocReader::showFunction())
     // GUI methods...
     void writeSettings();                               // write app settings
     bool maybeSave(QsciScintilla *editor = nullptr);    // will be called if user quits while text has changed; defaults to the active tab
@@ -666,6 +670,12 @@ private:
     // the user closes it (see actionShowManual()).
     QDialog *p_manualWindow = nullptr;
 
+    // AutoDoc Reader (Build > AutoDoc Reader..., rev.150) - non-modal,
+    // single instance, same "only once" tracking as p_manualWindow above.
+    // nullptr while closed; reset back to nullptr via its destroyed()
+    // signal once the user closes it (see actionShowAutodocReader()).
+    AutodocReader *p_autodocReader = nullptr;
+
     // Functions Browser visibility - View menue, right after GUI Language
     QAction *showFunctionsBrowserAct = nullptr;
     QAction *hideFunctionsBrowserAct = nullptr;
@@ -707,6 +717,7 @@ private:
     QAction *pasteAct;              // paste clipboard
     QAction *searchAct;             // search for text
     QAction *contextSearchReplaceAct;  // "Search and Replace..." - context menu only, topmost entry (see showCustomContextMenue())
+    QAction *jumpToExplanationAct;   // "Jump to Explanation" (rev.151) - context menu only, opens/raises the AutoDoc Reader and jumps to the word under the click, see actionJumpToExplanation()
     // Actions for helpMenue
     QAction *manualAct;             // opens the non-modal HTML Manual viewer (F1)
     QAction *aboutAct;              // show about message
@@ -738,6 +749,7 @@ private:
     QAction *hideOutputAct;              // pops up compiler output pane
     QAction *toggleGccDefaultOptsAct;    // show or hide gcc/g++ default options dialog
     QAction *toggleVbccDefaultOptsAct;   // show or hide vc default options dialog
+    QAction *autodocReaderAct;           // "AutoDoc Reader..." - opens (or raises) the non-modal NDK AutoDocs browser, see actionShowAutodocReader()
     // Actions for toolsMenue
     QAction *emulatorAct;             // start default UAE
     QAction *emulator13Act;           // start UAE with Workbench 1.3

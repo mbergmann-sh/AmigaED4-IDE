@@ -11,6 +11,7 @@
 #include <QComboBox>
 #include <QSettings>
 #include <QCoreApplication>
+#include <QProcess>
 
 class MainWindow;
 
@@ -54,6 +55,9 @@ private slots:
     void on_btn_getEmulatorExefile_clicked();
     void on_btn_getOS13Configfile_clicked();
     void on_btn_getOS3Configfile_clicked();
+    void on_btn_editOS13Configfile_clicked();  // Prefs > Emulator: "Edit" next to OS 1.3 config - opens the file in the system's own text editor
+    void on_btn_editOS3Configfile_clicked();   // Prefs > Emulator: "Edit" next to OS 3.x config - opens the file in the system's own text editor
+    void on_btn_getAutodocsDir_clicked();      // Prefs > Emulator: "AutoDocs folder:" - selects the NDK AutoDocs folder used by Build > AutoDoc Reader...
     void on_btn_CancelSave_clicked();
 
     void on_checkBoxSimpleStatusbar_clicked();
@@ -64,6 +68,12 @@ private slots:
 
 private:
     Ui::PrefsDialog *ui;
+
+    // Shared by on_btn_editOS13Configfile_clicked()/on_btn_editOS3Configfile_clicked() -
+    // launches the platform's own text editor on filePath. See the .cpp
+    // for why a concrete editor is launched per platform instead of just
+    // going through QDesktopServices::openUrl()'s file-association lookup.
+    void openFileInSystemEditor(const QString &filePath);
 };
 
 #endif // PREFSDIALOG_H

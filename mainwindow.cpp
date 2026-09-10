@@ -77,6 +77,7 @@
 #include "prefsdialog.h"
 #include "aboutdialog.h"
 #include "autodocreader.h"
+#include "externalchangesdialog.h"
 
 // Processes to start:
 static QProcess myProcess;      // the process for using as spare for further extensions
@@ -453,6 +454,17 @@ MainWindow::MainWindow(QString cmdFileName)
         }
 
     }
+
+    // External-change detection (rev.152): whenever the whole application
+    // regains focus (the user switches back from another app), compare
+    // every open tab's on-disk file against the mtime AmigaED last saw for
+    // it - see checkForExternallyModifiedFiles(). Deliberately keyed off
+    // ApplicationState rather than a QFileSystemWatcher: the watcher is
+    // known to silently drop a watch on some platforms when a file is
+    // replaced via delete+recreate (exactly how some external tools save),
+    // and polling only on refocus is both cheaper and less naggy than a
+    // watcher's immediate per-write notifications.
+    connect(qApp, &QApplication::applicationStateChanged, this, &MainWindow::onApplicationStateChanged);
 }
 
 //
@@ -2724,6 +2736,14 @@ void MainWindow::setCurrentFile(const QString &fileName)
     // widget - see onTabChanged(), findEditorForFile().
     textEdit->setProperty("amigaed_filePath", curFile);
 
+    // setCurrentFile() is the single choke point every successful open
+    // AND every successful save funnels through (loadFile()/saveFile()),
+    // so it's also the right place to (re)stamp this tab's "last known
+    // on-disk mtime" baseline - see checkForExternallyModifiedFiles().
+    // Stamping it here means AmigaED's own writes never look like an
+    // external change to itself.
+    updateExternalMTimeBaseline(curFile);
+
     QString shownName = curFile.isEmpty() ? tr("untitled.c") : strippedName(curFile);
 
     updateWindowTitle();
@@ -2859,6 +2879,111 @@ void MainWindow::reloadEditorFromDiskIfOpen(const QString &fileName)
     in.setEncoding(QStringConverter::Latin1);
     editor->setText(in.readAll());
     editor->setModified(false);
+}
+
+//
+// Stamps 'fileName's open tab (if it's open, and has a path at all) with
+// the file's current on-disk modification time, as a second Qt dynamic
+// property ("amigaed_extMTime") alongside its existing "amigaed_filePath"
+// one. This is the baseline checkForExternallyModifiedFiles() later
+// compares against - called both from setCurrentFile() (so AmigaED's own
+// opens/saves establish a fresh baseline instead of looking like an
+// external change) and from checkForExternallyModifiedFiles() itself once
+// the user has been asked about a change (so it doesn't keep nagging
+// about the same already-acknowledged change on every future refocus).
+//
+void MainWindow::updateExternalMTimeBaseline(const QString &fileName)
+{
+    if (fileName.isEmpty())
+        return;
+
+    QsciScintilla *editor = findEditorForFile(fileName);
+    if (!editor)
+        return;
+
+    editor->setProperty("amigaed_extMTime", QFileInfo(fileName).lastModified());
+}
+
+//
+// QApplication::applicationStateChanged() fires on every transition, e.g.
+// active -> inactive when switching away, and inactive -> active when
+// switching back. Only the latter is interesting here: reacting on every
+// transition would also fire when the user merely switches between two of
+// AmigaED's own windows (e.g. the AutoDoc Reader), which never leaves
+// Qt::ApplicationActive.
+//
+void MainWindow::onApplicationStateChanged(Qt::ApplicationState state)
+{
+    if (state == Qt::ApplicationActive)
+        checkForExternallyModifiedFiles();
+}
+
+//
+// Walks every open tab and compares its file's current on-disk
+// modification time against the baseline stamped in
+// updateExternalMTimeBaseline() (set on every AmigaED-initiated open or
+// save - see setCurrentFile()). Anything that no longer matches was
+// therefore changed by something other than AmigaED itself since it was
+// last opened/saved/acknowledged - offer those, via ExternalChangesDialog,
+// to be reloaded from disk.
+//
+// Deliberately does nothing for a tab that's never had a baseline stamped
+// (property missing/invalid) rather than treating that as "changed" -
+// covers a brand new "untitled.c" tab, which has no file on disk at all.
+//
+void MainWindow::checkForExternallyModifiedFiles()
+{
+    if (!tabWidget)
+        return;
+
+    QStringList changedFiles;
+    QStringList dirtyFiles;
+
+    for (int i = 0; i < tabWidget->count(); ++i)
+    {
+        QsciScintilla *editor = qobject_cast<QsciScintilla *>(tabWidget->widget(i));
+        if (!editor)
+            continue;
+
+        QString path = editor->property("amigaed_filePath").toString();
+        if (path.isEmpty())
+            continue;   // untitled/unsaved buffer - nothing on disk to compare against
+
+        QVariant baselineProp = editor->property("amigaed_extMTime");
+        if (!baselineProp.isValid())
+            continue;   // never stamped (shouldn't normally happen - see setCurrentFile())
+        QDateTime baseline = baselineProp.toDateTime();
+
+        QFileInfo info(path);
+        if (!info.exists())
+            continue;   // deleted/moved out from under us - a different concern, not handled here
+
+        if (info.lastModified() == baseline)
+            continue;   // unchanged since we last saw it
+
+        changedFiles.append(path);
+        if (editor->isModified())
+            dirtyFiles.append(path);
+    }
+
+    if (changedFiles.isEmpty())
+        return;
+
+    ExternalChangesDialog dlg(changedFiles, dirtyFiles, this);
+    dlg.exec();   // result (accepted/rejected) doesn't matter - see below
+    QStringList toReload = dlg.filesToReload();
+
+    for (const QString &fileName : toReload)
+        reloadEditorFromDiskIfOpen(fileName);
+
+    // Whatever the user decided for each file - reload it or leave it -
+    // they've now been asked about this change, so re-stamp every listed
+    // file's baseline to what's on disk right now. Otherwise a file the
+    // user deliberately left un-reloaded (or the whole dialog dismissed
+    // outright) would keep being reported as "changed" on every future
+    // refocus, forever.
+    for (const QString &fileName : changedFiles)
+        updateExternalMTimeBaseline(fileName);
 }
 
 //

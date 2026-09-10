@@ -56,6 +56,7 @@
 #include <QPalette>
 #include <QFile>
 #include <QFileInfo>
+#include <QDateTime>
 #include <QTextStream>
 #include <QStringConverter>
 #include <QStatusBar>
@@ -339,6 +340,8 @@ public slots:
 private slots:
     void onTabChanged(int index);                    // active tab switched - update textEdit/curFile/window title
     void onTabCloseRequested(int index);              // a tab's [x] was clicked - check for unsaved changes, then close it
+    void onApplicationStateChanged(Qt::ApplicationState state);   // reacts to the whole app regaining focus (switching back from another app) - see checkForExternallyModifiedFiles()
+    void checkForExternallyModifiedFiles();           // compares every open tab's on-disk mtime against its stored baseline; offers to reload any that changed outside AmigaED
     void call_do_search_and_replace();
     void clearMarkers();                            // clear marked occourances in case of new search
     int startCompiler();                            // starts a process (f.e. Compiler)
@@ -572,6 +575,7 @@ private:
     QString compilerDisplayLabel(int compiler) const;   // short status-bar-friendly compiler name: "gcc"/"g++"/"vbcc"
     QString dedupTokens(const QString &args) const;                          // removes duplicate whitespace-separated tokens, keeping the first occurrence of each
     void reloadEditorFromDiskIfOpen(const QString &fileName);               // refreshes an already-open tab's content from disk, if that file is open (used after auto-regenerating Makefiles)
+    void updateExternalMTimeBaseline(const QString &fileName);              // stamps the given open tab's "last known on-disk mtime" baseline to what's on disk right now - see setCurrentFile()/checkForExternallyModifiedFiles()
     QString removeTokensAlsoIn(const QString &text, const QString &reference) const;  // drops any token from 'text' that also appears in 'reference'
     bool saveCurrentProject();                                             // persists currentProject to its .aep and clears the "unsaved changes" state
     void markProjectModified();                                            // flags currentProject as having unsaved changes (see p_projectModified)

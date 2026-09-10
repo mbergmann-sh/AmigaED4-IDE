@@ -34,8 +34,8 @@ IMG_NATURAL_SIZE = {
     "project": (1160, 800),
     "prefs": (1160, 820),
     "ctxmenu": (1100, 810),
-    "cover": (1000, 900),
-    "toolbar": (1320, 96),
+    "cover": (1000, 992),
+    "toolbar": (1378, 96),
     "qs1": (1160, 560),
     "qs2": (1160, 620),
     "qs3": (1160, 560),
@@ -92,7 +92,7 @@ ol.steps li { margin-bottom:10px; font-size:14px; }
 .cover { text-align:center; padding: 10px 0 30px 0; border-bottom:2px solid #eee; margin-bottom:10px;}
 .cover h1 { border:none; margin:6px 0 2px 0; font-size:26px; }
 .cover .tagline { color:#D94F1A; font-size:14px; margin-bottom:14px; }
-.cover img { max-width:260px; }
+.cover img { max-width:640px; }
 .rl-lit dt { color:#D94F1A; font-weight:bold; font-size:13.5px; margin-top:12px; }
 .rl-lit dd { margin:2px 0 0 0; font-size:13px; }
 """
@@ -107,13 +107,14 @@ def build(lang):
     def T(en, de_):
         return de_ if de else en
 
+    # The cover asset (html_assets/cover-000.png) is a fully designed title
+    # page - it already bakes in the "AmigaED 4.0 User Manual" title, the
+    # tagline, a screenshot montage, and the author credit - so it's shown
+    # standalone here rather than layered under a second, redundant
+    # <h1>/tagline/description like the old small-logo cover used to be.
     cover = ("""
     <div class="cover">
-      """ + img_tag("cover", "AmigaED", 220) + """
-      <h1>AmigaED 4.0 Quick Manual</h1>
-      <div class="tagline">""" + T("Quick Reference &amp; Getting Started Guide", "Kurzanleitung &amp; Schnellreferenz") + """</div>
-      <p style="font-size:12.5px;color:#666;">""" + T("AmigaED is a cross-platform C/C++ and m68k Assembler IDE for classic Amiga development.",
-          "AmigaED ist eine plattformübergreifende C/C++- und m68k-Assembler-IDE für die klassische Amiga-Entwicklung.") + """</p>
+      """ + img_tag("cover", "AmigaED 4.0 User Manual", 640) + """
     </div>
     """)
 
@@ -125,6 +126,7 @@ def build(lang):
         ("mode2", T("Mode 2: Project Driven Compilation", "Modus 2: Projektgesteuerte Kompilierung")),
         ("quickstart", T("Quick Start: From Template to Clean Build", "Schnellstart: Von der Vorlage zum sauberen Build")),
         ("prefs", T("The Preferences Editor", "Der Einstellungs-Editor (Prefs)")),
+        ("autodocreader", T("The AutoDoc Reader", "Der AutoDoc Reader")),
         ("ctxmenu", T("The Editor&rsquo;s Context Menu", "Das Kontextmenü des Editors")),
         ("outputpane", T("The Compiler Output Pane", "Das Compiler-Output-Fenster")),
         ("switches", T("Suggested Compiler &amp; Linker Switches", "Empfohlene Compiler- &amp; Linker-Schalter")),
@@ -197,10 +199,11 @@ def build(lang):
       <tr><td>14</td><td>Compile</td><td>Build &rarr; Compile...</td><td>""" + T("Ad-hoc single-file compile (Mode 1) - see below.", "Ad-hoc-Einzeldatei-Kompilierung (Modus 1) \u2013 siehe unten.") + """</td></tr>
       <tr><td>15</td><td>Build Project</td><td>Build &rarr; Build Project</td><td>""" + T("Project build (Mode 2) - see below.", "Projekt-Build (Modus 2) \u2013 siehe unten.") + """</td></tr>
       <tr><td>16</td><td>Clean Project</td><td>Build &rarr; Clean Project</td><td>""" + T("Removes the current project's build artifacts (object files, executable, icon).", "Entfernt die Build-Artefakte des aktuellen Projekts (Objektdateien, Executable, Icon).") + """</td></tr>
-      <tr><td>17</td><td>""" + T("Open Shell", "Open Shell") + """</td><td>Build &rarr; Open Shell</td><td>""" + T("Opens the system's default command line, starting in the current project's folder (or the configured \u201cProjects root\u201d if none is loaded).", "Öffnet die Standard-Kommandozeile des Systems, gestartet im Ordner des aktuellen Projekts (oder im konfigurierten \u201eProjects root\u201c, falls kein Projekt geladen ist).") + """</td></tr>
-      <tr><td>18</td><td>""" + T("Start Emulator", "Start Emulator") + """</td><td>Tools &rarr; Emulator &rarr; Start default Workbench in UAE...</td><td>""" + T("Launches your configured UAE emulator.", "Startet den konfigurierten UAE-Emulator.") + """</td></tr>
-      <tr><td>19</td><td>""" + T("Stop Emulator", "Stop Emulator") + """</td><td>Tools &rarr; Stop running Emulation...</td><td>""" + T("Stops the running emulator instance.", "Beendet die laufende Emulator-Instanz.") + """</td></tr>
-      <tr><td>20</td><td>Exit</td><td>File &rarr; Exit</td><td>""" + T("Closes AmigaED.", "Beendet AmigaED.") + """</td></tr>
+      <tr><td>17</td><td>""" + T("AutoDoc Reader", "AutoDoc Reader") + """</td><td>Build &rarr; AutoDoc Reader...</td><td>""" + T("Opens (or raises) the non-modal NDK AutoDocs browser - see “The AutoDoc Reader” below.", "Öffnet (oder holt nach vorne) den nicht-modalen NDK-AutoDocs-Betrachter – siehe „Der AutoDoc Reader“ weiter unten.") + """</td></tr>
+      <tr><td>18</td><td>""" + T("Open Shell", "Open Shell") + """</td><td>Build &rarr; Open Shell</td><td>""" + T("Opens the system's default command line, starting in the current project's folder (or the configured \u201cProjects root\u201d if none is loaded).", "Öffnet die Standard-Kommandozeile des Systems, gestartet im Ordner des aktuellen Projekts (oder im konfigurierten \u201eProjects root\u201c, falls kein Projekt geladen ist).") + """</td></tr>
+      <tr><td>19</td><td>""" + T("Start Emulator", "Start Emulator") + """</td><td>Tools &rarr; Emulator &rarr; Start default Workbench in UAE...</td><td>""" + T("Launches your configured UAE emulator.", "Startet den konfigurierten UAE-Emulator.") + """</td></tr>
+      <tr><td>20</td><td>""" + T("Stop Emulator", "Stop Emulator") + """</td><td>Tools &rarr; Stop running Emulation...</td><td>""" + T("Stops the running emulator instance.", "Beendet die laufende Emulator-Instanz.") + """</td></tr>
+      <tr><td>21</td><td>Exit</td><td>File &rarr; Exit</td><td>""" + T("Closes AmigaED.", "Beendet AmigaED.") + """</td></tr>
     </table>
     <div class="note"><b>""" + T("Warning", "Warnhinweis") + """:</b> """ + T(
         "Open Shell gives you an unrestricted command line in the project's own folder - including the Makefiles and every file a build reads or produces. Editing, renaming, or deleting files there by hand, outside of AmigaED's own actions, can leave the project in a state that no longer matches what AmigaED expects, and may cause the next Build Project or Clean Project to fail or behave unexpectedly. Treat the shell as a power-user escape hatch, not part of the normal edit/build cycle.",
@@ -363,6 +366,8 @@ def build(lang):
              "Default Target OS legt fest, welcher der beiden obigen Optionssätze verwendet wird, wenn du nicht ausdrücklich einen auswählst.") + """</li>
       <li>""" + T("The GCC tab additionally has \u201cGNU as:\u201d and \u201cGNU ld:\u201d fields (each with its own path field and file selector, right next to the existing gcc/g++ ones) - the assembler and linker used for a GNU-as-dialect Assembler Project, assembling and linking it directly rather than through gcc.",
              "Der GCC-Reiter besitzt zusätzlich die Felder \u201cGNU as:\u201c und \u201cGNU ld:\u201c (jeweils mit eigenem Pfadfeld und Dateiauswahl, direkt neben den bestehenden gcc-/g++-Feldern) - Assembler und Linker für ein Assembler-Projekt im GNU-as-Dialekt, die es direkt assemblieren und linken, statt über gcc.") + """</li>
+      <li>""" + T("The GCC and VBCC tabs each also have an \u201cAssembler Include Path:\u201d field - when set, it is appended as <span class=\"code\">-I&lt;path&gt;</span> to that toolchain's assemble rule in the generated Makefile (vasm on Makefile.vbcc, GNU as on Makefile.gcc), so a hand-written .asm/.s source can <span class=\"code\">include</span>/<span class=\"code\">.include</span> files from there - e.g. the NDK's own separate assembler-include tree - without a hardcoded absolute path in the source itself. Left empty, no extra flag is added at all.",
+             "Die Reiter GCC und VBCC besitzen je ein Feld \u201cAssembler Include Path:\u201c - ist es gesetzt, wird es als <span class=\"code\">-I&lt;Pfad&gt;</span> an die Assemblier-Regel dieser Toolchain in der erzeugten Makefile angehängt (vasm in Makefile.vbcc, GNU as in Makefile.gcc), sodass eine handgeschriebene .asm-/.s-Quelle mit <span class=\"code\">include</span>/<span class=\"code\">.include</span> Dateien von dort einbinden kann - z. B. aus dem eigenen, separaten Assembler-Include-Baum des NDKs - ohne einen fest einprogrammierten absoluten Pfad in der Quelle selbst. Bleibt das Feld leer, wird kein zusätzlicher Schalter ergänzt.") + """</li>
     </ol>
     <div class="note"><b>""" + T("Automatic floating-point handling", "Automatische Gleitkommazahlen-Behandlung") + """:</b> """ + T(
         "if AmigaED detects float or double - or the Amiga-typical uppercase FLOAT/DOUBLE typedefs, both are recognized - anywhere in your project's own C/C++ sources, it automatically adds the right math library to the generated Makefiles for you: -lm for gcc/g++, -lmieee for vbcc, and MATH=IEEE for SAS/C (only if no MATH= mode is already set). You do not need to add these yourself.",
@@ -379,16 +384,60 @@ def build(lang):
     <div class="note"><b>""" + T("Known issue: FS-UAE under WSL2/WSLg", "Bekanntes Problem: FS-UAE unter WSL2/WSLg") + """:</b> """ + T(
         "if you run the Linux build of FS-UAE inside WSL2 (Windows Subsystem for Linux), its mouse capture is unreliable - both the host and the emulated Amiga cursor can remain visible at once, drifting apart as you move the mouse, no matter how FS-UAE's own configuration options for mouse grabbing are set. This traces back to a known WSLg limitation with relative mouse input (see microsoft/wslg issue #240), not a bug in FS-UAE, AmigaED, or your configuration - confirmed by the same FS-UAE configuration working correctly on a real Linux machine. If you need FS-UAE specifically inside WSL2, running an X server on the Windows side (e.g. VcXsrv) instead of relying on WSLg's own GUI integration is the more promising workaround; otherwise, running FS-UAE on a native Linux machine (or natively on Windows, using the Windows build of FS-UAE) avoids the issue entirely.",
         "wird die Linux-Version von FS-UAE innerhalb von WSL2 (Windows Subsystem for Linux) betrieben, ist das Einfangen der Maus unzuverlässig \u2013 sowohl der Host- als auch der emulierte Amiga-Mauszeiger können gleichzeitig sichtbar bleiben und bei Mausbewegung auseinanderdriften, unabhängig davon, wie FS-UAEs eigene Konfigurationsoptionen für das Maus-Greifen gesetzt sind. Das geht auf eine bekannte WSLg-Einschränkung bei relativer Mauseingabe zurück (siehe microsoft/wslg Issue #240), nicht auf einen Fehler in FS-UAE, AmigaED oder der eigenen Konfiguration \u2013 bestätigt dadurch, dass dieselbe FS-UAE-Konfiguration auf einer echten Linux-Maschine einwandfrei funktioniert. Wird FS-UAE unbedingt innerhalb von WSL2 benötigt, ist das Betreiben eines eigenen X-Servers auf der Windows-Seite (z. B. VcXsrv) statt WSLgs eigener GUI-Integration der vielversprechendere Workaround; andernfalls vermeidet der Betrieb von FS-UAE auf einer echten Linux-Maschine (oder nativ unter Windows, mit der Windows-Version von FS-UAE) das Problem vollständig.") + """</div>
+    <h2>""" + T("Editing UAE config files directly", "UAE-Konfigurationsdateien direkt bearbeiten") + """</h2>
+    <p>""" + T("The “OS 1.3 Config” and “OS 3.x Config” fields on the Emulator tab each have their own Edit button next to the usual file picker, opening that UAE config file directly in the platform's native text editor (Notepad on Windows, TextEdit on macOS, and the first available of gedit/kate/mousepad/leafpad, or a generic xdg-open fallback, on Linux) - handy for hand-tuning a setting UAE's own GUI does not expose.",
+          "Die Felder „OS 1.3 Config“ und „OS 3.x Config“ im Emulator-Reiter besitzen je einen eigenen Edit-Button neben der üblichen Dateiauswahl, der diese UAE-Konfigurationsdatei direkt im systemeigenen Texteditor öffnet (Notepad unter Windows, TextEdit unter macOS, sowie unter Linux der erste verfügbare von gedit/kate/mousepad/leafpad, mit xdg-open als generischem Fallback) - praktisch, um eine Einstellung von Hand anzupassen, die UAEs eigene Oberfläche nicht bietet.") + """</p>
+    <h2>""" + T("NDK AutoDocs folder", "NDK-AutoDocs-Ordner") + """</h2>
+    <p>""" + T("The Emulator tab also has an “AutoDocs folder:” field (directory selector) pointing at your Amiga NDK's own “Autodocs” drawer - set this once to use Build &rarr; AutoDoc Reader..., described in its own chapter right after this one.",
+          "Der Emulator-Reiter besitzt außerdem ein Feld „AutoDocs folder:“ (Ordnerauswahl), das auf den „Autodocs“-Ordner deines Amiga-NDKs zeigt - einmal gesetzt, aktiviert es Build &rarr; AutoDoc Reader..., beschrieben im eigenen, direkt folgenden Kapitel.") + """</p>
     """)
+
+    autodocreader = ("""
+    <a name="autodocreader"></a>
+    <h1 id="autodocreader">""" + T("The AutoDoc Reader", "Der AutoDoc Reader") + """</h1>
+    <p>""" + T("Build &rarr; AutoDoc Reader... (also in the toolbar, right before Open Shell) opens a non-modal browser for the AmigaOS NDK AutoDocs - the plain-text *.doc files under the NDK's own \u201cAutodocs\u201d drawer (exec.doc, dos.doc, graphics.doc, and so on, one file per library), each holding every documented function of that library back to back. It lets you browse and full-text-filter every documented NDK function without ever leaving AmigaED, inspired by (though not a pixel clone of) the classic Workbench tool MinAD.",
+          "Build &rarr; AutoDoc Reader... (auch in der Toolbar, direkt vor Open Shell) öffnet einen nicht-modalen Betrachter für die AmigaOS-NDK-AutoDocs - die reinen Textdateien *.doc im \u201eAutodocs\u201c-Ordner des NDKs (exec.doc, dos.doc, graphics.doc, und so weiter, eine Datei je Bibliothek, jede mit allen dokumentierten Funktionen dieser Bibliothek hintereinander). Damit lassen sich alle dokumentierten NDK-Funktionen durchsuchen und per Volltextfilter durchstöbern, ohne AmigaED je zu verlassen - inspiriert vom klassischen Workbench-Werkzeug MinAD, aber kein Pixel-Klon davon.") + """</p>
+    <div class="note"><b>""" + T("Prerequisite", "Voraussetzung") + """:</b> """ + T(
+        "Set Prefs &rarr; Emulator &rarr; \u201cAutoDocs folder:\u201d to your Amiga NDK's \u201cAutodocs\u201d drawer first (see \u201cNDK AutoDocs folder\u201d in the previous chapter). If that field is empty or no longer points at a real folder, AutoDoc Reader... shows a warning naming exactly where to set it, instead of opening an empty window.",
+        "Zuerst Prefs &rarr; Emulator &rarr; \u201cAutoDocs folder:\u201c auf den \u201eAutodocs\u201c-Ordner deines Amiga-NDKs setzen (siehe \u201eNDK AutoDocs folder\u201c im vorigen Kapitel). Ist dieses Feld leer oder zeigt nicht mehr auf einen echten Ordner, zeigt AutoDoc Reader... eine Warnung mit dem genauen Fundort dieser Einstellung, statt ein leeres Fenster zu öffnen.") + """</div>
+    <ol class="steps">
+      <li>""" + T("Every *.doc file found (recursively) under the configured AutoDocs folder is parsed into individual function entries and grouped into a tree, one top-level group per source file - e.g. every function documented in exec.doc groups under \u201cexec\u201d.",
+             "Jede *.doc-Datei, die (rekursiv) im konfigurierten AutoDocs-Ordner gefunden wird, wird in einzelne Funktionseinträge zerlegt und in einem Baum gruppiert - eine oberste Gruppe je Quelldatei, z. B. gruppieren sich alle in exec.doc dokumentierten Funktionen unter \u201cexec\u201c.") + """</li>
+      <li>""" + T("Type into the Filter field to narrow the tree to matching function names as you type; Prev/Next step through matches, and Enter in the filter field jumps to the first/next match. The window title keeps a running \u201cFilter showing X/Y Funcs in A/B Files\u201d count while a filter is active.",
+             "Tippen im Filterfeld schränkt den Baum sofort auf passende Funktionsnamen ein; Prev/Next springt durch die Treffer, Enter im Filterfeld springt zum ersten/nächsten Treffer. Solange ein Filter aktiv ist, zeigt der Fenstertitel fortlaufend \u201cFilter showing X/Y Funcs in A/B Files\u201c an.") + """</li>
+      <li>""" + T("Open All / Close All expand or collapse the whole tree in one click.",
+             "Open All / Close All klappen den gesamten Baum mit einem Klick auf bzw. zu.") + """</li>
+      <li>""" + T("Selecting a function shows its complete, unmodified AutoDoc text on the right, in a guaranteed-monospace font - needed for the SYNOPSIS section's column-aligned register names (e.g. D0, A0) to line up correctly, exactly as in the original documentation.",
+             "Die Auswahl einer Funktion zeigt rechts ihren vollständigen, unveränderten AutoDoc-Text in einer garantiert dicktengleichen Schrift - nötig, damit die spaltenweise ausgerichteten Registernamen (z. B. D0, A0) im SYNOPSIS-Abschnitt exakt wie im Original untereinanderstehen.") + """</li>
+    </ol>
+    <div class="note"><b>""" + T("Note", "Hinweis") + """:</b> """ + T(
+        "AutoDoc Reader can only ever be open once, exactly like Help &rarr; Manual - triggering Build &rarr; AutoDoc Reader... again while it is already open simply raises the existing window instead of opening a second one (un-minimizing it too, if it was minimized). It is non-modal throughout, so the rest of AmigaED - editing, building, everything - stays fully usable while it is open, and it remembers its own window size and position the next time you open it. It can be resized from any edge or corner, same as any other window; the small grip in its bottom-right corner is just a visual reminder of that.",
+        "AutoDoc Reader lässt sich - genau wie Help &rarr; Manual - immer nur einmal öffnen: ein erneuter Aufruf von Build &rarr; AutoDoc Reader..., während das Fenster bereits offen ist, holt es lediglich nach vorne (und hebt eine Minimierung dabei auf), statt ein zweites zu öffnen. Es ist durchgehend nicht-modal - der Rest von AmigaED bleibt währenddessen voll nutzbar, egal ob beim Bearbeiten, Bauen oder sonst etwas - und merkt sich beim nächsten Öffnen seine zuletzt genutzte Fenstergröße und -position. Es lässt sich, wie jedes andere Fenster, an jeder Kante oder Ecke in der Größe verändern; der kleine Griff unten rechts ist lediglich ein optischer Hinweis darauf.") + """</div>
+    <div class="note"><b>""" + T("Tip", "Tipp") + """:</b> """ + T(
+        "Instead of opening AutoDoc Reader and typing a function name into the filter by hand, right-click that name directly in the editor and choose <b>Jump to Explanation</b> - see &ldquo;The Editor&rsquo;s Context Menu&rdquo; below. It opens (or raises) this same window and jumps straight to that function's entry.",
+        "Statt den AutoDoc Reader zu öffnen und einen Funktionsnamen von Hand ins Filterfeld einzutippen, kann dieser Name auch direkt im Editor per Rechtsklick ausgewählt werden - über <b>Jump to Explanation</b>, siehe &bdquo;Das Kontextmenü des Editors&ldquo; weiter unten. Das öffnet (oder holt nach vorne) genau dieses Fenster und springt direkt zum Eintrag dieser Funktion.") + """</div>
+    """)
+
 
     ctxmenu = ("""
     <a name="ctxmenu"></a>
     <h1 id="ctxmenu">""" + T("The Editor&rsquo;s Context Menu", "Das Kontextmenü des Editors") + """</h1>
-    <p>""" + T("Right-click anywhere inside the code editor to open a context menu of quick code-insertion shortcuts. It mirrors the main Inserts menu (menu bar) exactly: anything listed here is also available there, under the same name.",
-          "Ein Rechtsklick irgendwo im Code-Editor öffnet ein Kontextmenü mit schnellen Code-Einfüge-Hilfen. Es spiegelt exakt das Hauptmenü Inserts (Menüleiste) wider \u2013 alles, was hier aufgeführt ist, findest du dort unter demselben Namen wieder.") + """</p>
+    <p>""" + T("Right-click anywhere inside the code editor to open a context menu. Its lower section mirrors the main Inserts menu (menu bar) exactly: anything listed there is also available here, under the same name. Above that, three quick-access entries sit at the very top of the menu, not part of Inserts:",
+          "Ein Rechtsklick irgendwo im Code-Editor öffnet ein Kontextmenü. Sein unterer Teil spiegelt exakt das Hauptmenü Inserts (Menüleiste) wider \u2013 alles, was dort aufgeführt ist, findest du auch hier unter demselben Namen. Darüber, ganz oben im Menü, stehen drei schnell erreichbare Einträge, die nicht Teil von Inserts sind:") + """</p>
+    <ul>
+      <li><b>""" + T("Comment/Uncomment Block", "Comment/Uncomment Block") + """</b> \u2013 """ + T(
+          "toggles line-comment markers on the current selection (or the current line, with nothing selected), using whichever comment style the active syntax uses.",
+          "schaltet Zeilenkommentar-Markierungen für die aktuelle Auswahl um (oder die aktuelle Zeile, falls nichts ausgewählt ist), im Kommentarstil der gerade aktiven Syntax.") + """</li>
+      <li><b>""" + T("Search and Replace...", "Search and Replace...") + """</b> \u2013 """ + T(
+          "opens the Find/Replace panel for the current tab, pre-filled with whatever word was under the click (see row 11 of the Toolbar Reference table above).",
+          "öffnet das Suchen/Ersetzen-Panel für den aktuellen Tab, vorausgefüllt mit dem Wort unter dem Klick (siehe Zeile 11 der Toolbar-Referenz-Tabelle oben).") + """</li>
+      <li><b>""" + T("Jump to Explanation", "Jump to Explanation") + """</b> \u2013 """ + T(
+          "opens (or, if already open, raises and reuses) the AutoDoc Reader and jumps it straight to the entry for the NDK/MUI function under the click - e.g. right-clicking <span class=\"code\">OpenWindow</span> and choosing this jumps straight to <span class=\"code\">intuition.library/OpenWindow</span>, instead of having to open the AutoDoc Reader yourself and type the name into its filter by hand. Needs Prefs &rarr; Emulator &rarr; \u201cAutoDocs folder:\u201d set first (see \u201cThe AutoDoc Reader\u201d above); if the word under the click isn't a documented function, or nothing was under it at all, a status-bar message says so instead of opening an empty or unrelated entry.",
+          "öffnet (oder holt nach vorne, falls bereits offen) den AutoDoc Reader und springt darin direkt zum Eintrag der NDK-/MUI-Funktion unter dem Klick \u2013 ein Rechtsklick auf <span class=\"code\">OpenWindow</span> mit dieser Auswahl springt direkt zu <span class=\"code\">intuition.library/OpenWindow</span>, statt den AutoDoc Reader selbst zu öffnen und den Namen von Hand ins Filterfeld einzutippen. Setzt vorher Prefs &rarr; Emulator &rarr; \u201eAutoDocs folder:\u201c voraus (siehe \u201eDer AutoDoc Reader\u201c weiter oben); ist das Wort unter dem Klick keine dokumentierte Funktion, oder stand gar kein Wort darunter, meldet das eine Statusleisten-Nachricht, statt einen leeren oder falschen Eintrag zu öffnen.") + """</li>
+    </ul>
     """ + img_tag("ctxmenu", "Context menu screenshot", 480) + """
-    <p class="caption">""" + T("The editor context menu, opened over a source file: numbers match the entries explained below.",
-                           "Das Kontextmenü des Editors, geöffnet über einer Quelldatei: Die Nummern entsprechen den unten erklärten Einträgen.") + """</p>
+    <p class="caption">""" + T("The editor context menu's Inserts-mirrored section, opened over a source file: numbers match the entries explained below. The three quick-access entries above are shown further up in the real menu, ahead of this section.",
+                           "Der Inserts-gespiegelte Teil des Editor-Kontextmen\u00fcs, ge\u00f6ffnet \u00fcber einer Quelldatei: Die Nummern entsprechen den unten erkl\u00e4rten Eintr\u00e4gen. Die drei oben beschriebenen Schnellzugriffs-Eintr\u00e4ge stehen im echten Men\u00fc weiter oben, vor diesem Abschnitt.") + """</p>
     <ol class="steps">
       <li><b>What to insert?</b> &ndash; """ + T("a disabled heading line, not a clickable entry. It is only there to label the menu.",
              "eine deaktivierte Kopfzeile, kein anklickbarer Eintrag. Sie dient nur als Beschriftung des Menüs.") + """</li>
@@ -441,6 +490,9 @@ def build(lang):
     <div class="note"><b>""" + T("Note", "Hinweis") + """:</b> """ + T(
         "An error reported inside a generated intermediate file (e.g. VBCC reporting an assembler-level problem in the .asm file it produced from your .c source) still jumps correctly - to that intermediate file, exactly as the compiler itself reported it.",
         "Ein Fehler, der innerhalb einer erzeugten Zwischendatei gemeldet wird (z. B. wenn VBCC ein Problem auf Assembler-Ebene in der aus deiner .c-Datei erzeugten .asm-Datei meldet), springt weiterhin korrekt dorthin \u2013 zu genau der Zwischendatei, wie vom Compiler selbst gemeldet.") + """</div>
+    <h2>""" + T("Context menu", "Kontextmenü") + """</h2>
+    <p>""" + T("Right-click inside the pane for Qt's usual Copy/Select All entries, plus two AmigaED-specific ones: <b>Mark all and copy</b> selects the entire pane and copies it to the clipboard in one click, instead of the usual Select All + Copy two-step; <b>Empty Console</b> clears the pane outright - unlike a normal compile run, which only ever appends new output on top of whatever is already there.",
+          "Ein Rechtsklick im Fenster öffnet neben Qts üblichen Copy-/Select-All-Einträgen zwei AmigaED-eigene: <b>Mark all and copy</b> markiert das gesamte Fenster und kopiert es in einem Klick in die Zwischenablage, statt des üblichen Zwei-Schritts Select All + Copy; <b>Empty Console</b> leert das Fenster vollständig - anders als ein normaler Kompilierlauf, der neue Ausgabe immer nur an das bereits Vorhandene anhängt.") + """</p>
     """)
 
     switches = ("""
@@ -509,8 +561,8 @@ def build(lang):
           "Preise, Links und Verfügbarkeit ändern sich mit der Zeit \u2013 sollte oben etwas nicht mehr erreichbar sein, findet eine Websuche nach Titel und Autor meist am schnellsten die aktuelle Quelle.") + """</div>
     """)
 
-    body = cover + toc_html + introduction + two_ways + toolbar + mode1 + mode2 + quickstart + prefs + ctxmenu + outputpane + switches + recommendations
-    title = "AmigaED 4.0 Quick Manual" if not de else "AmigaED 4.0 Kurzanleitung"
+    body = cover + toc_html + introduction + two_ways + toolbar + mode1 + mode2 + quickstart + prefs + autodocreader + ctxmenu + outputpane + switches + recommendations
+    title = "AmigaED 4.0 User Manual" if not de else "AmigaED 4.0 Benutzerhandbuch"
     return wrap(title, body)
 
 

@@ -59,7 +59,7 @@ SourceDir=install_src
 ; previously compiled Setup.exe sitting inside it right along with the
 ; rest.
 OutputDir=..\Output
-OutputBaseFilename=AmigaED4_rev149_Setup
+OutputBaseFilename=AmigaED4_rev151_Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -132,11 +132,16 @@ german.UninstallFailed=Die Deinstallation konnte nicht gestartet werden.
 ; declining it stops the installer in its tracks no matter what else
 ; might otherwise happen first.
 english.DisclaimerCaption=License Disclaimer
-english.DisclaimerText=AmigaED 4.0 is distributed under the GNU Lesser General Public License, with one additional restriction: fascists, racists, AfD voters and members, as well as MAGA supporters and Putin sympathizers, are not permitted to use this program!
+; %n inserts a real line break here (Inno Setup's own message-file escape
+; for [CustomMessages] entries, not a Pascal string) - keeps the fixed-
+; width disclaimer dialog from wrapping this long text awkwardly; %n%n
+; is a full blank line between paragraphs. See ShowDisclaimer() below for
+; the dialog/label sizing that was enlarged to fit this longer text.
+english.DisclaimerText=AmigaED 4.0 is distributed under the GNU Lesser General Public License, with one additional restriction:%nfascists, racists, AfD voters and members, as well as%nMAGA supporters and Putin sympathizers, are not permitted to use this program!%n%nA free world needs free software - and free people.%n%nFor a tolerant, peaceful and diverse world!%n%nMichael Bergmann%n%nAuthor of AmigaED 4.0
 english.BtnAccept=&Accept
 english.BtnDecline=&Decline
 german.DisclaimerCaption=Lizenz-Hinweis
-german.DisclaimerText=AmigaED 4.0 steht unter der GNU Lesser License mit einer Einschränkung: Faschisten, Rassisten, AfD-Wähler und -mitglieder, sowie MAGA-Befürworter und Putin-Fans dürfen dieses Programm nicht verwenden!
+german.DisclaimerText=AmigaED 4.0 steht unter der GNU Lesser License mit einer Einschränkung:%nFaschisten, Rassisten, AfD-Wähler und -mitglieder, sowie%nMAGA-Befürworter und Putin-Fans dürfen dieses Programm nicht verwenden!%n%nEine freie Welt braucht freie Software - und freie Menschen.%n%nFür eine tolerante, friedliche und vielfältige Welt!%n%nMichael Bergmann%n%nAutor von AmigaED 4.0
 german.BtnAccept=&Akzeptieren
 german.BtnDecline=&Ablehnen
 
@@ -313,16 +318,22 @@ var
   AcceptBtn, DeclineBtn: TNewButton;
   BtnWidth: Integer;
   TextLeft: Integer;
+  ContentBottom: Integer;
 #ifdef HasDisclaimerImage
   DisclaimerImage: TBitmapImage;
 #endif
 begin
   DisclaimerAccepted := False; // closing the form any other way still counts as Decline
 
-  // Wide/tall enough for the image column (if any) plus the disclaimer
-  // text wrapping over a handful of lines, plus two buttons underneath.
-  // Fixed size (False, False), same as AskInstallChoice's dialog above.
-  DisclaimerForm := CreateCustomForm(ScaleX(560), ScaleY(280), False, False);
+  // Width is the one fixed number here (kept deliberately narrow - see
+  // TextLeft/InfoLabel below); height is never hand-guessed: InfoLabel
+  // below computes its own exact wrapped height for whatever text/font/
+  // DPI this particular system renders, and the form is resized to fit
+  // that plus the button row right after - so the dialog is always
+  // exactly as tall as the current DisclaimerText needs, no magic
+  // number to keep re-tuning by hand every time the text changes.
+  // Placeholder height here only - overwritten via ClientHeight below.
+  DisclaimerForm := CreateCustomForm(ScaleX(460), ScaleY(300), False, False);
   try
     DisclaimerForm.Caption := ExpandConstant('{cm:DisclaimerCaption}');
     DisclaimerForm.Position := poScreenCenter;
@@ -333,14 +344,14 @@ begin
     // WizardImageFile above - extracted into {tmp} here purely so this
     // dialog's own TBitmapImage can load it (TBitmapImage.PngImage
     // loads PNG directly; no BMP conversion needed). Stretched into a
-    // fixed-size column on the left, same idea as the Welcome page's
-    // own large wizard image.
+    // fixed-width column on the left (Height is set below, once
+    // InfoLabel's own real height is known), same idea as the Welcome
+    // page's own large wizard image.
     DisclaimerImage := TBitmapImage.Create(DisclaimerForm);
     DisclaimerImage.Parent := DisclaimerForm;
     DisclaimerImage.Left := ScaleX(16);
     DisclaimerImage.Top := ScaleY(16);
     DisclaimerImage.Width := ScaleX(110);
-    DisclaimerImage.Height := ScaleY(200);
     DisclaimerImage.Stretch := True;
     DisclaimerImage.Center := True;
     ExtractTemporaryFile('wizard_image.png');
@@ -354,34 +365,59 @@ begin
     InfoLabel.Parent := DisclaimerForm;
     InfoLabel.Left := TextLeft;
     InfoLabel.Top := ScaleY(16);
-    InfoLabel.Width := DisclaimerForm.ClientWidth - TextLeft - ScaleX(16);
-    InfoLabel.Height := ScaleY(200);
     InfoLabel.AutoSize := False;
     InfoLabel.WordWrap := True;
+    // Width fixed first, Caption set next, AutoSize turned on last: with
+    // WordWrap already True and a Width already in place, AutoSize now
+    // only grows/shrinks Height to exactly fit the wrapped text - it
+    // does NOT touch Width - the standard Delphi/Inno "fixed width,
+    // auto height" label technique (TNewStaticText descends from
+    // TCustomLabel, same as a plain TLabel here).
+    InfoLabel.Width := DisclaimerForm.ClientWidth - TextLeft - ScaleX(16);
     InfoLabel.Caption := ExpandConstant('{cm:DisclaimerText}');
+    InfoLabel.AutoSize := True;
 
-    BtnWidth := (DisclaimerForm.ClientWidth - ScaleX(32) - ScaleX(10)) div 2;
+    ContentBottom := InfoLabel.Top + InfoLabel.Height;
 
-    AcceptBtn := TNewButton.Create(DisclaimerForm);
-    AcceptBtn.Parent := DisclaimerForm;
-    AcceptBtn.Left := ScaleX(16);
-    AcceptBtn.Top := ScaleY(232);
-    AcceptBtn.Width := BtnWidth;
-    AcceptBtn.Height := ScaleY(23);
-    AcceptBtn.Caption := ExpandConstant('{cm:BtnAccept}');
-    AcceptBtn.Tag := 1;
-    AcceptBtn.OnClick := @DisclaimerButtonClick;
+#ifdef HasDisclaimerImage
+    // Match the image column to whichever this text needs - keeps the
+    // book graphic from looking squashed (short text) or stunted (long
+    // text) relative to it.
+    DisclaimerImage.Height := InfoLabel.Height;
+    if DisclaimerImage.Top + DisclaimerImage.Height > ContentBottom then
+      ContentBottom := DisclaimerImage.Top + DisclaimerImage.Height;
+#endif
+
+    // Resize the form to exactly fit what's above plus one button row -
+    // this is the only place the dialog's final height is decided.
+    DisclaimerForm.ClientHeight := ContentBottom + ScaleY(16) + ScaleY(23) + ScaleY(20);
+
+    // Fixed, compact width (not "half the dialog each") - was stretching
+    // both buttons across almost the entire dialog once the dialog got
+    // wide enough for the disclaimer text. Right-aligned as a pair,
+    // Windows-dialog-style, instead of starting flush at the left edge.
+    BtnWidth := ScaleX(130);
 
     DeclineBtn := TNewButton.Create(DisclaimerForm);
     DeclineBtn.Parent := DisclaimerForm;
-    DeclineBtn.Left := AcceptBtn.Left + AcceptBtn.Width + ScaleX(10);
-    DeclineBtn.Top := ScaleY(232);
+    DeclineBtn.Left := DisclaimerForm.ClientWidth - ScaleX(16) - BtnWidth;
+    DeclineBtn.Top := ContentBottom + ScaleY(16);
     DeclineBtn.Width := BtnWidth;
     DeclineBtn.Height := ScaleY(23);
     DeclineBtn.Caption := ExpandConstant('{cm:BtnDecline}');
     DeclineBtn.Tag := 0;
     DeclineBtn.OnClick := @DisclaimerButtonClick;
     DeclineBtn.Cancel := True; // Esc / closing the dialog acts as Decline
+
+    AcceptBtn := TNewButton.Create(DisclaimerForm);
+    AcceptBtn.Parent := DisclaimerForm;
+    AcceptBtn.Left := DeclineBtn.Left - ScaleX(10) - BtnWidth;
+    AcceptBtn.Top := DeclineBtn.Top;
+    AcceptBtn.Width := BtnWidth;
+    AcceptBtn.Height := ScaleY(23);
+    AcceptBtn.Caption := ExpandConstant('{cm:BtnAccept}');
+    AcceptBtn.Tag := 1;
+    AcceptBtn.OnClick := @DisclaimerButtonClick;
 
     // Decline is the active/default control - closing the dialog any
     // way other than an explicit Accept click is the safe outcome.

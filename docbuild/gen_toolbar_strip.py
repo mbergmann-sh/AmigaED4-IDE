@@ -27,7 +27,7 @@ GROUPS = [
     ["cut.png", "copy.png", "paste.png"],
     ["search.png"],
     ["gotoline.png", "brackets.png"],
-    ["dice.png", "build_project.png", "clean_project.png", "open_shell.png"],
+    ["dice.png", "build_project.png", "clean_project.png", "autodoc_reader.png", "open_shell.png"],
     ["start-emu.png", "stop-emu.png"],
     ["fileexit.png"],
 ]

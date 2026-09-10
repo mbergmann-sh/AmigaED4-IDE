@@ -22,6 +22,7 @@
 #include <QString>
 #include <QVector>
 #include <QList>
+#include <QSet>
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -56,6 +57,21 @@ public:
     // found and selected; false (nothing changed) if functionName is
     // empty or doesn't match any parsed entry.
     bool showFunction(const QString &functionName);
+
+    // Lightweight counterpart to the constructor's parseAutodocsFolder():
+    // scans autodocsDir for every documented function's short name (the
+    // part of its "library.name/FunctionName" marker line after the last
+    // "/", lower-cased for case-insensitive lookups), WITHOUT keeping any
+    // entry body text or building any widget - just the name set, so
+    // callers can cheaply check "is this word an actual NDK/MUI function"
+    // without constructing (let alone showing) a whole AutodocReader.
+    // Used by MainWindow::isKnownAutodocFunction() to decide whether the
+    // editor context menu's "Jump to Explanation" entry should even
+    // appear for the word under the click - see showCustomContextMenue().
+    // Returns an empty set if autodocsDir doesn't exist/isn't configured;
+    // callers are expected to cache the result themselves (this rescans
+    // the folder from scratch on every call).
+    static QSet<QString> collectFunctionNames(const QString &autodocsDir);
 
 protected:
     // Persists the window's current size/position to QSettings (see

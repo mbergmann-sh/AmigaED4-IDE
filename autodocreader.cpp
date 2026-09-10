@@ -282,6 +282,67 @@ void AutodocReader::parseAutodocFile(const QString &filePath)
 }
 
 //
+// Lightweight counterpart to parseAutodocsFolder()/parseAutodocFile():
+// same form-feed-delimited entry scan (see parseAutodocFile()'s own
+// comment for why that, rather than the visually-repeated-name regex an
+// earlier revision used, is the correct delimiter), but only ever keeps
+// each entry's short function name - never its body text, and never
+// touches p_entries or builds anything - so a caller can cheaply ask "is
+// this word a real NDK/MUI function" without constructing a whole
+// AutodocReader (which would also mean building its entire tree/text-view
+// UI just to throw it away again). See the header for the intended use.
+//
+QSet<QString> AutodocReader::collectFunctionNames(const QString &autodocsDir)
+{
+    QSet<QString> names;
+
+    static const QChar formFeed(0x0C);
+    static const QRegularExpression whitespaceRe(QStringLiteral("\\s+"));
+
+    QDirIterator it(autodocsDir, QStringList() << QStringLiteral("*.doc"),
+                     QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext())
+    {
+        QFile file(it.next());
+        if (!file.open(QIODevice::ReadOnly))
+            continue;
+
+        const QString content = QString::fromUtf8(file.readAll());
+        file.close();
+
+        QVector<int> markerPositions;
+        for (int i = 0; i < content.size(); ++i)
+        {
+            if (content.at(i) == formFeed)
+                markerPositions << i;
+        }
+
+        for (int i = 0; i < markerPositions.size(); ++i)
+        {
+            const int entryStart = markerPositions[i] + 1;
+            const int entryEnd = (i + 1 < markerPositions.size()) ? markerPositions[i + 1] : content.size();
+            if (entryEnd <= entryStart)
+                continue;
+
+            const QString entryBlock = content.mid(entryStart, entryEnd - entryStart);
+            const int firstNewline = entryBlock.indexOf(QLatin1Char('\n'));
+            const QString markerLine = (firstNewline >= 0) ? entryBlock.left(firstNewline) : entryBlock;
+            const QString fullName = markerLine.trimmed().section(whitespaceRe, 0, 0);
+
+            if (fullName.isEmpty() || !fullName.contains(QLatin1Char('/')))
+                continue;   // not a real marker line - see parseAutodocFile()
+
+            const int slash = fullName.lastIndexOf(QLatin1Char('/'));
+            const QString shortName = (slash >= 0) ? fullName.mid(slash + 1) : fullName;
+            if (!shortName.isEmpty())
+                names.insert(shortName.toLower());
+        }
+    }
+
+    return names;
+}
+
+//
 // Groups every parsed entry under a top-level tree node per SOURCE FILE
 // (exec, dos, graphics, ... - one group per *.doc file, using that
 // file's own base name - see parseAutodocFile()). This, not grouping by

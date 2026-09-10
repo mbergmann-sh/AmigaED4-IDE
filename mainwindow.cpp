@@ -803,6 +803,42 @@ void MainWindow::showAutodocReaderAndJumpTo(const QString &functionName)
 }
 
 //
+// true if 'word' matches a documented NDK/MUI function's short name
+// (case-insensitive) under the AutoDocs folder currently configured in
+// Prefs > Emulator > "AutoDocs folder:" - see showCustomContextMenue(),
+// which only offers "Jump to Explanation" at all when this says yes, so
+// the context menu never promises an explanation for a plain C keyword,
+// a local variable, or any other word that was never going to match.
+//
+// Backed by p_autodocFunctionNamesCache, rebuilt via the lightweight
+// AutodocReader::collectFunctionNames() only when the configured folder
+// path actually changes (or on first use) - not on every right-click,
+// which is what keeps this cheap enough to call from a context menu
+// that can open many times per minute. No folder configured (or it
+// doesn't exist) - see AutodocReader::collectFunctionNames() - simply
+// yields an empty cache, so this quietly returns false rather than
+// erroring; the "AutoDocs folder not configured" message stays reserved
+// for when the user actually tries to open the reader.
+//
+bool MainWindow::isKnownAutodocFunction(const QString &word)
+{
+    if (word.isEmpty())
+        return false;
+
+    QSettings settings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
+    const QString autodocsDir = settings.value("NDK/AutodocsPath").toString();
+
+    if (!p_autodocFunctionNamesCacheValid || p_autodocFunctionNamesCacheDir != autodocsDir)
+    {
+        p_autodocFunctionNamesCache = AutodocReader::collectFunctionNames(autodocsDir);
+        p_autodocFunctionNamesCacheDir = autodocsDir;
+        p_autodocFunctionNamesCacheValid = true;
+    }
+
+    return p_autodocFunctionNamesCache.contains(word.toLower());
+}
+
+//
 // react on SIGNAL textChanged() if text was modified
 //
 // Since AmigaED v3.2, this is connected per-tab (see newEditorTab()), so
@@ -10389,7 +10425,15 @@ void MainWindow::showCustomContextMenue(const QPoint &pos)
     // contextMenu.addAction(&pseudo_action) further down) since
     // searching/replacing isn't a code-insertion template.
     contextMenu.addAction(contextSearchReplaceAct);
-    contextMenu.addAction(jumpToExplanationAct);
+
+    // Only offer "Jump to Explanation" when the word under the click is
+    // actually a documented NDK/MUI function - otherwise it used to open
+    // the AutoDoc Reader anyway (in its default "show everything" state)
+    // for any word at all - a plain C keyword, a local variable, ... -
+    // which just looked like the entry had done nothing useful. See
+    // isKnownAutodocFunction()/AutodocReader::collectFunctionNames().
+    if (isKnownAutodocFunction(p_contextMenuWordAtClick))
+        contextMenu.addAction(jumpToExplanationAct);
     contextMenu.addSeparator();
 
     // define a pseudo action to show some kind of menue title - disabled,

@@ -57,6 +57,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDateTime>
+#include <QSet>
 #include <QTextStream>
 #include <QStringConverter>
 #include <QStatusBar>
@@ -499,6 +500,7 @@ private:
     void applyGuiLanguage(const QString &langCode, bool persist = true);   // installs/removes the QTranslator for "en"/"de", calls retranslateUi(); persist=false for a session-only switch (View menu) that must NOT change Prefs' own default
     void createStatusBarMessage(QString statusmessage, int timeout);    // sets up the statusbar with a custom message
     void showAutodocReaderAndJumpTo(const QString &functionName = QString());   // shared implementation behind Build > AutoDoc Reader... and the editor context menu's "Jump to Explanation" (rev.151) - opens/raises the single AutoDoc Reader instance, then, if functionName isn't empty, jumps it straight to that function's entry (see AutodocReader::showFunction())
+    bool isKnownAutodocFunction(const QString &word);   // true if 'word' (case-insensitive) is a documented NDK/MUI function's short name under the currently configured AutoDocs folder - backed by p_autodocFunctionNamesCache; used to gate the context menu's "Jump to Explanation" entry (see showCustomContextMenue()) so it doesn't offer to open the AutoDoc Reader for plain C keywords/identifiers that were never going to match anything
     // GUI methods...
     void writeSettings();                               // write app settings
     bool maybeSave(QsciScintilla *editor = nullptr);    // will be called if user quits while text has changed; defaults to the active tab
@@ -679,6 +681,17 @@ private:
     // nullptr while closed; reset back to nullptr via its destroyed()
     // signal once the user closes it (see actionShowAutodocReader()).
     AutodocReader *p_autodocReader = nullptr;
+
+    // Cache backing isKnownAutodocFunction() (see showCustomContextMenue()'s
+    // "Jump to Explanation" gating): the lower-cased short name of every
+    // documented NDK/MUI function found under the currently configured
+    // AutoDocs folder (AutodocReader::collectFunctionNames()), plus the
+    // folder path it was built from. Rebuilt only when that path changes
+    // (or on first use) - NOT reparsed on every right-click, which is what
+    // makes checking a context menu's worth of clicks cheap.
+    QSet<QString> p_autodocFunctionNamesCache;
+    QString p_autodocFunctionNamesCacheDir;
+    bool p_autodocFunctionNamesCacheValid = false;
 
     // Functions Browser visibility - View menue, right after GUI Language
     QAction *showFunctionsBrowserAct = nullptr;

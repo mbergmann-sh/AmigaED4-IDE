@@ -23,14 +23,16 @@
 #include <QVector>
 #include <QList>
 #include <QSet>
+#include <QHash>
 
 class QTreeWidget;
 class QTreeWidgetItem;
-class QPlainTextEdit;
+class QTextBrowser;
 class QLineEdit;
 class QLabel;
 class QPushButton;
 class QCloseEvent;
+class QUrl;
 
 class AutodocReader : public QDialog
 {
@@ -56,7 +58,19 @@ public:
     // just opened or was already open. Returns true if a match was
     // found and selected; false (nothing changed) if functionName is
     // empty or doesn't match any parsed entry.
-    bool showFunction(const QString &functionName);
+    //
+    // The same short function name can legitimately exist in more than
+    // one library's docs (e.g. "CMD_WRITE" in audio.device,
+    // carddisk.device, trackdisk.device, ...) - when more than one entry
+    // matches, preferredLibrary (rev.154; e.g. "carddisk") picks the one
+    // belonging to that library if there is one, falling back to
+    // whichever match sorts first in the tree otherwise (the previous,
+    // context-free behaviour - what a caller with no library context of
+    // its own, like "Jump to Explanation", still gets by leaving this
+    // empty). See onSeeAlsoLinkClicked() for the caller that actually
+    // needs this: a SEE ALSO reference is, by AmigaOS AutoDoc convention,
+    // read relative to the entry it appears in.
+    bool showFunction(const QString &functionName, const QString &preferredLibrary = QString());
 
     // Lightweight counterpart to the constructor's parseAutodocsFolder():
     // scans autodocsDir for every documented function's short name (the
@@ -88,6 +102,13 @@ private slots:
     void onFilterNext();
     void onFilterPrev();
 
+    // Handles a click on a "SEE ALSO" cross-reference link in the text
+    // view (rev.153, href "adoc:<shortName>" - see renderEntryHtml()/
+    // linkifySeeAlsoLine()). Jumps to that entry exactly like
+    // showFunction() does for "Jump to Explanation" - same tree
+    // expand/select/scroll, same filter-clearing.
+    void onSeeAlsoLinkClicked(const QUrl &link);
+
 private:
     // One parsed AutoDoc function entry.
     struct AutodocEntry
@@ -103,14 +124,33 @@ private:
     void buildTree();
     void applyFilter(const QString &text);
 
+    // Populates p_nameToIndex from the just-parsed p_entries (called once
+    // from the constructor, right after parseAutodocsFolder()) - a
+    // lower-cased "short function name" -> first-matching-entry-index map,
+    // used by linkifySeeAlsoLine() to decide (cheaply, no per-click
+    // re-parsing) whether a SEE ALSO token is a real cross-reference.
+    void buildNameIndex();
+
+    // Renders one entry's fullText as HTML for p_textView (a QTextBrowser),
+    // wrapped in a <pre> so its column alignment survives unchanged - see
+    // the .cpp for why only its "SEE ALSO" section gets linkified.
+    QString renderEntryHtml(int idx) const;
+
+    // Turns every recognized function name in one already-HTML-escaped
+    // SEE ALSO line into a clickable "adoc:<shortName>" link - see the
+    // .cpp for the exact matching rules (bare or "library/Name" form,
+    // trailing sentence punctuation).
+    QString linkifySeeAlsoLine(const QString &escapedLine) const;
+
     QVector<AutodocEntry> p_entries;
     int p_totalFiles = 0;   // distinct source *.doc files found - shown alongside the function count
+    QHash<QString, int> p_nameToIndex;   // lower-cased short function name -> index into p_entries, see buildNameIndex()
 
     QLineEdit *p_filterEdit = nullptr;
     QPushButton *p_filterPrevBtn = nullptr;
     QPushButton *p_filterNextBtn = nullptr;
     QTreeWidget *p_tree = nullptr;
-    QPlainTextEdit *p_textView = nullptr;
+    QTextBrowser *p_textView = nullptr;
     QPushButton *p_openAllBtn = nullptr;
     QPushButton *p_closeAllBtn = nullptr;
 

@@ -11,13 +11,14 @@
 #include <QHBoxLayout>
 #include <QSplitter>
 #include <QTreeWidget>
-#include <QPlainTextEdit>
+#include <QTextBrowser>
 #include <QLineEdit>
 #include <QLabel>
 #include <QPushButton>
 #include <QSettings>
 #include <QCloseEvent>
 #include <QSizeGrip>
+#include <QUrl>
 #include <algorithm>
 #include <utility>
 
@@ -41,6 +42,7 @@ AutodocReader::AutodocReader(const QString &autodocsDir, QWidget *parent)
         resize(950, 650);
 
     parseAutodocsFolder(autodocsDir);
+    buildNameIndex();   // rev.153 - see its own comment; needed before the first renderEntryHtml() call
 
     QSet<QString> allFiles;
     for (const AutodocEntry &e : std::as_const(p_entries))
@@ -88,18 +90,29 @@ AutodocReader::AutodocReader(const QString &autodocsDir, QWidget *parent)
     leftWidget->setLayout(leftLayout);
 
     // --- right side: the selected function's raw AutoDoc text ---
-    p_textView = new QPlainTextEdit(this);
+    // QTextBrowser, not QPlainTextEdit (changed in rev.153): SEE ALSO
+    // cross-references need to render as real, clickable <a> links (see
+    // renderEntryHtml()/onSeeAlsoLinkClicked() below) - a plain text
+    // widget has no notion of a link at all. setHtml() wraps the content
+    // in its own <pre>, which keeps everything else about the display
+    // (monospace column alignment, no line wrapping) exactly as before.
+    p_textView = new QTextBrowser(this);
     p_textView->setReadOnly(true);
-    p_textView->setLineWrapMode(QPlainTextEdit::NoWrap);
+    p_textView->setLineWrapMode(QTextEdit::NoWrap);
     // AutoDoc SYNOPSIS sections rely on column alignment (e.g. "D0" lined
     // up under the return value) - QFontDatabase::systemFont(FixedFont) is
     // Qt's own guaranteed-monospace system font, so this is correct on
     // Windows/Linux/macOS alike without any of the per-platform font-name
     // guessing initializeFont() has to do for the QScintilla editor (that
     // function's own problem - internal per-style font objects Scintilla
-    // builds itself - doesn't apply here: this is one plain QPlainTextEdit
-    // with a single QFont, no per-style-run font resolution involved).
+    // builds itself - doesn't apply here: this is one rich-text view with
+    // a single QFont, no per-style-run font resolution involved).
     p_textView->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    // The SEE ALSO links aren't real documents to navigate to - without
+    // this, QTextBrowser would try to "load" e.g. "adoc:CMD_WRITE" as a
+    // new page itself (clearing the view) before anchorClicked() below
+    // even runs. onSeeAlsoLinkClicked() is what actually acts on a click.
+    p_textView->setOpenLinks(false);
 
     QSplitter *splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(leftWidget);
@@ -137,17 +150,29 @@ AutodocReader::AutodocReader(const QString &autodocsDir, QWidget *parent)
     connect(p_closeAllBtn, &QPushButton::clicked, this, &AutodocReader::onCollapseAll);
     connect(p_filterPrevBtn, &QPushButton::clicked, this, &AutodocReader::onFilterPrev);
     connect(p_filterNextBtn, &QPushButton::clicked, this, &AutodocReader::onFilterNext);
+    connect(p_textView, &QTextBrowser::anchorClicked, this, &AutodocReader::onSeeAlsoLinkClicked);
 
     p_filterEdit->setFocus();
 }
 
-bool AutodocReader::showFunction(const QString &functionName)
+bool AutodocReader::showFunction(const QString &functionName, const QString &preferredLibrary)
 {
     const QString name = functionName.trimmed();
     if (name.isEmpty())
         return false;
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
+    // A short function name isn't always unique across libraries (e.g.
+    // "CMD_WRITE" exists in audio.device, carddisk.device, trackdisk.device,
+    // ...) - collect the FIRST match found (tree/alphabetical order, same
+    // behaviour as before rev.154) as a fallback, but prefer one whose
+    // library equals preferredLibrary, if given and found. Callers that
+    // don't have a library context (e.g. MainWindow's "Jump to Explanation",
+    // which only knows the clicked word, not which library it belongs to)
+    // pass an empty preferredLibrary and get exactly the old behaviour.
+    QTreeWidgetItem *firstMatch = nullptr;
+    QTreeWidgetItem *preferredMatch = nullptr;
+
+    for (int gi = 0; gi < p_tree->topLevelItemCount() && !preferredMatch; ++gi)
     {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
 
@@ -158,28 +183,42 @@ bool AutodocReader::showFunction(const QString &functionName)
             if (idx < 0 || idx >= p_entries.size())
                 continue;
 
-            const QString &fullName = p_entries.at(idx).functionName;   // e.g. "intuition.library/OpenWindow"
+            const AutodocEntry &entry = p_entries.at(idx);
+            const QString &fullName = entry.functionName;   // e.g. "intuition.library/OpenWindow"
             const int slash = fullName.lastIndexOf(QLatin1Char('/'));
             const QString shortName = (slash >= 0) ? fullName.mid(slash + 1) : fullName;
 
             if (shortName.compare(name, Qt::CaseInsensitive) != 0)
                 continue;
 
-            // A leftover filter would otherwise leave every non-matching
-            // group/leaf hidden around the one we're about to reveal -
-            // clearing it re-runs applyFilter(QString()) via
-            // onFilterTextChanged(), unhiding everything first.
-            if (!p_filterEdit->text().isEmpty())
-                p_filterEdit->clear();
+            if (!firstMatch)
+                firstMatch = funcItem;
 
-            groupItem->setExpanded(true);
-            p_tree->setCurrentItem(funcItem);   // also triggers onTreeSelectionChanged(), filling the text view
-            p_tree->scrollToItem(funcItem);
-            return true;
+            if (!preferredLibrary.isEmpty()
+                && entry.library.compare(preferredLibrary, Qt::CaseInsensitive) == 0)
+            {
+                preferredMatch = funcItem;
+                break;
+            }
         }
     }
 
-    return false;
+    QTreeWidgetItem *funcItem = preferredMatch ? preferredMatch : firstMatch;
+    if (!funcItem)
+        return false;
+
+    // A leftover filter would otherwise leave every non-matching
+    // group/leaf hidden around the one we're about to reveal -
+    // clearing it re-runs applyFilter(QString()) via
+    // onFilterTextChanged(), unhiding everything first.
+    if (!p_filterEdit->text().isEmpty())
+        p_filterEdit->clear();
+
+    if (QTreeWidgetItem *groupItem = funcItem->parent())
+        groupItem->setExpanded(true);
+    p_tree->setCurrentItem(funcItem);   // also triggers onTreeSelectionChanged(), filling the text view
+    p_tree->scrollToItem(funcItem);
+    return true;
 }
 
 //
@@ -435,13 +474,13 @@ void AutodocReader::applyFilter(const QString &textRaw)
 
     if (haveFilter)
     {
-        setWindowTitle(tr("AutoDoc Reader - Filter showing %1/%2 Funcs in %3/%4 Files")
+        setWindowTitle(tr("AmigaED AutoDoc Reader - Filter showing %1/%2 Funcs in %3/%4 Files")
                         .arg(visibleFuncs).arg(p_entries.size())
                         .arg(visibleFiles.size()).arg(p_totalFiles));
     }
     else
     {
-        setWindowTitle(tr("AutoDoc Reader - %1 Funcs in %2 Files")
+        setWindowTitle(tr("AmigaED AutoDoc Reader - %1 Funcs in %2 Files")
                         .arg(p_entries.size()).arg(p_totalFiles));
     }
 }
@@ -464,7 +503,210 @@ void AutodocReader::onTreeSelectionChanged()
 
     const int idx = item->data(0, Qt::UserRole).toInt();
     if (idx >= 0 && idx < p_entries.size())
-        p_textView->setPlainText(p_entries.at(idx).fullText);
+        p_textView->setHtml(renderEntryHtml(idx));
+}
+
+//
+// Populates p_nameToIndex from p_entries - see the header for what it's
+// for. Where the same short name genuinely occurs in more than one
+// library's docs (rare, but not impossible), the first one encountered
+// while parsing wins; SEE ALSO linkification only needs "does a match
+// exist at all", not which one - actually jumping to it (showFunction())
+// does its own independent, alphabetical-tree-order search anyway.
+//
+void AutodocReader::buildNameIndex()
+{
+    p_nameToIndex.clear();
+
+    for (int idx = 0; idx < p_entries.size(); ++idx)
+    {
+        const QString &fullName = p_entries.at(idx).functionName;
+        const int slash = fullName.lastIndexOf(QLatin1Char('/'));
+        const QString shortName = (slash >= 0) ? fullName.mid(slash + 1) : fullName;
+
+        if (shortName.isEmpty())
+            continue;
+
+        const QString key = shortName.toLower();
+        if (!p_nameToIndex.contains(key))
+            p_nameToIndex.insert(key, idx);
+    }
+}
+
+//
+// Renders p_entries[idx].fullText as HTML for p_textView, HTML-escaped
+// and wrapped in a <pre> so its original column alignment survives
+// completely unchanged from the old setPlainText() behaviour - except
+// that within the entry's own "SEE ALSO" section specifically, a token
+// matching another parsed entry's short function name becomes a
+// clickable link (see linkifySeeAlsoLine()).
+//
+// A real AutoDoc section header (NAME, FUNCTION, SYNOPSIS, SEE ALSO, ...)
+// is in upper case and - this is the part an earlier revision got wrong -
+// is NOT necessarily flush against column 0: real NDK AutoDoc files
+// indent section headers with a few literal spaces (three, in every
+// sample seen so far), while body text under a header is indented with a
+// literal TAB instead. That's what actually distinguishes the two, not
+// "any leading whitespace at all" - a naive "must start in column 0" check
+// misses every header except an entry's very first one (whose leading
+// spaces happen to get stripped by parseAutodocFile()'s call to
+// QString::trimmed() on the whole entry body, since trimmed() only trims
+// the outer edges of the full block, not each line). Matching on "doesn't
+// start with a tab" instead handles both the unindented first header and
+// every space-indented one after it, while still correctly excluding
+// every tab-indented body line - including a body line that happens to be
+// all upper case itself, e.g. a "<devices/trackdisk.h>" style reference.
+//
+// A section is "SEE ALSO" from that header line up to (not including) the
+// next such header line, or the end of the entry.
+//
+// Deliberately scoped to just SEE ALSO rather than linking every
+// occurrence of a known function name anywhere in the text: ordinary
+// prose in FUNCTION/NOTES/etc. can easily contain a plain English word
+// ("Wait", "Read", "Open", ...) that also happens to be some unrelated
+// library's function name, and linkifying those would be surprising
+// rather than helpful.
+//
+QString AutodocReader::renderEntryHtml(int idx) const
+{
+    if (idx < 0 || idx >= p_entries.size())
+        return QString();
+
+    static const QRegularExpression headerRe(QStringLiteral("^[A-Z][A-Z0-9 /]*$"));
+
+    const QString &fullText = p_entries.at(idx).fullText;
+    const QStringList lines = fullText.split(QLatin1Char('\n'));
+
+    QString html;
+    html.reserve(fullText.size() + 64);
+    html += QStringLiteral("<pre style=\"white-space:pre; margin:0;\">");
+
+    bool inSeeAlso = false;
+    for (const QString &rawLine : lines)
+    {
+        const QString trimmed = rawLine.trimmed();
+        const bool startsWithTab = !rawLine.isEmpty() && rawLine.at(0) == QLatin1Char('\t');
+        const bool isHeaderLine = !trimmed.isEmpty()
+                                    && !startsWithTab
+                                    && headerRe.match(trimmed).hasMatch();
+
+        const QString escapedLine = rawLine.toHtmlEscaped();
+
+        if (isHeaderLine)
+        {
+            // The header word itself is never linkified, only what
+            // follows it - see linkifySeeAlsoLine().
+            inSeeAlso = (trimmed.compare(QStringLiteral("SEE ALSO"), Qt::CaseInsensitive) == 0);
+            html += escapedLine;
+        }
+        else
+        {
+            html += inSeeAlso ? linkifySeeAlsoLine(escapedLine) : escapedLine;
+        }
+
+        html += QLatin1Char('\n');
+    }
+
+    html += QStringLiteral("</pre>");
+    return html;
+}
+
+//
+// Turns every recognized function-name token in one already-HTML-escaped
+// SEE ALSO line into a clickable link (href "adoc:<shortName>", handled
+// by onSeeAlsoLinkClicked()). A token may be a bare short name
+// ("CMD_WRITE") or a qualified one ("exec.library/Wait") - either way,
+// only its short name (the part after the last "/", if any) needs to
+// match a parsed entry for the WHOLE token to become the link's text.
+//
+// Matching directly against the already-escaped line (rather than
+// escaping after matching) is safe: HTML-escaping only ever touches &,
+// <, >, " - none of which are valid characters in an Amiga function or
+// library identifier - so it can never shift or split a token match.
+//
+QString AutodocReader::linkifySeeAlsoLine(const QString &escapedLine) const
+{
+    static const QRegularExpression tokenRe(QStringLiteral("[A-Za-z_][A-Za-z0-9_./]*"));
+
+    QString result;
+    result.reserve(escapedLine.size() + 32);
+    int lastEnd = 0;
+
+    QRegularExpressionMatchIterator it = tokenRe.globalMatch(escapedLine);
+    while (it.hasNext())
+    {
+        const QRegularExpressionMatch m = it.next();
+        result += escapedLine.mid(lastEnd, m.capturedStart() - lastEnd);
+
+        QString candidate = m.captured(0);
+        // A lone trailing "." is virtually always sentence punctuation
+        // ("...see CMD_WRITE.") rather than part of the name - strip it
+        // before looking the name up, and put it back outside the link
+        // (if there was one) either way.
+        const bool hadTrailingDot = candidate.endsWith(QLatin1Char('.'));
+        if (hadTrailingDot)
+            candidate.chop(1);
+
+        const int slash = candidate.lastIndexOf(QLatin1Char('/'));
+        const QString shortName = (slash >= 0) ? candidate.mid(slash + 1) : candidate;
+
+        if (!shortName.isEmpty() && p_nameToIndex.contains(shortName.toLower()))
+        {
+            result += QStringLiteral("<a href=\"adoc:") + shortName.toHtmlEscaped() + QStringLiteral("\">")
+                     + candidate + QStringLiteral("</a>");
+            if (hadTrailingDot)
+                result += QLatin1Char('.');
+        }
+        else
+        {
+            result += m.captured(0);   // no match - leave the token exactly as found
+        }
+
+        lastEnd = m.capturedEnd();
+    }
+
+    result += escapedLine.mid(lastEnd);
+    return result;
+}
+
+//
+// Handles a click on one of the "SEE ALSO" links renderEntryHtml()/
+// linkifySeeAlsoLine() add to the text view (href "adoc:<shortName>") -
+// setOpenLinks(false) on p_textView (see constructor) is what stops
+// QTextBrowser from trying to navigate to that URL itself first, since
+// it isn't a real document source, just a name to jump to.
+//
+// Reuses showFunction() itself rather than duplicating any of its
+// lookup/expand/select/scroll/filter-clearing logic, so a SEE ALSO click
+// behaves exactly like "Jump to Explanation" finding the same name from
+// the editor - except it also passes the CURRENTLY shown entry's own
+// library as showFunction()'s preferredLibrary: an unqualified SEE ALSO
+// reference like "CMD_WRITE" is, by AmigaOS AutoDoc convention, the
+// CMD_WRITE of that very same library, not just whichever library's
+// CMD_WRITE happens to sort first in the tree (e.g. carddisk.device's own
+// SEE ALSO "CMD_WRITE" must jump to carddisk.device/CMD_WRITE, not
+// audio.device/CMD_WRITE just because "audio" sorts before "carddisk").
+//
+void AutodocReader::onSeeAlsoLinkClicked(const QUrl &link)
+{
+    static const QString scheme = QStringLiteral("adoc:");
+
+    const QString url = link.toString();
+    if (!url.startsWith(scheme))
+        return;
+
+    QString preferredLibrary;
+    if (QTreeWidgetItem *current = p_tree->currentItem())
+    {
+        if (current->parent())   // a group header carries no entry index - see onTreeSelectionChanged()
+        {
+            const int idx = current->data(0, Qt::UserRole).toInt();
+            if (idx >= 0 && idx < p_entries.size())
+                preferredLibrary = p_entries.at(idx).library;
+        }
+    }
+
+    showFunction(url.mid(scheme.length()), preferredLibrary);
 }
 
 void AutodocReader::onExpandAll()

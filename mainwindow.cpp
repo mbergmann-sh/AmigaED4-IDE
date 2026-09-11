@@ -2251,6 +2251,7 @@ void MainWindow::readSettings()
     }
     p_show_indentation = (settings.value("MISC/ShowIndentGuide").toBool());
     p_indentationWidth = (settings.value("MISC/IndentationWidth", 2).toInt());
+    p_highlightBraceBlock = (settings.value("MISC/HighlightBraceBlock").toBool());
     p_mydebug = (settings.value("MISC/ShowDebugOutput").toBool());
     p_no_lcd_statusbar = (settings.value("MISC/NoLCDstatusbar").toBool());
     p_defaultCompiler = (settings.value("MISC/DefaultCrossCompiler").toInt());
@@ -2840,6 +2841,10 @@ QsciScintilla *MainWindow::newEditorTab()
     connect(editor, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(showCustomContextMenue(const QPoint &)));
     connect(editor, SIGNAL(textChanged()), this, SLOT(documentWasModified()));
     connect(editor, SIGNAL(cursorPositionChanged(int, int)), this, SLOT(showCurrendCursorPosition()));
+    // rev.156 - Prefs > Misc "Highlight block between braces": lets
+    // onBraceBlockCursorMoved() notice when the caret leaves the bracket
+    // pair actionGoto_matching_brace() last highlighted in THIS tab.
+    connect(editor, SIGNAL(cursorPositionChanged(int, int)), this, SLOT(onBraceBlockCursorMoved()));
     connect(editor, SIGNAL(copyAvailable(bool)), cutAct, SLOT(setEnabled(bool)));
     connect(editor, SIGNAL(copyAvailable(bool)), copyAct, SLOT(setEnabled(bool)));
 
@@ -3565,6 +3570,14 @@ void MainWindow::actionGoto_matching_brace()
     if (!textEdit)
         return;
 
+    // Prefs > Misc "Highlight block between braces" (rev.156) is scoped to
+    // THIS command only (not the automatic caret-adjacent brace-pair
+    // colouring initializeCaretLine() already does) - any previous
+    // highlight is cleared unconditionally on every invocation, so a
+    // failed lookup below (no bracket, or no match) never leaves a stale
+    // one behind either.
+    clearBraceBlockHighlight();
+
     auto isBracket = [](char c) {
         return c == '(' || c == ')' || c == '{' || c == '}' || c == '[' || c == ']';
     };
@@ -3609,6 +3622,111 @@ void MainWindow::actionGoto_matching_brace()
     // behind the bracket" convention the search above started from.
     textEdit->SendScintilla(QsciScintillaBase::SCI_GOTOPOS, matchPos + 1);
     textEdit->setFocus();
+
+    if (p_highlightBraceBlock)
+        applyBraceBlockHighlight(textEdit, bracePos, matchPos);
+}
+
+//
+// Prefs > Misc "Highlight block between braces" (rev.156) - paints an
+// alpha-blended background box (a Scintilla "indicator", not a text
+// style - it draws UNDER the glyphs without touching their own
+// foreground colour, so syntax highlighting stays fully legible through
+// it, same reasoning as setSelectionBackgroundColor() in
+// initializeCaretLine() never setting a matching foreground colour) over
+// the text strictly BETWEEN bracePos and matchPos (the brackets
+// themselves are left alone - they already get their own colour from
+// the unrelated, always-on setMatchedBraceForegroundColor() mechanism).
+//
+// Only ONE highlight is ever active at a time (see
+// clearBraceBlockHighlight(), always called first by the one caller,
+// actionGoto_matching_brace()) - p_braceBlockHighlightEditor/Low/High
+// record exactly what was painted and where, so
+// onBraceBlockCursorMoved() knows what to clear and when.
+//
+void MainWindow::applyBraceBlockHighlight(QsciScintilla *editor, long bracePos, long matchPos)
+{
+    if (!editor)
+        return;
+
+    const long low = (bracePos < matchPos) ? bracePos : matchPos;
+    const long high = (bracePos < matchPos) ? matchPos : bracePos;
+    if (high <= low + 1)
+        return;   // adjacent brackets, e.g. "()" - nothing BETWEEN them to highlight
+
+    // Reserve indicator INDIC_CONTAINER (8, the first of Scintilla's
+    // "for application use" indicator numbers - lexers only ever use
+    // 0-7) - nothing else in AmigaED uses any Scintilla indicator, so no
+    // collision risk.
+    const int indicator = QsciScintillaBase::INDIC_CONTAINER;
+
+    editor->SendScintilla(QsciScintillaBase::SCI_INDICSETSTYLE, indicator, QsciScintillaBase::INDIC_STRAIGHTBOX);
+    editor->SendScintilla(QsciScintillaBase::SCI_INDICSETFORE, indicator,
+                           isDarkTheme() ? QColor("#264f78") : QColor("#add6ff"));   // same tone as the selection background (initializeCaretLine()) - already proven not to fight syntax colours
+    editor->SendScintilla(QsciScintillaBase::SCI_INDICSETALPHA, indicator, 120);
+    // Explicit cast needed here for the same reason as the SCI_BRACEMATCH
+    // call in actionGoto_matching_brace() above: a bare literal "0" is
+    // ambiguous between this overload's "long" third argument and the
+    // "void *"/"const char *" overloads' null-pointer-constant match.
+    editor->SendScintilla(QsciScintillaBase::SCI_INDICSETOUTLINEALPHA, indicator, static_cast<long>(0));   // no extra border - just the soft fill
+    editor->SendScintilla(QsciScintillaBase::SCI_SETINDICATORCURRENT, indicator);
+    editor->SendScintilla(QsciScintillaBase::SCI_INDICATORFILLRANGE,
+                           static_cast<unsigned long>(low + 1), high - low - 1);
+
+    p_braceBlockHighlightEditor = editor;
+    p_braceBlockHighlightLow = low;
+    p_braceBlockHighlightHigh = high;
+}
+
+//
+// Undoes whatever applyBraceBlockHighlight() last painted (if anything -
+// a no-op otherwise) and resets the p_braceBlockHighlight* tracking.
+// Called unconditionally at the top of every actionGoto_matching_brace()
+// (so a failed jump never leaves a stale highlight behind) and from
+// onBraceBlockCursorMoved() once the caret leaves the bracket pair.
+//
+void MainWindow::clearBraceBlockHighlight()
+{
+    if (!p_braceBlockHighlightEditor)
+        return;
+
+    const int indicator = QsciScintillaBase::INDIC_CONTAINER;
+    p_braceBlockHighlightEditor->SendScintilla(QsciScintillaBase::SCI_SETINDICATORCURRENT, indicator);
+    p_braceBlockHighlightEditor->SendScintilla(QsciScintillaBase::SCI_INDICATORCLEARRANGE,
+                                                static_cast<unsigned long>(p_braceBlockHighlightLow + 1),
+                                                p_braceBlockHighlightHigh - p_braceBlockHighlightLow - 1);
+
+    p_braceBlockHighlightEditor = nullptr;
+    p_braceBlockHighlightLow = -1;
+    p_braceBlockHighlightHigh = -1;
+}
+
+//
+// Connected per-tab to cursorPositionChanged() (see newEditorTab()) -
+// the live counterpart to clearBraceBlockHighlight(): once a highlight
+// from applyBraceBlockHighlight() is active, this fires on every caret
+// move in ANY tab, but only acts when the move happened in the SAME
+// editor the highlight belongs to (sender() - a move in a different tab
+// can't be "outside the bracket pair" of a highlight that isn't even
+// showing there). "Outside the bracket pair" is deliberately the OUTER
+// span, bracket characters included (p_braceBlockHighlightLow to
+// p_braceBlockHighlightHigh + 1 inclusive) - not just the highlighted
+// interior - so moving the caret onto either bracket itself, or freely
+// around inside, keeps the highlight showing; only stepping fully past
+// one of the two brackets clears it.
+//
+void MainWindow::onBraceBlockCursorMoved()
+{
+    if (!p_braceBlockHighlightEditor)
+        return;
+
+    QsciScintilla *movedEditor = qobject_cast<QsciScintilla *>(sender());
+    if (movedEditor != p_braceBlockHighlightEditor)
+        return;
+
+    const long pos = movedEditor->SendScintilla(QsciScintillaBase::SCI_GETCURRENTPOS);
+    if (pos < p_braceBlockHighlightLow || pos > p_braceBlockHighlightHigh + 1)
+        clearBraceBlockHighlight();
 }
 
 //
@@ -4280,8 +4398,133 @@ void MainWindow::actionCopy()
 
 void MainWindow::actionPaste()
 {
-    if(textEdit)
-        textEdit->paste();
+    if (!textEdit)
+        return;
+
+    // Remember where the paste is about to land, so the exact line range
+    // it touches can be re-indented afterwards - see reindentPastedLines()
+    // for why that's needed (rev.155). A paste either replaces the current
+    // selection (getSelection() then returns a valid range) or lands right
+    // at the caret (getSelection() returns -1s, in which case the current
+    // cursor line is where it starts).
+    int selLineFrom = -1, selIndexFrom = -1, selLineTo = -1, selIndexTo = -1;
+    textEdit->getSelection(&selLineFrom, &selIndexFrom, &selLineTo, &selIndexTo);
+
+    int curLine = -1, curIndex = -1;
+    textEdit->getCursorPosition(&curLine, &curIndex);
+
+    const int startLine = (selLineFrom >= 0) ? selLineFrom : curLine;
+
+    textEdit->paste();
+
+    int endLine = -1, endIndex = -1;
+    textEdit->getCursorPosition(&endLine, &endIndex);
+
+    reindentPastedLines(textEdit, startLine, endLine);
+}
+
+//
+// Re-applies THIS editor's own indentation convention (View > Indentation:
+// setIndentationsUseTabs()/setIndentationWidth()/setTabWidth(), set in
+// newEditorTab()/applyIndentationWidth()) to every line a paste just
+// touched (rev.155, [fromLine, toLine] inclusive, order-independent).
+//
+// The bug this fixes: pasted code kept whatever literal whitespace
+// characters were already on the clipboard, immune to View > Indentation
+// afterwards, while typed text or a file loaded straight from disk reacted
+// to it normally. The difference isn't anything AmigaED's own paste
+// handling was doing wrong so much as what it wasn't doing at all: a real
+// TAB character rescales correctly the moment the tab width changes -
+// Scintilla renders every tab in the document at the CURRENT width, no
+// matter when it was inserted - but plenty of real-world clipboard
+// sources (a browser's syntax-highlighted <pre> block, another editor set
+// to "insert spaces for tab", a terminal, ...) hand over literal SPACE
+// characters instead of tabs, and a space is always exactly one column
+// wide - no tab-width setting can ever visually shrink or grow it again.
+// That's indistinguishable from "the formatting isn't being checked",
+// because nothing here previously interpreted or normalized pasted text
+// at all; it went straight into the document exactly as the clipboard
+// held it (see setIndentationsUseTabs()/setTabWidth() in newEditorTab()
+// for the settings this now enforces instead).
+//
+// The fix reads each touched line's indentation not as literal characters
+// but as a COLUMN COUNT via Scintilla's own SCI_GETLINEINDENTATION - which
+// already interprets any existing tabs at the CURRENT tab width and any
+// spaces 1:1, so it returns the correct visual indent depth regardless of
+// whether the pasted line used tabs or spaces, or what width the source
+// assumed - then rewrites the line's leading whitespace from scratch using
+// THIS editor's own indentationsUseTabs()/tabWidth() convention at that
+// same column count. The pasted lines end up at the exact same visual
+// indent depth they arrived at, just expressed in this editor's own
+// convention from then on - so a later View > Indentation change rescales
+// them exactly like any other line. Only each line's LEADING whitespace is
+// touched; the rest of the line (including any inner alignment spaces,
+// e.g. in a SYNOPSIS-style column layout) is left completely alone.
+//
+// Deliberately NOT done via Scintilla's own SCI_SETLINEINDENTATION for the
+// "write it back" half (only GETLINEINDENTATION is used, purely to read
+// the column count): tested directly against this app's actual QScintilla
+// build (2.14.1) with setIndentationsUseTabs(true) and a matching
+// SCI_SETUSETABS both confirmed set, SCI_SETLINEINDENTATION still wrote
+// plain spaces regardless - contrary to Scintilla's own documented
+// behaviour, whether an upstream regression or a documentation mismatch
+// doesn't matter here, since relying on it would have silently shipped
+// this exact fix broken. Rebuilding the indentation string by hand and
+// replacing just the old leading whitespace via
+// setSelection()+replaceSelectedText() (one Scintilla undo action, so a
+// single Ctrl+Z undoes the whole paste+reindent together, same as any
+// other paste) was verified to work correctly in both directions -
+// space-indented paste normalized to tabs, and vice versa - and to react
+// correctly to a subsequent tab-width change.
+//
+void MainWindow::reindentPastedLines(QsciScintilla *editor, int fromLine, int toLine)
+{
+    if (!editor)
+        return;
+
+    if (fromLine > toLine)
+    {
+        const int tmp = fromLine;
+        fromLine = toLine;
+        toLine = tmp;
+    }
+    if (fromLine < 0)
+        fromLine = 0;
+
+    const int lastLine = editor->lines() - 1;
+    if (toLine > lastLine)
+        toLine = lastLine;
+
+    const bool useTabs = editor->indentationsUseTabs();
+    const int tabWidth = (editor->tabWidth() > 0) ? editor->tabWidth() : 8;
+
+    for (int line = fromLine; line <= toLine; ++line)
+    {
+        const long indentCols = editor->SendScintilla(QsciScintillaBase::SCI_GETLINEINDENTATION, line);
+
+        const QString lineText = editor->text(line);
+        int oldLen = 0;
+        while (oldLen < lineText.size()
+               && (lineText.at(oldLen) == QLatin1Char(' ') || lineText.at(oldLen) == QLatin1Char('\t')))
+            ++oldLen;
+
+        QString newIndent;
+        if (useTabs)
+        {
+            newIndent = QString(static_cast<int>(indentCols / tabWidth), QLatin1Char('\t'));
+            newIndent += QString(static_cast<int>(indentCols % tabWidth), QLatin1Char(' '));
+        }
+        else
+        {
+            newIndent = QString(static_cast<int>(indentCols), QLatin1Char(' '));
+        }
+
+        if (newIndent == lineText.left(oldLen))
+            continue;   // already matches this editor's convention - don't add a no-op undo step
+
+        editor->setSelection(line, 0, line, oldLen);
+        editor->replaceSelectedText(newIndent);
+    }
 }
 
 void MainWindow::actionZoomIn()
@@ -6375,6 +6618,7 @@ void MainWindow::initializeLexerNone(QsciScintilla *editor, bool announceChange)
     }
 
     initializeMargin(editor);
+    initializeCaretLine(editor);   // re-applies matched/unmatched-brace colours wiped by this setLexer(nullptr) call - see initializeLexerCPP()'s own comment
     // We don't want to have the fold margin visible, since it's plain text we're displaying...
     editor->setFolding(QsciScintilla::NoFoldStyle);
     // Make sure everything is unfolded!
@@ -6454,6 +6698,19 @@ void MainWindow::initializeLexerCPP()
     // showed a light-gray line-number gutter even with the "Dark" style
     // active, while a freshly created blank tab (never re-lexed) did not.
     initializeMargin();
+    // Same underlying reason as the initializeMargin() call just above
+    // (see its own comment): setLexer() calling detachLexer() a SECOND
+    // time (any lexer switch after the tab's first one, e.g. from here
+    // being called again by applyLexerForFileExtension()) runs
+    // SCI_STYLECLEARALL, which resets EVERY numbered style - including
+    // Scintilla's own STYLE_BRACELIGHT/STYLE_BRACEBAD (34/35) that
+    // initializeCaretLine() customizes via setMatchedBrace*Color()/
+    // setUnmatchedBrace*Color() - back to Scintilla's hardcoded defaults.
+    // Confirmed reported bug: the matched-bracket highlight showed a
+    // plain white box with no colour at all on any file actually opened
+    // from disk (which always re-lexes once more here), while a brand
+    // new blank tab (never re-lexed) looked correct.
+    initializeCaretLine();
 
     createStatusBarMessage(tr("Syntax changed to C/C++"), 0);
     // Keep the Syntax menu's checked entry in sync - needed because this
@@ -6482,6 +6739,7 @@ void MainWindow::initializeLexerMakefile()
 
     textEdit->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     initializeMargin();
+    initializeCaretLine();   // re-applies matched/unmatched-brace colours wiped by this setLexer() call - see initializeLexerCPP()'s own comment
     createStatusBarMessage(tr("Syntax changed to Makefiles"), 0);
     if (lexMakefileAct)
         lexMakefileAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
@@ -6501,6 +6759,7 @@ void MainWindow::initializeLexerBatch()
 
     textEdit->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     initializeMargin();
+    initializeCaretLine();   // re-applies matched/unmatched-brace colours wiped by this setLexer() call - see initializeLexerCPP()'s own comment
     createStatusBarMessage(tr("Syntax changed to Shell"), 0);
 }
 
@@ -6522,6 +6781,7 @@ void MainWindow::initializeLexerInstaller()
     // provide, so folding is disabled instead of showing an empty margin.
     textEdit->setFolding(QsciScintilla::NoFoldStyle);
     initializeMargin();
+    initializeCaretLine();   // re-applies matched/unmatched-brace colours wiped by this setLexer() call - see initializeLexerCPP()'s own comment
     createStatusBarMessage(tr("Syntax changed to Amiga installer"), 0);
     if (lexInstallerAct)
         lexInstallerAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
@@ -6544,6 +6804,7 @@ void MainWindow::initializeLexerAmigaGuide()
     // margin rather than an empty, non-functional one.
     textEdit->setFolding(QsciScintilla::NoFoldStyle);
     initializeMargin();
+    initializeCaretLine();   // re-applies matched/unmatched-brace colours wiped by this setLexer() call - see initializeLexerCPP()'s own comment
     createStatusBarMessage(tr("Syntax changed to AmigaGuide"), 0);
     if (lexAmigaGuideAct)
         lexAmigaGuideAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
@@ -6564,6 +6825,7 @@ void MainWindow::initializeLexerM68kAsm()
     // assembler source isn't brace-delimited the way C/C++ is.
     textEdit->setFolding(QsciScintilla::NoFoldStyle);
     initializeMargin();
+    initializeCaretLine();   // re-applies matched/unmatched-brace colours wiped by this setLexer() call - see initializeLexerCPP()'s own comment
     createStatusBarMessage(tr("Syntax changed to m68k Assembler"), 0);
     if (lexM68kAsmAct)
         lexM68kAsmAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
@@ -6583,6 +6845,7 @@ void MainWindow::initializeLexerPascal()
 
     textEdit->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     initializeMargin();
+    initializeCaretLine();   // re-applies matched/unmatched-brace colours wiped by this setLexer() call - see initializeLexerCPP()'s own comment
     createStatusBarMessage(tr("Syntax changed to Pascal"), 0);
     if (lexPascalAct)
         lexPascalAct->setChecked(true);   // see initializeLexerCPP()'s comment on why this is needed
@@ -6612,7 +6875,15 @@ void MainWindow::initializeCaretLine(QsciScintilla *editor)
         editor->setIndentationGuidesBackgroundColor(QColor("#1e1e1e"));
         editor->setWhitespaceForegroundColor(QColor("#3b3b3b"));
         editor->setWhitespaceBackgroundColor(QColor("#1e1e1e"));
-        editor->setMatchedBraceForegroundColor(QColor("#ffd700"));
+        // Matched brace pair coloured red (rev.155, on the user's own
+        // request) whenever the caret sits right before or right after
+        // one of them - Scintilla's own SloppyBraceMatch (see
+        // setBraceMatching() in newEditorTab()) already checks both
+        // sides of the caret for this, so no extra caret-tracking code
+        // is needed here, only the colour. Ctrl+B jump-to-matching-
+        // bracket (actionGoto_matching_brace()) is entirely separate
+        // code and unaffected by this.
+        editor->setMatchedBraceForegroundColor(QColor("#ff0000"));
         editor->setMatchedBraceBackgroundColor(QColor("#3a3d41"));
         editor->setUnmatchedBraceForegroundColor(QColor("#f44747"));
         editor->setUnmatchedBraceBackgroundColor(QColor("#1e1e1e"));
@@ -6632,7 +6903,8 @@ void MainWindow::initializeCaretLine(QsciScintilla *editor)
         editor->setIndentationGuidesBackgroundColor(QColor("#ffffff"));
         editor->setWhitespaceForegroundColor(QColor("#c0c0c0"));
         editor->setWhitespaceBackgroundColor(QColor("#ffffff"));
-        editor->setMatchedBraceForegroundColor(QColor("#0000ff"));
+        // See the dark-theme branch above for why this is red.
+        editor->setMatchedBraceForegroundColor(QColor("#ff0000"));
         editor->setMatchedBraceBackgroundColor(QColor("#b4eeb4"));
         editor->setUnmatchedBraceForegroundColor(QColor("#ff0000"));
         editor->setUnmatchedBraceBackgroundColor(QColor("#ffffff"));

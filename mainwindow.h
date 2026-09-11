@@ -257,6 +257,15 @@ public:
     bool p_styleInitialized = false;
     bool p_show_indentation;        // show indentation guidelines by default?
     int p_indentationWidth = 2;     // View > Indentation ("2/4/8 Characters") - width of one indent level in every editor tab, in characters (see newEditorTab()/applyIndentationWidth())
+    bool p_highlightBraceBlock = false;   // rev.156, Prefs > Misc "Highlight block between braces" - see actionGoto_matching_brace()
+    // Tracks the one currently active "Highlight block between braces"
+    // indicator (rev.156, see applyBraceBlockHighlight()/
+    // clearBraceBlockHighlight()/onBraceBlockCursorMoved()) - nullptr
+    // editor means none is active. Only ever one at a time, on whichever
+    // tab Goto Matching Bracket was last used in.
+    QsciScintilla *p_braceBlockHighlightEditor = nullptr;
+    long p_braceBlockHighlightLow = -1;    // lower of the two bracket positions (the opening one, whichever direction the jump went)
+    long p_braceBlockHighlightHigh = -1;   // higher of the two bracket positions (the closing one)
     bool p_mydebug = false;         // show or hide debugging informations
     bool p_no_lcd_statusbar;        // use normal text instead of LCD for cursor position view
     bool p_no_compilerbuttons;      // hide compiler selector and compile button from statusbar
@@ -362,7 +371,8 @@ private slots:
     void actionRedo();                                // forwards to the active tab's textEdit->redo()
     void actionCut();                                 // forwards to the active tab's textEdit->cut()
     void actionCopy();                                // forwards to the active tab's textEdit->copy()
-    void actionPaste();                               // forwards to the active tab's textEdit->paste()
+    void actionPaste();                               // forwards to the active tab's textEdit->paste(), then reindentPastedLines() on whatever it just inserted
+    void reindentPastedLines(QsciScintilla *editor, int fromLine, int toLine);   // rev.155 - re-applies 'editor's own tab/space convention to a just-pasted line range, see actionPaste()
     void actionZoomIn();                              // forwards to the active tab's textEdit->zoomIn()
     void actionZoomOut();                             // forwards to the active tab's textEdit->zoomOut()
 
@@ -392,6 +402,9 @@ private slots:
     void actionGotoBottom();            // jump to last line in text
     void actionGoto_Line();             // jump to line X
     void actionGoto_matching_brace();   // jumps to matching brace
+    void onBraceBlockCursorMoved();     // rev.156 - connected per-tab to cursorPositionChanged() (see newEditorTab()); clears the "Highlight block between braces" highlight once the caret leaves the bracket pair it belongs to
+    void applyBraceBlockHighlight(QsciScintilla *editor, long bracePos, long matchPos);   // rev.156 - Prefs > Misc "Highlight block between braces": paints an indicator over the text between two just-matched bracket positions
+    void clearBraceBlockHighlight();    // rev.156 - removes whatever applyBraceBlockHighlight() last painted, if anything, and resets p_braceBlockHighlight* tracking
     int actionCompile();                // calls compilation of current file
     // Emulator
     bool actionEmulator(int forcedTarget = -1);   // starts UAE; defaults to following the status bar's "Change default target OS" gadget - pass 0/1 to force OS 1.3/3.x regardless of it (see actionEmuOS13()/actionEmuOS30())

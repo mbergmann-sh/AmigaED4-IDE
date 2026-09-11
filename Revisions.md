@@ -8,6 +8,99 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.156
+> **rev.152–rev.155** were internal test builds only, never released to
+> users - they only ever existed during active development sessions.
+> Every change made along the way (new features and the fixes they
+> needed) is folded into this rev.156 entry below, which is the version
+> actually released.
+
+- **Fixed**: the AutoDoc Reader's SEE ALSO cross-reference lines were
+  shown as plain, uncoloured text instead of the clickable links they
+  were meant to be. The entry view now renders through `QTextBrowser`
+  (previously `QPlainTextEdit`) and every recognized function name on a
+  SEE ALSO line is turned into an `adoc:<shortName>` link
+  (`linkifySeeAlsoLine()`), backed by a lower-cased short-name index
+  (`buildNameIndex()`) built once right after parsing so clicks resolve
+  without re-scanning every entry. Header/section detection inside each
+  entry was also switched from a column-0 check to a tab-vs-space check,
+  which the SEE ALSO detection itself depends on.
+- **Fixed**: when the same short function name exists in more than one
+  library's AutoDocs (e.g. `CMD_WRITE` in audio.device, carddisk.device,
+  and trackdisk.device), clicking a SEE ALSO link always jumped to
+  whichever entry happened to sort alphabetically first, regardless of
+  which library the link actually appeared in. `AutodocReader::
+  showFunction()` gained a `preferredLibrary` parameter; `onSeeAlsoLink
+  Clicked()` now passes the current entry's own library, so the jump
+  lands on the matching entry in the SAME library first - the alphabetical
+  fallback still applies for callers with no library context of their
+  own, like "Jump to Explanation" from the editor.
+- **New**: the AutoDoc Reader window now shows a small resize grip in
+  its bottom-right corner - purely a visual reminder that, like any
+  other window, it can be resized from any edge or corner; no behaviour
+  changed.
+- **New**: external-change detection - whenever AmigaED regains
+  application focus (switching back from another app), every open
+  tab's on-disk file is compared against the mtime AmigaED last saw for
+  it. If any changed outside AmigaED, a new dialog lists them, each as
+  a pre-checked box, so some or all can be reloaded from disk in one
+  go; a file that also has unsaved in-editor changes is listed too, but
+  pre-*unchecked* and flagged with a warning, since reloading it would
+  silently discard those edits. Deliberately keyed off
+  `QApplication::applicationStateChanged` rather than a
+  `QFileSystemWatcher`, which is known to silently drop its watch on
+  some platforms when a file is replaced via delete+recreate (exactly
+  how some external tools save), and polling only on refocus is both
+  cheaper and less naggy than a watcher's immediate per-write
+  notifications.
+- **Fixed**: pasting a pre-formatted code snippet from the clipboard
+  kept whatever tab width the clipboard source used, frozen in place -
+  it did not follow the tab width typed or file-loaded text already
+  used, and View &rarr; Indentation could not correct it afterwards
+  either. Cause: clipboard sources often provide literal space
+  characters where the editor expects tabs. `actionPaste()` now calls
+  a new `reindentPastedLines()` right after the paste, which reads each
+  affected line's indentation depth and rewrites it using the editor's
+  own tab/space convention - implemented as a manual rebuild rather
+  than via `SCI_SETLINEINDENTATION`, which a standalone headless test
+  proved does not honour `useTabs` in the QScintilla version AmigaED
+  ships with.
+- **New**: the matching bracket/brace/parenthesis pair is now coloured
+  red the moment the caret sits directly before or after either one -
+  previously only Navigation &rarr; Goto matching bracket existed, with
+  no visual indication otherwise. Along the way, a real, previously
+  unknown bug was found and fixed: `QsciScintilla::setLexer()` clears
+  every numbered Scintilla style (including this brace colouring)
+  whenever a lexer was already attached - i.e. on every file-open and
+  lexer switch after a tab's initial creation - so the colouring was
+  silently wiped back to a plain white/grey box on the very next file
+  opened. Fixed by re-applying it (`initializeCaretLine()`) at the end
+  of every `initializeLexerXXX()` function, the same pattern already
+  used for an analogous, earlier margin-colour bug. Verified with a
+  standalone headless QScintilla test reproducing the wipe and
+  confirming the fix.
+- **New**: "Highlight block between braces" - a new checkbox in Prefs
+  &rarr; Misc (right under "Default GUI Language") that, when checked,
+  shades the text *between* a bracket pair with a subtle,
+  readability-preserving background the moment Navigation &rarr; Goto
+  matching bracket is used - handy for judging at a glance whether a
+  long bracketed passage is self-consistent. Implemented as a Scintilla
+  indicator (`INDIC_STRAIGHTBOX`, alpha-blended, theme-aware) painted
+  strictly between the two bracket positions, never over the brackets
+  themselves; it disappears the instant the caret leaves the bracket
+  pair (tracked per-tab via `cursorPositionChanged`), and only ever
+  applies to this one command - the always-on red bracket colouring
+  above is unaffected. Verified with a standalone headless test
+  checking, character by character, that the shading covers exactly
+  the interior between the brackets in both jump directions, is a
+  no-op for adjacent brackets like `()`, clears fully, and that the
+  "caret left the pair" boundary logic is correct.
+- Both manuals (HTML and PDF, English and German) were updated to
+  document all of the above: a new "Bracket Matching" section in the
+  Toolbar Reference chapter, a new "Detecting Externally Changed Files"
+  section in the Preferences chapter, and a new step in the AutoDoc
+  Reader chapter explaining SEE ALSO links.
+
 ## rev.151
 > **rev.150** was an internal test build only, never released to users - it
 > only ever existed during a single active development session. Every
@@ -342,6 +435,22 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   a glance; this is the same familiar diagonal-dots handle every
   `QStatusBar` shows by default; this dialog just has no status bar of
   its own to host one in, hence the dedicated row.
+- **Docs**: editor context menu chapter now documents the three quick-
+  access entries at the top of the real menu (Comment/Uncomment Block,
+  Search and Replace..., and the new Jump to Explanation), ahead of the
+  unchanged Inserts-mirrored section/screenshot below them. Preferences
+  Editor chapter gained the previously-undocumented "Assembler Include
+  Path:" fields (GCC/VBCC tabs). Compiler Output Pane chapter gained
+  its previously-undocumented context menu ("Mark all and copy",
+  "Empty Console"). AutoDoc Reader chapter gained a resize-grip note
+  and a cross-reference tip pointing at Jump to Explanation. HTML
+  manuals (`help/manual_en.html`/`manual_de.html`) and both PDFs
+  regenerated; `README.md` gained a matching Jump to Explanation bullet.
+- **Fixed**: `AmigaED_install\AmigaED.iss`'s `OutputBaseFilename` was
+  still hardcoded to `AmigaED4_rev150_Setup` - missed when rev.150 was
+  folded into this revision above, since it isn't derived from
+  `version.h` (Inno Setup scripts can't include a C++ header). Now
+  `AmigaED4_rev151_Setup`.
 
 ## rev.147
 - **New**: added a colourful "Open Shell" toolbar icon (`images/open_shell.png`,

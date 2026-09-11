@@ -443,6 +443,7 @@ void PrefsDialog::save_mySettings()
      mySettings.setValue("MISC/OpenConsoleOnFail", ui->checkBoxOpenOnFail->isChecked());
      mySettings.setValue("MISC/NoWarnRequester", ui->checkBoxWarnRequesters->isChecked());
      mySettings.setValue("MISC/DefaultGUILanguage", ui->comboBoxDefaultGuiLanguage->currentData().toString());
+     mySettings.setValue("MISC/HighlightBraceBlock", ui->checkBoxHighlightBraceBlock->isChecked());
 }
 
 void PrefsDialog::load_mySettings()
@@ -509,6 +510,7 @@ void PrefsDialog::load_mySettings()
 
     int guiLangIndex = ui->comboBoxDefaultGuiLanguage->findData(mySettings.value("MISC/DefaultGUILanguage", "en").toString());
     ui->comboBoxDefaultGuiLanguage->setCurrentIndex(guiLangIndex >= 0 ? guiLangIndex : 0);
+    ui->checkBoxHighlightBraceBlock->setChecked(mySettings.value("MISC/HighlightBraceBlock").toBool());
 }
 
 void PrefsDialog::on_checkBoxSimpleStatusbar_clicked()

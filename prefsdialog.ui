@@ -1341,6 +1341,22 @@
               </property>
              </widget>
             </item>
+            <item row="5" column="1">
+             <widget class="QCheckBox" name="checkBoxHighlightBraceBlock">
+              <property name="toolTip">
+               <string>When using Goto matching bracket, highlight the text between the matched bracket pair with a readability-preserving background</string>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LayoutDirection::RightToLeft</enum>
+              </property>
+              <property name="text">
+               <string>Highlight block between braces</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>
@@ -1535,6 +1551,7 @@
   <tabstop>checkBoxNoCompileButton</tabstop>
   <tabstop>checkBoxSimpleStatusbar</tabstop>
   <tabstop>comboBoxDefaultGuiLanguage</tabstop>
+  <tabstop>checkBoxHighlightBraceBlock</tabstop>
   <tabstop>checkBoxOpenOnFail</tabstop>
   <tabstop>checkBoxWarnRequesters</tabstop>
  </tabstops>

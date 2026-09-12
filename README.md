@@ -7,9 +7,12 @@ AmigaED 4.0 development consumes a huge amount of my lifetime and even some mone
 
 <img width="1405" height="961" alt="grafik" src="https://github.com/user-attachments/assets/11037a21-2197-4a6a-87f8-bdbfd7426478" />
 <img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/31e3cd55-fbad-43d4-b8c2-1e2daec18ee0" />
-<img width="1408" height="961" alt="grafik" src="https://github.com/user-attachments/assets/fb3adcde-01fa-4950-9b4e-6c3563941029" />
 <img width="1456" height="1017" alt="grafik" src="https://github.com/user-attachments/assets/955756d1-02e7-48ff-a9ab-838b644e7817" />
 <img width="1491" height="982" alt="grafik" src="https://github.com/user-attachments/assets/6aeb2f9d-503e-4a30-ab23-95cbbbd24c7c" />
+<img width="1190" height="853" alt="grafik" src="https://github.com/user-attachments/assets/cc3389e3-c9c0-4f07-9873-f99f27270c37" />
+<img width="1190" height="852" alt="grafik" src="https://github.com/user-attachments/assets/3ed240e0-2623-4dbd-a7f9-e35248867da1" />
+
+
 
 AmigaED brings project management, syntax highlighting, and one-click builds to AmigaOS 1.3/3.x cross-development, with out-of-the-box support for vbcc, vasm, m68k-amigaos-gcc, m68k-amigaos-as and SAS/C — plus integrated UAE emulator launching, so you can edit, compile, and test your Amiga software without ever leaving the editor.
 

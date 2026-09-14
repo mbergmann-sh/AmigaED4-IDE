@@ -1357,6 +1357,22 @@
               </property>
              </widget>
             </item>
+            <item row="6" column="1">
+             <widget class="QCheckBox" name="checkBoxNoSplashScreen">
+              <property name="toolTip">
+               <string>Skip the AmigaED logo/progress splash window normally shown while the program starts up</string>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LayoutDirection::RightToLeft</enum>
+              </property>
+              <property name="text">
+               <string>Don't show Splash Screen at Startup</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>

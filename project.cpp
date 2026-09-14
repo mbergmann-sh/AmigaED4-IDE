@@ -140,6 +140,9 @@ bool Project::save(const QString &fileName)
     settings.setValue("LastWrittenGccMakefileHash", lastWrittenGccMakefileHash);
     settings.setValue("LastWrittenVbccMakefileHash", lastWrittenVbccMakefileHash);
     settings.setValue("LastWrittenScMakefileHash", lastWrittenScMakefileHash);
+    settings.setValue("ExcludeGccMakefile", excludeGccMakefile);
+    settings.setValue("ExcludeVbccMakefile", excludeVbccMakefile);
+    settings.setValue("ExcludeScMakefile", excludeScMakefile);
     settings.endGroup();
 
     settings.beginWriteArray("Files");
@@ -179,6 +182,9 @@ bool Project::load(const QString &fileName)
     QString loadedGccMakefileHash;
     QString loadedVbccMakefileHash;
     QString loadedScMakefileHash;
+    bool loadedExcludeGccMakefile = false;
+    bool loadedExcludeVbccMakefile = false;
+    bool loadedExcludeScMakefile = false;
     QList<ProjectFile> loadedFiles;
 
     settings.beginGroup("Project");
@@ -193,6 +199,9 @@ bool Project::load(const QString &fileName)
     loadedGccMakefileHash = settings.value("LastWrittenGccMakefileHash").toString();
     loadedVbccMakefileHash = settings.value("LastWrittenVbccMakefileHash").toString();
     loadedScMakefileHash = settings.value("LastWrittenScMakefileHash").toString();
+    loadedExcludeGccMakefile = settings.value("ExcludeGccMakefile", false).toBool();
+    loadedExcludeVbccMakefile = settings.value("ExcludeVbccMakefile", false).toBool();
+    loadedExcludeScMakefile = settings.value("ExcludeScMakefile", false).toBool();
     settings.endGroup();
 
     int count = settings.beginReadArray("Files");
@@ -220,6 +229,9 @@ bool Project::load(const QString &fileName)
     lastWrittenGccMakefileHash = loadedGccMakefileHash;
     lastWrittenVbccMakefileHash = loadedVbccMakefileHash;
     lastWrittenScMakefileHash = loadedScMakefileHash;
+    excludeGccMakefile = loadedExcludeGccMakefile;
+    excludeVbccMakefile = loadedExcludeVbccMakefile;
+    excludeScMakefile = loadedExcludeScMakefile;
     files = loadedFiles;
     projectFilePath = fileName;
 

@@ -8,6 +8,89 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.157
+
+- **Fixed**: Makefiles could not be removed from a project. The "Remove"
+  button in the Project panel (and "Remove" in the project tree's
+  right-click context menu, which did not even offer it for a Makefile
+  item before this fix) silently did nothing when used on Makefile.gcc,
+  Makefile.vbcc, or Makefile.sc - regenerateProjectMakefiles() simply
+  wrote the file straight back on the next build or file-list change,
+  since nothing recorded that it had been deliberately removed.
+  `Project` gained three new persisted flags (`excludeGccMakefile`/
+  `excludeVbccMakefile`/`excludeScMakefile`, saved/loaded via `QSettings`
+  the same way every other project setting is), and a new
+  `excludeAndDeleteGeneratedMakefile()` deletes the file from disk and
+  sets the matching flag; `regenerateProjectMakefiles()` now skips
+  regenerating any Makefile whose flag is set. Since this makes a
+  removed Makefile otherwise unrecoverable from the GUI, Project &rarr;
+  Project Options... gained a new "Generated Makefiles" group with one
+  checkbox per toolchain, pre-checked/unchecked to match the project's
+  current flags - unchecking (removing) or re-checking (bringing back)
+  one and confirming the dialog takes effect on the next build.
+- **Fixed**: the external-change-detection dialog (see rev.156) could
+  fire false positives on Windows: after another application had focus
+  and AmigaED regained it - e.g. starting the emulator on a compiled
+  project - one or more open tabs were sometimes flagged as "changed
+  outside AmigaED" even though their on-disk content was byte-for-byte
+  identical to what the editor already showed. The check relied on the
+  file's mtime alone; some combinations of external tools and the
+  Windows filesystem update a file's mtime without changing its content
+  (or update it with coarser precision than AmigaED's own last-seen
+  timestamp), producing a spurious mismatch.
+  `checkForExternallyModifiedFiles()` now adds a content-verification
+  step before ever flagging a non-dirty tab: it re-reads the file from
+  disk (the same `QFile::ReadOnly` + Latin-1 `QTextStream` approach
+  `reloadEditorFromDiskIfOpen()` already used) and compares it
+  byte-for-byte against the tab's current text; on an exact match, the
+  tab is silently re-baselined (`updateExternalMTimeBaseline()`) and
+  skipped instead of being listed as changed. A tab with genuine
+  unsaved changes of its own is unaffected - it is still compared, and
+  handled, exactly as before.
+- **New**: a startup splash screen (`SplashScreen`, `splashscreen.h`/
+  `.cpp`) - the AmigaED logo, a progress bar, and a status text naming
+  whichever startup step is currently running - shown from the moment
+  `main()` starts building the application, before the comparatively
+  expensive `MainWindow` construction (building every menu, toolbar,
+  and panel from scratch) even begins, so slower machines get
+  meaningful feedback instead of an unresponsive-looking blank moment.
+  `MainWindow`'s constructor and `initializeGUI()` call the new
+  `updateSplash(percent, text)` at roughly a dozen real milestones
+  through startup, so the progress bar and status text always reflect
+  actual work, never an artificial fixed delay; the splash window
+  closes itself the instant the main window is shown.
+- **New**: "Don't show Splash Screen at Startup" - a new checkbox in
+  Prefs &rarr; Misc, directly below "Highlight block between braces"
+  and right-aligned to match it, unchecked by default. When checked,
+  the splash screen above is skipped entirely; read directly via a
+  bare `QSettings` at the very top of `main()` (before `MainWindow`,
+  and therefore before its own `readSettings()`, exists at all), using
+  the same application/organization names every other settings access
+  in the app already shares, so it resolves to the same settings file.
+- Both manuals (HTML and PDF, English and German) were extended to
+  document all of the above, plus the "Lookup C/C++"/"Lookup
+  Assembler" editor context-menu entries and the Help &rarr; C/C++ /
+  Help &rarr; Assembler language reference browsers that shipped in
+  earlier development builds of this revision but had not yet been
+  written up: a new "Removing a generated Makefile" section in the
+  Project Driven Compilation chapter, a new "Startup Splash Screen"
+  section in the Preferences chapter, two new chapters "The C/C++
+  Reference" and "The Assembler Reference" (right after the AutoDoc
+  Reader chapter, matching its tree-plus-filter-plus-text-view
+  pattern), and two new quick-access entries documented in the
+  Editor's Context Menu chapter.
+- **New**: a bundled `AmigaED-Examples` folder (C, ReAction, and
+  Assembler example projects, several of them full working projects
+  with Makefiles and AmigaOS Workbench `.info` icons) was added to the
+  project tree as a new top-level sibling of `DOC`/`help`/`images`.
+  `AmigaED_install\AmigaED.iss` gained a matching "Would you like to
+  install the example projects?" Yes/No prompt (same pattern as the
+  existing documentation prompt: a `[CustomMessages]` bilingual string,
+  an `InstallExamples`/`ShouldInstallExamples()` pair in `[Code]`, and
+  a `[Files]` entry gated by it), and `install_stage.bat` now stages
+  `AmigaED-Examples` into `install_src` alongside `DOC` on every build,
+  so the installer always has a current copy to offer.
+
 ## rev.156
 > **rev.152–rev.155** were internal test builds only, never released to
 > users - they only ever existed during active development sessions.

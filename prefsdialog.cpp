@@ -444,6 +444,7 @@ void PrefsDialog::save_mySettings()
      mySettings.setValue("MISC/NoWarnRequester", ui->checkBoxWarnRequesters->isChecked());
      mySettings.setValue("MISC/DefaultGUILanguage", ui->comboBoxDefaultGuiLanguage->currentData().toString());
      mySettings.setValue("MISC/HighlightBraceBlock", ui->checkBoxHighlightBraceBlock->isChecked());
+     mySettings.setValue("MISC/NoSplashScreen", ui->checkBoxNoSplashScreen->isChecked());
 }
 
 void PrefsDialog::load_mySettings()
@@ -511,6 +512,11 @@ void PrefsDialog::load_mySettings()
     int guiLangIndex = ui->comboBoxDefaultGuiLanguage->findData(mySettings.value("MISC/DefaultGUILanguage", "en").toString());
     ui->comboBoxDefaultGuiLanguage->setCurrentIndex(guiLangIndex >= 0 ? guiLangIndex : 0);
     ui->checkBoxHighlightBraceBlock->setChecked(mySettings.value("MISC/HighlightBraceBlock").toBool());
+    // Default unchecked (splash shown) - see main.cpp, which reads this
+    // same "MISC/NoSplashScreen" key directly (rather than through
+    // MainWindow's usual p_xxx readSettings() mirror) since it has to
+    // decide whether to show the splash BEFORE MainWindow even exists.
+    ui->checkBoxNoSplashScreen->setChecked(mySettings.value("MISC/NoSplashScreen", false).toBool());
 }
 
 void PrefsDialog::on_checkBoxSimpleStatusbar_clicked()

@@ -28,8 +28,10 @@
 
 #include <QApplication>
 #include <QIcon>
+#include <QSettings>
 
 #include "mainwindow.h"
+#include "splashscreen.h"
 #include "version.h"
 
 int main(int argc, char *argv[])
@@ -64,14 +66,44 @@ int main(int argc, char *argv[])
     // possible moment, which is what Linux desktop environments look at.
     app.setWindowIcon(QIcon(":/images/amiga_classic.png"));
 
+    // Startup splash screen (see splashscreen.h/.cpp): shown BEFORE
+    // MainWindow itself is constructed, so it's already on screen for the
+    // whole, comparatively expensive, construction below (building
+    // ~100+ QActions/menus/toolbars and every editor panel from scratch
+    // can take a noticeable moment on a slow machine) - handed into
+    // MainWindow's constructor, which calls splash->setProgress() at each
+    // major step (see MainWindow::updateSplash() and its call sites).
+    //
+    // Prefs > Misc > "Don't show Splash Screen at Startup" (default
+    // unchecked) can turn this off. Read directly via a bare QSettings
+    // here, NOT through MainWindow's usual readSettings()/p_xxx mirror
+    // like every other Misc checkbox - this decision has to be made
+    // BEFORE MainWindow (and its readSettings() call) even exists. The
+    // application/organization names set above are what let this
+    // default-constructed QSettings resolve to the very same settings
+    // file MainWindow itself reads/writes (see the comment on
+    // app.setApplicationName() above).
+    const bool noSplashScreen = QSettings().value("MISC/NoSplashScreen", false).toBool();
+
+    SplashScreen splash;
+    if (!noSplashScreen)
+    {
+        splash.show();
+        splash.setProgress(0, QStringLiteral("AmigaED 4.0"));
+    }
+
     // GUI Language (I18n): MainWindow's constructor calls readSettings() as
     // its very first statement (before any widget/action exists), which
     // installs the saved translator (if any) right there - so every tr()
-    // call during the initial GUI build-up already picks up the right
-    // language. See MainWindow::readSettings()/applyGuiLanguage().
-    MainWindow mainWin(cmdFileName);   // take first cmd argument to load a file
+    // call during the initial GUI build-up (including every splash status
+    // text after that point) already picks up the right language. See
+    // MainWindow::readSettings()/applyGuiLanguage().
+    MainWindow mainWin(cmdFileName, noSplashScreen ? nullptr : &splash);   // take first cmd argument to load a file
     QGuiApplication::setQuitOnLastWindowClosed(true);
 
     mainWin.show();
+    if (!noSplashScreen)
+        splash.close();   // MainWindow is up and visible now - nothing left to show a splash for
+
     return app.exec();
 }

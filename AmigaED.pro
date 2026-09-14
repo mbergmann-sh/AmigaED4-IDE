@@ -15,7 +15,10 @@ HEADERS      = mainwindow.h \
     prefsdialog.h \
     aboutdialog.h \
     autodocreader.h \
+    cpprefreader.h \
+    asmrefreader.h \
     externalchangesdialog.h \
+    splashscreen.h \
     amigalexercpp.h \
     amigainstallerlexer.h \
     amigaguidelexer.h \
@@ -26,7 +29,12 @@ SOURCES      = main.cpp mainwindow.cpp \
     prefsdialog.cpp \
     aboutdialog.cpp \
     autodocreader.cpp \
+    cpprefreader.cpp \
+    cpprefdata.cpp \
+    asmrefreader.cpp \
+    asmrefdata.cpp \
     externalchangesdialog.cpp \
+    splashscreen.cpp \
     amigainstallerlexer.cpp \
     amigaguidelexer.cpp \
     m68kasmlexer.cpp \

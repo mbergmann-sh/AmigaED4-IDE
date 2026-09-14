@@ -127,6 +127,9 @@ class QsciLexer;
 class PrefsDialog;
 class aboutDialog;
 class AutodocReader;
+class CppRefReader;
+class AsmRefReader;
+class SplashScreen;
 class QTimer;
 class QTime;
 class QElapsedTimer;
@@ -151,7 +154,13 @@ public:
     // but never switched on.
     enum class SearchReplaceAction { FindNext, FindPrevious, Replace, ReplaceAll };
 
-    explicit MainWindow(QString cmdFileName);
+    // 'splash': an optional startup splash screen (see splashscreen.h) -
+    // passed in from main.cpp, which constructs and shows it BEFORE
+    // MainWindow itself so it's already on screen for the whole,
+    // comparatively expensive, construction below. Purely cosmetic -
+    // nullptr (the default) skips every splash update throughout this
+    // class entirely, see updateSplash().
+    explicit MainWindow(QString cmdFileName, SplashScreen *splash = nullptr);
     bool fileExists(QString path);
     #define MY_MARKER_ID 0
 
@@ -364,6 +373,8 @@ private slots:
     void actionShowManual();                        // opens (or raises) the non-modal Manual viewer window, in the current GUI language
     void actionShowAutodocReader();                 // Build > AutoDoc Reader... - opens (or raises) the non-modal NDK AutoDocs browser (needs Prefs > Emulator > "AutoDocs folder:" set)
     void actionJumpToExplanation();                 // editor context-menu entry "Jump to Explanation" - opens/raises the AutoDoc Reader and jumps straight to the entry for the word under the click (see showAutodocReaderAndJumpTo())
+    void actionLookupCppRef();                      // editor context-menu entry "Lookup C/C++" (rev.158) - opens/raises the C/C++ Reference and jumps straight to the entry for the word under the click (see showCustomContextMenue()/isKnownCppRefToken())
+    void actionLookupAsmRef();                      // editor context-menu entry "Lookup Assembler" (rev.159) - opens/raises the Assembler Reference and jumps straight to the entry for the word under the click (see showCustomContextMenue()/isKnownAsmRefToken())
     void startPrefs();                              // Workaround to start prefsDialog with a parameter
     void setEmulatorMenu();                         // disable emulator menu entries if no config was specified
     void actionResetFontSize();                      // zoomTo(0) wrapper, since QAction::triggered() has no args
@@ -513,7 +524,35 @@ private:
     void applyGuiLanguage(const QString &langCode, bool persist = true);   // installs/removes the QTranslator for "en"/"de", calls retranslateUi(); persist=false for a session-only switch (View menu) that must NOT change Prefs' own default
     void createStatusBarMessage(QString statusmessage, int timeout);    // sets up the statusbar with a custom message
     void showAutodocReaderAndJumpTo(const QString &functionName = QString());   // shared implementation behind Build > AutoDoc Reader... and the editor context menu's "Jump to Explanation" (rev.151) - opens/raises the single AutoDoc Reader instance, then, if functionName isn't empty, jumps it straight to that function's entry (see AutodocReader::showFunction())
+
+    // Shared implementation behind every Help > C/C++ > <category> menu
+    // entry (rev.157) - opens the single CppRefReader instance if it
+    // isn't open yet (picking up the CURRENT p_guiLanguage, fixed for as
+    // long as this instance stays open - same "fixed at open time"
+    // behaviour as the Manual viewer and AutoDoc Reader), or simply
+    // raises it if it already is, then jumps it to the given category
+    // (see CppRefReader::showCategory()).
+    void showCppRefReaderAndJumpTo(const QString &category);
+
+    // Lazily constructs p_cppRefReader if needed (never shows it by
+    // itself) and returns it - shared by showCppRefReaderAndJumpTo(),
+    // actionLookupCppRef() and isKnownCppRefToken() (rev.158) so there's
+    // exactly one place that knows how to construct the single instance.
+    CppRefReader *ensureCppRefReader();
+
+    // Shared implementation behind every Help > Assembler > <category>
+    // menu entry (rev.158) - same pattern as showCppRefReaderAndJumpTo()
+    // above, just for the AsmRefReader instance (see
+    // AsmRefReader::showCategory()).
+    void showAsmRefReaderAndJumpTo(const QString &category);
+
+    // Lazily constructs p_asmRefReader if needed (never shows it by
+    // itself) and returns it - mirrors ensureCppRefReader() (rev.158).
+    AsmRefReader *ensureAsmRefReader();
+
     bool isKnownAutodocFunction(const QString &word);   // true if 'word' (case-insensitive) is a documented NDK/MUI function's short name under the currently configured AutoDocs folder - backed by p_autodocFunctionNamesCache; used to gate the context menu's "Jump to Explanation" entry (see showCustomContextMenue()) so it doesn't offer to open the AutoDoc Reader for plain C keywords/identifiers that were never going to match anything
+    bool isKnownCppRefToken(const QString &word);       // true if 'word' (case-sensitive) is a keyword/datatype the C/C++ Reference has an entry for - backed by CppRefReader::hasEntryForToken() via ensureCppRefReader(); used to gate the context menu's "Lookup C/C++" entry (rev.158, see showCustomContextMenue())
+    bool isKnownAsmRefToken(const QString &word);       // true if 'word' (case-insensitive) is a mnemonic/directive/register the Assembler Reference has an entry for - backed by AsmRefReader::hasEntryForToken() via ensureAsmRefReader(); used to gate the context menu's "Lookup Assembler" entry (rev.159, see showCustomContextMenue())
     // GUI methods...
     void writeSettings();                               // write app settings
     bool maybeSave(QsciScintilla *editor = nullptr);    // will be called if user quits while text has changed; defaults to the active tab
@@ -580,6 +619,7 @@ private:
     void createProjectPanel();                    // builds projectPanel/tree/buttons - called once from the constructor
     void refreshProjectTree();                     // rebuild tree items from currentProject
     void regenerateProjectMakefiles();              // (re)writes Makefile.gcc and Makefile.vbcc in the project directory
+    void excludeAndDeleteGeneratedMakefile(const QString &path);   // "Remove" on a Makefile tree item: deletes it from disk and flags it in currentProject so regenerateProjectMakefiles() leaves it alone from then on - shared by actionRemoveFileFromProject() and onProjectTreeContextMenu()
     QString resolveMakeExecutable() const;           // finds a usable "make" binary (Prefs, then next to the selected compiler, then bare "make")
     bool promptCompilerLinkerOptions(QString &compilerOpts, QString &linkerOpts, int templateKind); // asks before Makefiles are (re)created; pre-fills known-good defaults for certain template/compiler combinations
     void createNewProject(int templateKind);         // shared implementation for all "New Project" menu entries
@@ -602,6 +642,10 @@ private:
     QString mainFileTemplateContent(int templateKind, const QString &baseName, int asmAssembler = 3) const; // skeleton content for a new project's main file - asmAssembler (3=vasm, 4=GNU as) only matters for templateKind 6, see its case
     bool writeProgramIcon(const QString &executablePath, long stackSize) const;   // writes AmigaED's own built-in tool icon (see resources/amigaed_tool.info) to "<executablePath>.info", with do_StackSize patched to the given value
     void maybeOfferAddToProject(const QString &fileName); // called after a successful save - offers to add an untracked file
+
+    // --- Startup splash screen (see splashscreen.h) ---------------------
+    SplashScreen *p_splashScreen = nullptr;   // owned by main.cpp; nullptr if none was passed to the constructor
+    void updateSplash(int percent, const QString &text);   // no-op if p_splashScreen is nullptr - called throughout the constructor/initializeGUI() at each major startup step
 
     // --- Functions panel (AmigaED v3.4) ---------------------------------
     QGroupBox *functionsGroupBox = nullptr;        // "Functions" - sits to the right of the editor
@@ -695,6 +739,20 @@ private:
     // signal once the user closes it (see actionShowAutodocReader()).
     AutodocReader *p_autodocReader = nullptr;
 
+    // C/C++ Language Reference (Help > C/C++ > ..., rev.157) - non-modal,
+    // single instance, same "only once" tracking as p_autodocReader
+    // above. nullptr while closed; reset back to nullptr via its
+    // destroyed() signal once the user closes it (see
+    // showCppRefReaderAndJumpTo()).
+    CppRefReader *p_cppRefReader = nullptr;
+
+    // Assembler Language Reference (Help > Assembler > ..., rev.158) -
+    // non-modal, single instance, same "only once" tracking as
+    // p_cppRefReader above. nullptr while closed; reset back to nullptr
+    // via its destroyed() signal once the user closes it (see
+    // showAsmRefReaderAndJumpTo()).
+    AsmRefReader *p_asmRefReader = nullptr;
+
     // Cache backing isKnownAutodocFunction() (see showCustomContextMenue()'s
     // "Jump to Explanation" gating): the lower-cased short name of every
     // documented NDK/MUI function found under the currently configured
@@ -748,8 +806,32 @@ private:
     QAction *searchAct;             // search for text
     QAction *contextSearchReplaceAct;  // "Search and Replace..." - context menu only, topmost entry (see showCustomContextMenue())
     QAction *jumpToExplanationAct;   // "Jump to Explanation" (rev.151) - context menu only, opens/raises the AutoDoc Reader and jumps to the word under the click, see actionJumpToExplanation()
+    QAction *lookupCppRefAct;        // "Lookup C/C++" (rev.158) - context menu only, opens/raises the C/C++ Reference and jumps to the word under the click, see actionLookupCppRef()
+    QAction *lookupAsmRefAct;        // "Lookup Assembler" (rev.159) - context menu only, opens/raises the Assembler Reference and jumps to the word under the click, see actionLookupAsmRef()
     // Actions for helpMenue
     QAction *manualAct;             // opens the non-modal HTML Manual viewer (F1)
+    // Help > C/C++ > ... (rev.157) - each opens/raises the single
+    // CppRefReader instance and jumps to its own category, see
+    // showCppRefReaderAndJumpTo() and createMenus() for cppRefMenue.
+    QMenu *cppRefMenue = nullptr;
+    QAction *cppRefKeywordsAct;
+    QAction *cppRefDatatypesAct;
+    QAction *cppRefVariablesAct;
+    QAction *cppRefDecisionsAct;
+    QAction *cppRefControlStructuresAct;
+    QAction *cppRefOperatorsAct;
+    QAction *cppRefFunctionsAct;
+    // Help > Assembler > ... (rev.158) - each opens/raises the single
+    // AsmRefReader instance and jumps to its own category, see
+    // showAsmRefReaderAndJumpTo() and createMenus() for asmRefMenue.
+    QMenu *asmRefMenue = nullptr;
+    QAction *asmRefRegistersAct;
+    QAction *asmRefAddressingModesAct;
+    QAction *asmRefMnemonicsAct;
+    QAction *asmRefDirectivesAct;
+    QAction *asmRefMacrosAct;
+    QAction *asmRefSubroutinesAct;
+    QAction *asmRefVasmVsGnuAsAct;
     QAction *aboutAct;              // show about message
     QAction *aboutQtAct;            // show about-Qt message
     // Actions for navigationMenue

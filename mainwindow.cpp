@@ -77,14 +77,18 @@
 #include "prefsdialog.h"
 #include "aboutdialog.h"
 #include "autodocreader.h"
+#include "cpprefreader.h"
+#include "asmrefreader.h"
 #include "externalchangesdialog.h"
+#include "splashscreen.h"
 
 // Processes to start:
 static QProcess myProcess;      // the process for using as spare for further extensions
 static QProcess cmd;            // the process for running the compiler
 
 // Open MainWindow with given filename...
-MainWindow::MainWindow(QString cmdFileName)
+MainWindow::MainWindow(QString cmdFileName, SplashScreen *splash)
+    : p_splashScreen(splash)
 {
     // rev.149: carry over an existing user's settings from the old
     // "Amiga Cross Editor" settings file/registry key to the new
@@ -95,11 +99,14 @@ MainWindow::MainWindow(QString cmdFileName)
     // load preferences
     // restores last saved position and size of the editor window, load other defaults
     readPosSettings();
-    readSettings();
+    readSettings();   // installs the saved GUI-language translator, if any - every tr() call below (including every updateSplash() call in this constructor) already picks up the right language
     debugVars();
+
+    updateSplash(5, tr("Loading preferences..."));
 
     applyApplicationStyle();
     p_styleInitialized = true;   // from here on, readSettings() may re-apply the style live
+    updateSplash(15, tr("Applying application style..."));
 
     //QsciLexerBash *lexerbash = new QsciLexerBash;
     //lexer->setFoldComments(true);
@@ -297,13 +304,17 @@ MainWindow::MainWindow(QString cmdFileName)
     outputGroup->hide();
     searchGroup->hide();
 
+    updateSplash(25, tr("Building editor panels..."));
+
     // Project panel (tree view + Add/Remove buttons) sits to the left of
     // the existing tabs/output/search splitter, in its own horizontally
     // resizable pane (AmigaED v3.3).
     createProjectPanel();
+    updateSplash(35, tr("Building project panel..."));
     // Functions panel sits to the right of the editor, listing every
     // function AmigaED can find in the project's C/C++ files (v3.4).
     createFunctionsPanel();
+    updateSplash(45, tr("Building functions panel..."));
 
     mainSplitter = new QSplitter(this);
     mainSplitter->setOrientation(Qt::Horizontal);
@@ -351,6 +362,7 @@ MainWindow::MainWindow(QString cmdFileName)
     // BEFORE activateGUIdefaultSettings() below, since that calls
     // actionShowIndentationGuides(), which dereferences 'textEdit'.
     newEditorTab();
+    updateSplash(98, tr("Opening editor..."));
 
     activateGUIdefaultSettings();
 
@@ -465,6 +477,20 @@ MainWindow::MainWindow(QString cmdFileName)
     // and polling only on refocus is both cheaper and less naggy than a
     // watcher's immediate per-write notifications.
     connect(qApp, &QApplication::applicationStateChanged, this, &MainWindow::onApplicationStateChanged);
+
+    updateSplash(100, tr("Ready."));
+}
+
+//
+// Forwards to p_splashScreen->setProgress() (see splashscreen.h) if one
+// was passed into the constructor - a plain no-op otherwise, so every
+// call site throughout this file/initializeGUI() below stays valid
+// whether or not MainWindow was actually given a splash screen to drive.
+//
+void MainWindow::updateSplash(int percent, const QString &text)
+{
+    if (p_splashScreen)
+        p_splashScreen->setProgress(percent, text);
 }
 
 //
@@ -803,6 +829,179 @@ void MainWindow::showAutodocReaderAndJumpTo(const QString &functionName)
 }
 
 //
+// Shared implementation behind every Help > C/C++ > <category> menu entry
+// (rev.157) - opens the single CppRefReader instance if it isn't open
+// yet, or simply raises it if it already is, then jumps it to category
+// (see CppRefReader::showCategory()). Same "only once, non-modal"
+// pattern as showAutodocReaderAndJumpTo() right above (p_cppRefReader
+// enforces a single instance, its destroyed() signal resets the pointer
+// back to nullptr once the user closes it, and show()/raise()/
+// activateWindow(), never exec(), keeps the rest of AmigaED fully usable
+// while it's open) - unlike the AutoDoc Reader, there's no external
+// folder to configure first, so opening it can never fail.
+//
+//
+// Lazily constructs p_cppRefReader if it doesn't exist yet (never shown
+// by this alone - just built and returned), or simply returns the
+// existing single instance. Shared by showCppRefReaderAndJumpTo() (which
+// then also shows/raises it) and isKnownCppRefToken() (rev.158, which
+// only needs to query its token index - see the .h). Constructing it is
+// cheap (everything it shows is in-memory hardcoded HTML, no external
+// file parsing like AutodocReader's own folder scan), so probing it from
+// every right-click, the first time only, is not a concern.
+//
+CppRefReader *MainWindow::ensureCppRefReader()
+{
+    if (!p_cppRefReader)
+    {
+        p_cppRefReader = new CppRefReader(p_guiLanguage, this);
+
+        connect(p_cppRefReader, &QDialog::destroyed, this, [this]() {
+            p_cppRefReader = nullptr;
+        });
+    }
+    return p_cppRefReader;
+}
+
+void MainWindow::showCppRefReaderAndJumpTo(const QString &category)
+{
+    CppRefReader *reader = ensureCppRefReader();
+
+    // See showAutodocReaderAndJumpTo()'s own comment above for why
+    // isMinimized()/showNormal() is needed instead of a plain show().
+    if (reader->isMinimized())
+        reader->showNormal();
+    else
+        reader->show();
+    reader->raise();
+    reader->activateWindow();
+
+    reader->showCategory(category);
+}
+
+//
+// Editor context menu entry "Lookup C/C++" (rev.158, see
+// showCustomContextMenue()) - opens/raises the C/C++ Reference and jumps
+// it straight to the entry for whatever word was under the mouse when the
+// context menu was opened. Mirrors actionJumpToExplanation() exactly,
+// just backed by CppRefReader::showEntryForToken() instead of
+// AutodocReader::showFunction().
+//
+void MainWindow::actionLookupCppRef()
+{
+    if (p_contextMenuWordAtClick.isEmpty())
+    {
+        createStatusBarMessage(tr("No word under the cursor to look up."), 4000);
+        return;
+    }
+
+    CppRefReader *reader = ensureCppRefReader();
+
+    if (reader->isMinimized())
+        reader->showNormal();
+    else
+        reader->show();
+    reader->raise();
+    reader->activateWindow();
+
+    if (!reader->showEntryForToken(p_contextMenuWordAtClick))
+        createStatusBarMessage(tr("No C/C++ reference entry found for \"%1\".").arg(p_contextMenuWordAtClick), 4000);
+}
+
+//
+// true if word (case-sensitive - see CppRefReader::buildTokenIndex(),
+// which deliberately keeps "long" and "LONG" distinct) is a literal
+// C/C++ keyword or datatype spelling the C/C++ Reference has an entry
+// for. Used by showCustomContextMenue() to gate "Lookup C/C++" the same
+// way isKnownAutodocFunction() gates "Jump to Explanation", so a plain
+// local variable or other word that was never going to match doesn't get
+// offered a lookup that would just fail.
+//
+bool MainWindow::isKnownCppRefToken(const QString &word)
+{
+    if (word.isEmpty())
+        return false;
+
+    return ensureCppRefReader()->hasEntryForToken(word);
+}
+
+//
+// Lazily constructs p_asmRefReader if it doesn't exist yet, or simply
+// returns the existing single instance - mirrors ensureCppRefReader()
+// above exactly (rev.158).
+//
+AsmRefReader *MainWindow::ensureAsmRefReader()
+{
+    if (!p_asmRefReader)
+    {
+        p_asmRefReader = new AsmRefReader(p_guiLanguage, this);
+
+        connect(p_asmRefReader, &QDialog::destroyed, this, [this]() {
+            p_asmRefReader = nullptr;
+        });
+    }
+    return p_asmRefReader;
+}
+
+void MainWindow::showAsmRefReaderAndJumpTo(const QString &category)
+{
+    AsmRefReader *reader = ensureAsmRefReader();
+
+    if (reader->isMinimized())
+        reader->showNormal();
+    else
+        reader->show();
+    reader->raise();
+    reader->activateWindow();
+
+    reader->showCategory(category);
+}
+
+//
+// Editor context menu entry "Lookup Assembler" (rev.159, see
+// showCustomContextMenue()) - opens/raises the Assembler Reference and
+// jumps it straight to the entry for whatever word was under the mouse
+// when the context menu was opened. Mirrors actionLookupCppRef() exactly,
+// just backed by AsmRefReader::showEntryForToken() instead of
+// CppRefReader's.
+//
+void MainWindow::actionLookupAsmRef()
+{
+    if (p_contextMenuWordAtClick.isEmpty())
+    {
+        createStatusBarMessage(tr("No word under the cursor to look up."), 4000);
+        return;
+    }
+
+    AsmRefReader *reader = ensureAsmRefReader();
+
+    if (reader->isMinimized())
+        reader->showNormal();
+    else
+        reader->show();
+    reader->raise();
+    reader->activateWindow();
+
+    if (!reader->showEntryForToken(p_contextMenuWordAtClick))
+        createStatusBarMessage(tr("No Assembler reference entry found for \"%1\".").arg(p_contextMenuWordAtClick), 4000);
+}
+
+//
+// true (case-insensitive - see AsmRefReader::buildTokenIndex(), where
+// case carries no meaning for an m68k mnemonic/directive/register) if
+// word is a spelling the Assembler Reference has an entry for. Used by
+// showCustomContextMenue() to gate "Lookup Assembler" the same way
+// isKnownCppRefToken() gates "Lookup C/C++".
+//
+bool MainWindow::isKnownAsmRefToken(const QString &word)
+{
+    if (word.isEmpty())
+        return false;
+
+    return ensureAsmRefReader()->hasEntryForToken(word);
+}
+
+//
 // true if 'word' matches a documented NDK/MUI function's short name
 // (case-insensitive) under the AutoDocs folder currently configured in
 // Prefs > Emulator > "AutoDocs folder:" - see showCustomContextMenue(),
@@ -1034,6 +1233,22 @@ void MainWindow::createActions()
     jumpToExplanationAct = new QAction(QIcon(":/images/autodoc_reader.png"), tr("Jump to Explanation"), this);
     jumpToExplanationAct->setStatusTip(tr("Open the AutoDoc Reader and jump to the entry for the word under the click"));
     connect(jumpToExplanationAct, SIGNAL(triggered()), this, SLOT(actionJumpToExplanation()));
+
+    // Context-menu-only entry (rev.158, see showCustomContextMenue()):
+    // opens/raises the C/C++ Reference and jumps it straight to the
+    // keyword/datatype under the click - the same "Jump to Explanation"
+    // idea as jumpToExplanationAct right above, just backed by
+    // CppRefReader's own entries instead of the AutoDocs folder.
+    lookupCppRefAct = new QAction(QIcon(":/images/cpp-logo.png"), tr("Lookup C/C++"), this);
+    lookupCppRefAct->setStatusTip(tr("Open the C/C++ Reference and jump to the entry for the word under the click"));
+    connect(lookupCppRefAct, SIGNAL(triggered()), this, SLOT(actionLookupCppRef()));
+
+    // Context-menu-only entry (rev.159, see showCustomContextMenue()) -
+    // same idea as lookupCppRefAct right above, just backed by
+    // AsmRefReader's own entries instead of CppRefReader's.
+    lookupAsmRefAct = new QAction(QIcon(":/images/filetype_asm.png"), tr("Lookup Assembler"), this);
+    lookupAsmRefAct->setStatusTip(tr("Open the Assembler Reference and jump to the entry for the word under the click"));
+    connect(lookupAsmRefAct, SIGNAL(triggered()), this, SLOT(actionLookupAsmRef()));
 
     /* --- Navigation -------------------------------------------------------------------*/
     gotoTopAct = new QAction( tr("&Goto top..."), this);
@@ -1432,6 +1647,75 @@ void MainWindow::createActions()
     manualAct->setStatusTip(tr("Open the AmigaED manual"));
     connect(manualAct, SIGNAL(triggered()), this, SLOT(actionShowManual()));
 
+    // Help > C/C++ > ... (rev.157) - each opens/raises the single
+    // CppRefReader instance and jumps it to its own category; all seven
+    // share the same lambda-based connect() pattern (see
+    // showCppRefReaderAndJumpTo()) rather than seven near-identical
+    // named slots.
+    cppRefKeywordsAct = new QAction(tr("Keywords"), this);
+    cppRefKeywordsAct->setStatusTip(tr("Browse C/C++ keywords"));
+    connect(cppRefKeywordsAct, &QAction::triggered, this, [this]() { showCppRefReaderAndJumpTo(QStringLiteral("Keywords")); });
+
+    cppRefDatatypesAct = new QAction(tr("Datatypes"), this);
+    cppRefDatatypesAct->setStatusTip(tr("Browse C/C++ datatypes, including the Amiga NDK typedefs"));
+    connect(cppRefDatatypesAct, &QAction::triggered, this, [this]() { showCppRefReaderAndJumpTo(QStringLiteral("Datatypes")); });
+
+    cppRefVariablesAct = new QAction(tr("Variables"), this);
+    cppRefVariablesAct->setStatusTip(tr("Browse variables, pointers, and constants"));
+    connect(cppRefVariablesAct, &QAction::triggered, this, [this]() { showCppRefReaderAndJumpTo(QStringLiteral("Variables")); });
+
+    cppRefDecisionsAct = new QAction(tr("Decisions"), this);
+    cppRefDecisionsAct->setStatusTip(tr("Browse decision constructs (if/else, ...)"));
+    connect(cppRefDecisionsAct, &QAction::triggered, this, [this]() { showCppRefReaderAndJumpTo(QStringLiteral("Decisions")); });
+
+    cppRefControlStructuresAct = new QAction(tr("Control Structures"), this);
+    cppRefControlStructuresAct->setStatusTip(tr("Browse control structures (loops, switch, ...)"));
+    connect(cppRefControlStructuresAct, &QAction::triggered, this, [this]() { showCppRefReaderAndJumpTo(QStringLiteral("Control Structures")); });
+
+    cppRefOperatorsAct = new QAction(tr("Operators"), this);
+    cppRefOperatorsAct->setStatusTip(tr("Browse C/C++ operators"));
+    connect(cppRefOperatorsAct, &QAction::triggered, this, [this]() { showCppRefReaderAndJumpTo(QStringLiteral("Operators")); });
+
+    cppRefFunctionsAct = new QAction(tr("Functions"), this);
+    cppRefFunctionsAct->setStatusTip(tr("Browse function declarations, definitions, and function pointers"));
+    connect(cppRefFunctionsAct, &QAction::triggered, this, [this]() { showCppRefReaderAndJumpTo(QStringLiteral("Functions")); });
+
+    // Help > Assembler > ... (rev.158) - each opens/raises the single
+    // AsmRefReader instance and jumps it to its own category, same
+    // lambda-based pattern as the C/C++ actions above (see
+    // showAsmRefReaderAndJumpTo()). Mnemonics, Directives, Macros and
+    // Subroutines & Calling Conventions currently open to a single
+    // "(coming soon)" placeholder entry in their category - see
+    // AsmRefReader::populateEntries() - until a future revision fills
+    // them in.
+    asmRefRegistersAct = new QAction(tr("Registers"), this);
+    asmRefRegistersAct->setStatusTip(tr("Browse the m68k CPU registers"));
+    connect(asmRefRegistersAct, &QAction::triggered, this, [this]() { showAsmRefReaderAndJumpTo(QStringLiteral("Registers")); });
+
+    asmRefAddressingModesAct = new QAction(tr("Addressing Modes"), this);
+    asmRefAddressingModesAct->setStatusTip(tr("Browse the m68k addressing modes"));
+    connect(asmRefAddressingModesAct, &QAction::triggered, this, [this]() { showAsmRefReaderAndJumpTo(QStringLiteral("Addressing Modes")); });
+
+    asmRefMnemonicsAct = new QAction(tr("Mnemonics"), this);
+    asmRefMnemonicsAct->setStatusTip(tr("Browse m68k instruction mnemonics"));
+    connect(asmRefMnemonicsAct, &QAction::triggered, this, [this]() { showAsmRefReaderAndJumpTo(QStringLiteral("Mnemonics")); });
+
+    asmRefDirectivesAct = new QAction(tr("Directives"), this);
+    asmRefDirectivesAct->setStatusTip(tr("Browse assembler directives (sections, labels, EQU, ...)"));
+    connect(asmRefDirectivesAct, &QAction::triggered, this, [this]() { showAsmRefReaderAndJumpTo(QStringLiteral("Directives")); });
+
+    asmRefMacrosAct = new QAction(tr("Macros"), this);
+    asmRefMacrosAct->setStatusTip(tr("Browse assembler macros"));
+    connect(asmRefMacrosAct, &QAction::triggered, this, [this]() { showAsmRefReaderAndJumpTo(QStringLiteral("Macros")); });
+
+    asmRefSubroutinesAct = new QAction(tr("Subroutines && Calling Conventions"), this);
+    asmRefSubroutinesAct->setStatusTip(tr("Browse subroutines, calling conventions, and Amiga library calls"));
+    connect(asmRefSubroutinesAct, &QAction::triggered, this, [this]() { showAsmRefReaderAndJumpTo(QStringLiteral("Subroutines & Calling Conventions")); });
+
+    asmRefVasmVsGnuAsAct = new QAction(tr("vasm vs GNU-as"), this);
+    asmRefVasmVsGnuAsAct->setStatusTip(tr("Browse the differences between vasm (Motorola syntax) and GNU as"));
+    connect(asmRefVasmVsGnuAsAct, &QAction::triggered, this, [this]() { showAsmRefReaderAndJumpTo(QStringLiteral("vasm vs GNU-as")); });
+
     aboutAct = new QAction(tr("&About"), this);
     aboutAct->setStatusTip(tr("Show the application's About box"));
     connect(aboutAct, SIGNAL(triggered()), this, SLOT(about()));
@@ -1644,6 +1928,23 @@ void MainWindow::createMenus()
     helpMenue = menuBar()->addMenu(tr("&Help"));
     helpMenue->addAction(manualAct);
     helpMenue->addSeparator();
+    cppRefMenue = helpMenue->addMenu(tr("C/C++"));
+    cppRefMenue->addAction(cppRefKeywordsAct);
+    cppRefMenue->addAction(cppRefDatatypesAct);
+    cppRefMenue->addAction(cppRefVariablesAct);
+    cppRefMenue->addAction(cppRefDecisionsAct);
+    cppRefMenue->addAction(cppRefControlStructuresAct);
+    cppRefMenue->addAction(cppRefOperatorsAct);
+    cppRefMenue->addAction(cppRefFunctionsAct);
+    asmRefMenue = helpMenue->addMenu(tr("Assembler"));
+    asmRefMenue->addAction(asmRefRegistersAct);
+    asmRefMenue->addAction(asmRefAddressingModesAct);
+    asmRefMenue->addAction(asmRefMnemonicsAct);
+    asmRefMenue->addAction(asmRefDirectivesAct);
+    asmRefMenue->addAction(asmRefMacrosAct);
+    asmRefMenue->addAction(asmRefSubroutinesAct);
+    asmRefMenue->addAction(asmRefVasmVsGnuAsAct);
+    helpMenue->addSeparator();
     helpMenue->addAction(aboutAct);
     helpMenue->addAction(aboutQtAct);
 }
@@ -1740,6 +2041,8 @@ void MainWindow::retranslateUi()
     searchAct->setText(tr("Sea&rch..."));
     contextSearchReplaceAct->setText(tr("Search and Replace..."));
     jumpToExplanationAct->setText(tr("Jump to Explanation"));
+    lookupCppRefAct->setText(tr("Lookup C/C++"));
+    lookupAsmRefAct->setText(tr("Lookup Assembler"));
     gotoTopAct->setText(tr("&Goto top..."));
     gotoBottomAct->setText(tr("&Goto bottom..."));
     gotoLineAct->setText(tr("&Goto Line..."));
@@ -1804,6 +2107,20 @@ void MainWindow::retranslateUi()
     cpp_singleAct->setText(tr("C++ style single line comment..."));
     lineDevideCommentAct->setText(tr("C-style single line code dividing comment..."));
     manualAct->setText(tr("Manual"));
+    cppRefKeywordsAct->setText(tr("Keywords"));
+    cppRefDatatypesAct->setText(tr("Datatypes"));
+    cppRefVariablesAct->setText(tr("Variables"));
+    cppRefDecisionsAct->setText(tr("Decisions"));
+    cppRefControlStructuresAct->setText(tr("Control Structures"));
+    cppRefOperatorsAct->setText(tr("Operators"));
+    cppRefFunctionsAct->setText(tr("Functions"));
+    asmRefRegistersAct->setText(tr("Registers"));
+    asmRefAddressingModesAct->setText(tr("Addressing Modes"));
+    asmRefMnemonicsAct->setText(tr("Mnemonics"));
+    asmRefDirectivesAct->setText(tr("Directives"));
+    asmRefMacrosAct->setText(tr("Macros"));
+    asmRefSubroutinesAct->setText(tr("Subroutines && Calling Conventions"));
+    asmRefVasmVsGnuAsAct->setText(tr("vasm vs GNU-as"));
     aboutAct->setText(tr("&About"));
     aboutQtAct->setText(tr("About &Qt"));
 
@@ -1827,6 +2144,8 @@ void MainWindow::retranslateUi()
     searchAct->setStatusTip(tr("Search text in document"));
     contextSearchReplaceAct->setStatusTip(tr("Open Search and Replace, using the word under the click as the search term"));
     jumpToExplanationAct->setStatusTip(tr("Open the AutoDoc Reader and jump to the entry for the word under the click"));
+    lookupCppRefAct->setStatusTip(tr("Open the C/C++ Reference and jump to the entry for the word under the click"));
+    lookupAsmRefAct->setStatusTip(tr("Open the Assembler Reference and jump to the entry for the word under the click"));
     gotoTopAct->setStatusTip(tr("Goto top of file..."));
     gotoBottomAct->setStatusTip(tr("Goto bottom of file..."));
     gotoLineAct->setStatusTip(tr("Goto line X..."));
@@ -1891,6 +2210,20 @@ void MainWindow::retranslateUi()
     cpp_singleAct->setStatusTip(tr("insert C++ style single line comment"));
     lineDevideCommentAct->setStatusTip(tr("insert code dividing comment: /* --- COMMENT -------*/"));
     manualAct->setStatusTip(tr("Open the AmigaED manual"));
+    cppRefKeywordsAct->setStatusTip(tr("Browse C/C++ keywords"));
+    cppRefDatatypesAct->setStatusTip(tr("Browse C/C++ datatypes, including the Amiga NDK typedefs"));
+    cppRefVariablesAct->setStatusTip(tr("Browse variables, pointers, and constants"));
+    cppRefDecisionsAct->setStatusTip(tr("Browse decision constructs (if/else, ...)"));
+    cppRefControlStructuresAct->setStatusTip(tr("Browse control structures (loops, switch, ...)"));
+    cppRefOperatorsAct->setStatusTip(tr("Browse C/C++ operators"));
+    cppRefFunctionsAct->setStatusTip(tr("Browse function declarations, definitions, and function pointers"));
+    asmRefRegistersAct->setStatusTip(tr("Browse the m68k CPU registers"));
+    asmRefAddressingModesAct->setStatusTip(tr("Browse the m68k addressing modes"));
+    asmRefMnemonicsAct->setStatusTip(tr("Browse m68k instruction mnemonics"));
+    asmRefDirectivesAct->setStatusTip(tr("Browse assembler directives (sections, labels, EQU, ...)"));
+    asmRefMacrosAct->setStatusTip(tr("Browse assembler macros"));
+    asmRefSubroutinesAct->setStatusTip(tr("Browse subroutines, calling conventions, and Amiga library calls"));
+    asmRefVasmVsGnuAsAct->setStatusTip(tr("Browse the differences between vasm (Motorola syntax) and GNU as"));
     aboutAct->setStatusTip(tr("Show the application's About box"));
     aboutQtAct->setStatusTip(tr("Show the Qt library's About box"));
     addProjectFileBtn->setStatusTip(tr("Add an existing file to the project"));
@@ -1920,6 +2253,8 @@ void MainWindow::retranslateUi()
     toolsMenue->setTitle(tr("&Tools"));
     emulatorMenue->setTitle(tr("Emulator..."));
     helpMenue->setTitle(tr("&Help"));
+    cppRefMenue->setTitle(tr("C/C++"));
+    asmRefMenue->setTitle(tr("Assembler"));
 
     // -- Toolbar titles (shown in the toolbar right-click context menu) --
     fileToolBar->setWindowTitle(tr("File"));
@@ -2963,10 +3298,10 @@ void MainWindow::onApplicationStateChanged(Qt::ApplicationState state)
 // Walks every open tab and compares its file's current on-disk
 // modification time against the baseline stamped in
 // updateExternalMTimeBaseline() (set on every AmigaED-initiated open or
-// save - see setCurrentFile()). Anything that no longer matches was
-// therefore changed by something other than AmigaED itself since it was
-// last opened/saved/acknowledged - offer those, via ExternalChangesDialog,
-// to be reloaded from disk.
+// save - see setCurrentFile()). A file whose mtime no longer matches is
+// then CONFIRMED against its actual content (see below) before ever being
+// offered, via ExternalChangesDialog, as changed - so only a genuine
+// content change interrupts the user.
 //
 // Deliberately does nothing for a tab that's never had a baseline stamped
 // (property missing/invalid) rather than treating that as "changed" -
@@ -3000,7 +3335,40 @@ void MainWindow::checkForExternallyModifiedFiles()
             continue;   // deleted/moved out from under us - a different concern, not handled here
 
         if (info.lastModified() == baseline)
-            continue;   // unchanged since we last saw it
+            continue;   // mtime unchanged - definitely nothing to do, skip the content re-read below
+
+        // The mtime no longer matches - but on Windows this has been
+        // reported to fire spuriously on plain refocus (e.g. bringing
+        // AmigaED back to front after UAE, a browser, or Notepad++ had
+        // the focus) even though nothing on disk actually changed. Rather
+        // than trust the timestamp alone, confirm it: for a tab with no
+        // unsaved edits, re-read the file the same way reloadEditorFromDiskIfOpen()/
+        // loadFile() would and compare it byte-for-byte against what's
+        // currently shown. Identical content means there is nothing to
+        // reload - silently accept the new mtime as the fresh baseline and
+        // move on without ever bothering the user (avoids not just a
+        // needless dialog, but reloadEditorFromDiskIfOpen() discarding the
+        // tab's cursor/scroll/undo position for a "change" that never
+        // happened). A dirty tab's in-editor text intentionally differs
+        // from disk already (unsaved edits), so it can't be verified this
+        // way - it's still reported below, same as before, but
+        // ExternalChangesDialog already pre-unchecks and warns on any
+        // dirty file, so reloading it still can't happen by accident.
+        if (!editor->isModified())
+        {
+            QFile file(path);
+            if (file.open(QFile::ReadOnly))
+            {
+                QTextStream in(&file);
+                in.setEncoding(QStringConverter::Latin1);   // see loadFile() for rationale
+                if (in.readAll() == editor->text())
+                {
+                    updateExternalMTimeBaseline(path);
+                    continue;   // false alarm - identical content, nothing to ask about
+                }
+            }
+            // unreadable, or genuinely different content - fall through and report it below
+        }
 
         changedFiles.append(path);
         if (editor->isModified())
@@ -7233,6 +7601,123 @@ void MainWindow::createFunctionsPanel()
 }
 
 //
+// Blanks out //-comments, /* */-comments and the *contents* of string/char
+// literals (replacing every non-newline character with a space, never
+// removing anything) so the function-scanning regex below can no longer
+// mistake a comment for real code. Without this, a Doxygen-/K&R-style
+// comment block that repeats a function's signature directly above its
+// real definition - a very common pattern, e.g.
+//   // void MainWindow::doSomething(int x)
+//   // {
+//   //     ...
+//   // }
+//   void MainWindow::doSomething(int x)
+//   {
+// - matched TWICE: once inside the comment, once for the real definition,
+// so the same function showed up twice (or more) in the Functions panel.
+// Because only characters are replaced and no newlines are touched, the
+// string keeps its original length and all line breaks stay in place, so
+// the line-number math in scanFunctionsInFile() (which counts '\n' up to
+// a match offset) still yields the correct original line number.
+//
+static QString stripCommentsAndStringsForScan(const QString &source)
+{
+    QString out = source;
+    const int n = out.length();
+    int i = 0;
+
+    while (i < n)
+    {
+        const QChar c = out.at(i);
+
+        // Line comment: blank up to (not including) the newline.
+        if (c == QLatin1Char('/') && i + 1 < n && out.at(i + 1) == QLatin1Char('/'))
+        {
+            while (i < n && out.at(i) != QLatin1Char('\n'))
+            {
+                out[i] = QLatin1Char(' ');
+                ++i;
+            }
+            continue;
+        }
+
+        // Block comment: blank everything up to and including the closing
+        // "*/", but keep embedded newlines so line counting stays correct.
+        if (c == QLatin1Char('/') && i + 1 < n && out.at(i + 1) == QLatin1Char('*'))
+        {
+            out[i] = QLatin1Char(' ');
+            out[i + 1] = QLatin1Char(' ');
+            i += 2;
+            while (i < n && !(out.at(i) == QLatin1Char('*') && i + 1 < n && out.at(i + 1) == QLatin1Char('/')))
+            {
+                if (out.at(i) != QLatin1Char('\n'))
+                    out[i] = QLatin1Char(' ');
+                ++i;
+            }
+            if (i < n)
+            {
+                out[i] = QLatin1Char(' ');
+                if (i + 1 < n)
+                    out[i + 1] = QLatin1Char(' ');
+                i += 2;
+            }
+            continue;
+        }
+
+        // String literal: blank the contents (quotes themselves are left
+        // alone, they don't confuse the function regex either way).
+        if (c == QLatin1Char('"'))
+        {
+            ++i;
+            while (i < n && out.at(i) != QLatin1Char('"'))
+            {
+                if (out.at(i) == QLatin1Char('\\') && i + 1 < n)
+                {
+                    out[i] = QLatin1Char(' ');
+                    if (out.at(i + 1) != QLatin1Char('\n'))
+                        out[i + 1] = QLatin1Char(' ');
+                    i += 2;
+                    continue;
+                }
+                if (out.at(i) != QLatin1Char('\n'))
+                    out[i] = QLatin1Char(' ');
+                ++i;
+            }
+            if (i < n)
+                ++i;   // skip closing quote
+            continue;
+        }
+
+        // Char literal: same treatment.
+        if (c == QLatin1Char('\''))
+        {
+            ++i;
+            while (i < n && out.at(i) != QLatin1Char('\''))
+            {
+                if (out.at(i) == QLatin1Char('\\') && i + 1 < n)
+                {
+                    out[i] = QLatin1Char(' ');
+                    if (out.at(i + 1) != QLatin1Char('\n'))
+                        out[i + 1] = QLatin1Char(' ');
+                    i += 2;
+                    continue;
+                }
+                if (out.at(i) != QLatin1Char('\n'))
+                    out[i] = QLatin1Char(' ');
+                ++i;
+            }
+            if (i < n)
+                ++i;   // skip closing quote
+            continue;
+        }
+
+        ++i;
+    }
+
+    return out;
+}
+
+//
 // Heuristic (regex-based) scan for C/C++ function DEFINITIONS in a source
 // file - not a real parser. Looks for "<type> <name>(<params>) {" allowing
 // the opening brace on its own line (K&R style), and skips anything that
@@ -7254,6 +7739,13 @@ QList<QPair<QString, int>> MainWindow::scanFunctionsInFile(const QString &filePa
     in.setEncoding(QStringConverter::Latin1);   // see loadFile() for rationale
     QString content = in.readAll();
     file.close();
+
+    // Scan a comment-/string-blanked copy so a comment that happens to
+    // repeat a function's signature (see stripCommentsAndStringsForScan()
+    // above) can no longer produce a duplicate entry. Line numbers are
+    // computed against this same copy below, which is safe because it has
+    // the exact same length and newline positions as the original.
+    content = stripCommentsAndStringsForScan(content);
 
     static const QRegularExpression re(
         "^[ \\t]*[A-Za-z_][A-Za-z0-9_:<>]*(?:[ \\t]+[A-Za-z_][A-Za-z0-9_:<>]*)*[ \\t\\*&]+"
@@ -8034,8 +8526,14 @@ void MainWindow::regenerateProjectMakefiles()
     // added to a locked Assembler project later, asmOnlyProject itself
     // goes false and both Makefiles resume being generated normally,
     // same as any ordinary mixed project.
-    bool skipGccMakefile = asmOnlyProject && currentProject->asmAssembler == 3;
-    bool skipVbccMakefile = asmOnlyProject && currentProject->asmAssembler == 4;
+    // On top of the asmOnlyProject case above, the user may have explicitly
+    // removed a Makefile via "Remove" in the project tree - see
+    // excludeAndDeleteGeneratedMakefile(). That flag is a hard stop
+    // independent of asmOnlyProject: once set, this Makefile is never
+    // (re)written again until the user turns it back on via Build > Project
+    // Options... (actionProjectOptions()).
+    bool skipGccMakefile = (asmOnlyProject && currentProject->asmAssembler == 3) || currentProject->excludeGccMakefile;
+    bool skipVbccMakefile = (asmOnlyProject && currentProject->asmAssembler == 4) || currentProject->excludeVbccMakefile;
 
     if (!skipGccMakefile)
         writeMakefile("Makefile.gcc", "m68k-amigaos-gcc",
@@ -8056,7 +8554,7 @@ void MainWindow::regenerateProjectMakefiles()
     // for typical use. SAS/C only runs on a real Amiga/emulator, so
     // AmigaED never invokes this Makefile itself - it's purely a hint for
     // whoever builds it by hand later (e.g. via smake).
-    if (!scSources.isEmpty())
+    if (!scSources.isEmpty() && !currentProject->excludeScMakefile)
     {
         // Only add MATH=IEEE if the project doesn't already configure a
         // MATH= mode of its own (SAS/C also supports MATH=68881/MATH=FFP
@@ -8145,16 +8643,33 @@ void MainWindow::regenerateProjectMakefiles()
         }
     }
 
+    // Makefiles the user explicitly removed via "Remove" (see
+    // excludeAndDeleteGeneratedMakefile()) - deliberately not (re)generated
+    // above, distinct from preservedFiles (which WERE written before, but
+    // have since been hand-edited outside AmigaED).
+    QStringList excludedFiles;
+    if (currentProject->excludeGccMakefile)
+        excludedFiles << "Makefile.gcc";
+    if (currentProject->excludeVbccMakefile)
+        excludedFiles << "Makefile.vbcc";
+    if (currentProject->excludeScMakefile && !scSources.isEmpty())
+        excludedFiles << "Makefile.sc";
+
     if (writeFailed)
     {
         QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
                               tr("Could not write the following Makefile(s) in\n%1:\n\n%2")
                                   .arg(dir, failedFiles.join("\n")));
     }
-    else if (!preservedFiles.isEmpty())
+    else if (!preservedFiles.isEmpty() || !excludedFiles.isEmpty())
     {
-        createStatusBarMessage(tr("Makefiles updated (left unchanged - edited by hand: %1. Delete a file to let AmigaED manage it again.)")
-                                    .arg(preservedFiles.join(", ")), 8000);
+        QStringList notes;
+        if (!preservedFiles.isEmpty())
+            notes << tr("left unchanged - edited by hand: %1 (delete it to let AmigaED manage it again)").arg(preservedFiles.join(", "));
+        if (!excludedFiles.isEmpty())
+            notes << tr("not generated - removed by you: %1 (re-enable in Project Options... to bring it back)").arg(excludedFiles.join(", "));
+
+        createStatusBarMessage(tr("Makefiles updated (%1).").arg(notes.join("; ")), 8000);
     }
     else
     {
@@ -9696,6 +10211,29 @@ void MainWindow::actionProjectOptions()
                                   "delete it to let AmigaED manage it again."), &dlg);
     note->setWordWrap(true);
 
+    // Whether each generated Makefile is (re)written at all - unchecked
+    // after the user "Remove"s that Makefile from the project tree (see
+    // excludeAndDeleteGeneratedMakefile()); this is the only way to bring
+    // one back afterward. Re-checking here doesn't recreate the file
+    // immediately by itself - the next regeneration (right after this
+    // dialog closes, see below) does that.
+    QCheckBox *gccGenerateCheck = new QCheckBox(tr("Generate Makefile.gcc (m68k-amigaos-gcc)"), &dlg);
+    QCheckBox *vbccGenerateCheck = new QCheckBox(tr("Generate Makefile.vbcc (vbcc/vc)"), &dlg);
+    QCheckBox *scGenerateCheck = new QCheckBox(tr("Generate Makefile.sc (SAS/C hint, plain .c files only)"), &dlg);
+    gccGenerateCheck->setChecked(!currentProject->excludeGccMakefile);
+    vbccGenerateCheck->setChecked(!currentProject->excludeVbccMakefile);
+    scGenerateCheck->setChecked(!currentProject->excludeScMakefile);
+
+    QGroupBox *makefilesGroup = new QGroupBox(tr("Generated Makefiles"), &dlg);
+    QVBoxLayout *makefilesLayout = new QVBoxLayout(makefilesGroup);
+    makefilesLayout->addWidget(gccGenerateCheck);
+    makefilesLayout->addWidget(vbccGenerateCheck);
+    makefilesLayout->addWidget(scGenerateCheck);
+    QLabel *makefilesNote = new QLabel(tr("Unchecked after \"Remove\" on that Makefile in the project tree - check "
+                                           "it again here to let AmigaED generate and manage it once more."), &dlg);
+    makefilesNote->setWordWrap(true);
+    makefilesLayout->addWidget(makefilesNote);
+
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
     connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
@@ -9703,6 +10241,7 @@ void MainWindow::actionProjectOptions()
     QVBoxLayout *layout = new QVBoxLayout(&dlg);
     layout->addLayout(form);
     layout->addWidget(note);
+    layout->addWidget(makefilesGroup);
     layout->addWidget(buttons);
     dlg.setMinimumWidth(480);
 
@@ -9713,9 +10252,14 @@ void MainWindow::actionProjectOptions()
     currentProject->extraGccLinkerOptions = gccLinkerEdit->text();
     currentProject->extraVbccCompilerOptions = vbccCompilerEdit->text();
     currentProject->extraVbccLinkerOptions = vbccLinkerEdit->text();
+    currentProject->excludeGccMakefile = !gccGenerateCheck->isChecked();
+    currentProject->excludeVbccMakefile = !vbccGenerateCheck->isChecked();
+    currentProject->excludeScMakefile = !scGenerateCheck->isChecked();
 
     markProjectModified();
+    saveCurrentProject();
     regenerateProjectMakefiles();
+    refreshProjectTree();   // a re-enabled Makefile needs to (re)appear under "Makefiles" right away
     createStatusBarMessage(tr("Project options updated."), 3000);
 }
 
@@ -10204,8 +10748,12 @@ void MainWindow::actionAddFileToProject()
 
 //
 // Remove the file(s) currently selected in the project tree (Remove
-// button). Only removes project bookkeeping - never deletes the file
-// itself from disk.
+// button). For an ordinary project file this only removes project
+// bookkeeping - it never deletes the file itself from disk. A generated
+// Makefile is the one exception: since it isn't tracked in Project::files
+// to begin with, "removing" it means deleting it from disk and telling
+// AmigaED to leave it alone from now on - see
+// excludeAndDeleteGeneratedMakefile().
 //
 void MainWindow::actionRemoveFileFromProject()
 {
@@ -10221,11 +10769,13 @@ void MainWindow::actionRemoveFileFromProject()
 
     for (QTreeWidgetItem *item : selected)
     {
-        if (item->parent() == projectMakefileGroupItem)
-            continue;   // auto-generated Makefiles aren't tracked in Project::files - nothing to remove there
-
         QString path = item->data(0, Qt::UserRole).toString();
-        if (!path.isEmpty())
+        if (path.isEmpty())
+            continue;
+
+        if (item->parent() == projectMakefileGroupItem)
+            excludeAndDeleteGeneratedMakefile(path);
+        else
             currentProject->removeFile(path);
     }
 
@@ -10234,6 +10784,59 @@ void MainWindow::actionRemoveFileFromProject()
     regenerateProjectMakefiles();   // must run BEFORE refreshProjectTree() - it scans disk for which Makefiles exist
     refreshProjectTree();
     refreshFunctionsList();
+}
+
+//
+// "Remove" on a Makefile item in the project tree (see
+// actionRemoveFileFromProject()/onProjectTreeContextMenu()): unlike an
+// ordinary project file, a generated Makefile isn't tracked in
+// Project::files, so "removing" it instead means deleting it from disk AND
+// flagging it in currentProject so regenerateProjectMakefiles() leaves it
+// alone from then on. Without that flag, the very next regeneration -
+// which runs immediately after this (see the callers), and again on every
+// later project open, file add/remove, or build - would just silently
+// recreate it, which was exactly the reported bug: deleting a Makefile by
+// hand never actually stuck. The flag can be turned back on later via
+// Build > Project Options... (actionProjectOptions()).
+//
+void MainWindow::excludeAndDeleteGeneratedMakefile(const QString &path)
+{
+    if (!currentProject)
+        return;
+
+    QString name = QFileInfo(path).fileName();
+    bool *excludeFlag = nullptr;
+    QString *hashField = nullptr;
+
+    if (name.compare(QStringLiteral("Makefile.gcc"), Qt::CaseInsensitive) == 0)
+    {
+        excludeFlag = &currentProject->excludeGccMakefile;
+        hashField = &currentProject->lastWrittenGccMakefileHash;
+    }
+    else if (name.compare(QStringLiteral("Makefile.vbcc"), Qt::CaseInsensitive) == 0)
+    {
+        excludeFlag = &currentProject->excludeVbccMakefile;
+        hashField = &currentProject->lastWrittenVbccMakefileHash;
+    }
+    else if (name.compare(QStringLiteral("Makefile.sc"), Qt::CaseInsensitive) == 0)
+    {
+        excludeFlag = &currentProject->excludeScMakefile;
+        hashField = &currentProject->lastWrittenScMakefileHash;
+    }
+    else
+    {
+        return;   // not one of the three generated Makefiles - nothing to do
+    }
+
+    if (QFileInfo::exists(path) && !QFile::remove(path))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("Could not delete \"%1\" from disk.").arg(name));
+        return;
+    }
+
+    *excludeFlag = true;
+    hashField->clear();   // stale otherwise - would look like a hand-edit if this Makefile is ever re-enabled/regenerated later
 }
 
 //
@@ -10324,11 +10927,19 @@ void MainWindow::onProjectTreeContextMenu(const QPoint &pos)
     else
     {
         openAction = menu.addAction(tr("Open"));
-        if (!isMakefile)
+        if (isMakefile)
         {
             // Makefiles are auto-generated and not tracked in Project::files
-            // (see regenerateProjectMakefiles()/refreshProjectTree()) - "set as
-            // main"/"remove from project" simply don't apply to them.
+            // (see regenerateProjectMakefiles()/refreshProjectTree()) - "set
+            // as main file" doesn't apply, but "Remove" does: it deletes
+            // this one from disk and tells AmigaED to leave it alone from
+            // now on (see excludeAndDeleteGeneratedMakefile()) instead of
+            // silently regenerating it again on the next refresh.
+            menu.addSeparator();
+            removeAction = menu.addAction(tr("Remove"));
+        }
+        else
+        {
             if (Project::typeForFile(path) == ProjectFileType::CSource)
                 setMainAction = menu.addAction(tr("Set as main file for compilation"));
             menu.addSeparator();
@@ -10395,7 +11006,10 @@ void MainWindow::onProjectTreeContextMenu(const QPoint &pos)
     }
     else if (chosen == removeAction)
     {
-        currentProject->removeFile(path);
+        if (isMakefile)
+            excludeAndDeleteGeneratedMakefile(path);
+        else
+            currentProject->removeFile(path);
         markProjectModified();
         saveCurrentProject();
         regenerateProjectMakefiles();   // must run BEFORE refreshProjectTree() - it scans disk for which Makefiles exist
@@ -10577,10 +11191,14 @@ void MainWindow::initializeGUI()
     // tab is created right after this function returns (see constructor).
 
     // create actions, menues, toolbars and status bar:
+    updateSplash(55, tr("Creating actions..."));
     createActions();
+    updateSplash(70, tr("Building menus..."));
     createMenus();
+    updateSplash(85, tr("Building toolbars..."));
     createToolBars();
     createStatusBarMessage(tr("Ready"), 0);
+    updateSplash(95, tr("Almost ready..."));
 
 
     if(!(p_no_compilerbuttons))    // react on user prefs: show or hide compiler combo and -button
@@ -10706,6 +11324,21 @@ void MainWindow::showCustomContextMenue(const QPoint &pos)
     // isKnownAutodocFunction()/AutodocReader::collectFunctionNames().
     if (isKnownAutodocFunction(p_contextMenuWordAtClick))
         contextMenu.addAction(jumpToExplanationAct);
+
+    // Same idea, same gating principle (rev.158) - only offer "Lookup
+    // C/C++" when the word under the click is actually a keyword or
+    // datatype this reference has an entry for, so it doesn't show up
+    // for a local variable or any other word that was never going to
+    // match. See isKnownCppRefToken()/CppRefReader::hasEntryForToken().
+    if (isKnownCppRefToken(p_contextMenuWordAtClick))
+        contextMenu.addAction(lookupCppRefAct);
+
+    // Same idea again (rev.159) - only offer "Lookup Assembler" when the
+    // word under the click is actually a mnemonic/directive/register this
+    // reference has an entry for. See isKnownAsmRefToken()/
+    // AsmRefReader::hasEntryForToken().
+    if (isKnownAsmRefToken(p_contextMenuWordAtClick))
+        contextMenu.addAction(lookupAsmRefAct);
     contextMenu.addSeparator();
 
     // define a pseudo action to show some kind of menue title - disabled,

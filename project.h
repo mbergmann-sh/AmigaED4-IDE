@@ -71,6 +71,21 @@ public:
     QString lastWrittenVbccMakefileHash;
     QString lastWrittenScMakefileHash;
 
+    // True once the user has explicitly removed this generated Makefile via
+    // "Remove" in the project tree (context menu, or the "Remove" toolbar
+    // button - see MainWindow::actionRemoveFileFromProject()/
+    // onProjectTreeContextMenu()). MainWindow::regenerateProjectMakefiles()
+    // checks these BEFORE writing each Makefile and skips it entirely while
+    // set - otherwise a manually (or "Remove"-)deleted Makefile was always
+    // silently regenerated the very next time the project was opened, a
+    // file was added/removed, or a build ran, with no way to make the
+    // removal stick. Can be turned back on via Build > Project Options...
+    // (MainWindow::actionProjectOptions()). false (generate as usual) for
+    // every project, and for one saved before this field existed.
+    bool excludeGccMakefile = false;
+    bool excludeVbccMakefile = false;
+    bool excludeScMakefile = false;
+
     QList<ProjectFile> files;
 
     // Which "New Project" template this was created from (see MainWindow's

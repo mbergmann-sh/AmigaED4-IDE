@@ -36,6 +36,15 @@ rem just needs to be present here in install_src for that prompt to have
 rem something to copy from.
 robocopy "%~dp0DOC" "%DEST%\DOC" *.* /E /NFL /NDL /NJH /NP
 
+rem Also stage AmigaED-Examples (ready-made example projects: C, ReAction,
+rem Assembler), the same way as DOC above - a static folder living next to
+rem this .bat file at the project root, not part of the build output.
+rem AmigaED_install\AmigaED.iss decides at install time - via its own
+rem Yes/No prompt - whether the examples actually get copied into the end
+rem user's chosen install directory; it just needs to be present here in
+rem install_src for that prompt to have something to copy from.
+robocopy "%~dp0AmigaED-Examples" "%DEST%\AmigaED-Examples" *.* /E /NFL /NDL /NJH /NP
+
 rem robocopy's exit codes are bit-flags (0-7 = success in various
 rem shades, 8+ = real failure) - always report plain success here so
 rem the calling recipe line (and mingw32-make) never has to interpret

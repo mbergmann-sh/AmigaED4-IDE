@@ -581,10 +581,24 @@ private:
     bool isDarkTheme() const;                     // true if p_default_style == "Dark"
     bool isWorkbench13Theme() const;               // true if p_default_style == "Workbench 1.3"
     bool isWorkbench31Theme() const;               // true if p_default_style == "Workbench 3.1"
+    // true if p_default_style == "Visual Studio Code Dark" - a second, distinct
+    // dark theme (rev.158) reproducing Microsoft Visual Studio Code's own
+    // "Dark+" colour scheme as closely as a Qt/Fusion application chrome
+    // allows: the app palette uses VS Code's real UI hex values (sideBar/
+    // editor/status-bar/selection colours, not just "dark grey" like the
+    // existing "Dark" theme's own palette), and the editor's Amiga-specific
+    // type/function highlighting is retuned to VS Code's own semantic-token
+    // colours (teal/pale-yellow) instead of "Dark"'s purple/amber choice -
+    // see applyLexerDarkColors()/vscodeApplicationPalette() for the details.
+    // The base syntax colours (comment/keyword/number/string/preprocessor)
+    // were already exact VS Code Dark+ values in "Dark" and are reused
+    // as-is here.
+    bool isVSCodeTheme() const;
     void applyApplicationStyle();                 // applies p_default_style to QApplication (called from the constructor and, live, from readSettings() when the style changed)
     QPalette darkApplicationPalette() const;       // the dark QPalette used together with "Fusion" for "Dark"
     QPalette workbench13ApplicationPalette() const; // the QPalette used together with "Fusion" for "Workbench 1.3"
     QPalette workbench31ApplicationPalette() const; // the QPalette used together with "Fusion" for "Workbench 3.1"
+    QPalette vscodeApplicationPalette() const;      // the QPalette used together with "Fusion" for "Visual Studio Code Dark"
     void applyLexerDarkColors(QsciLexer *lexer);   // recolors an already-created lexer's styles for the current theme - dark colours for "Dark", or a reset back to this app's own light-theme colours otherwise
     void reapplyEditorTheme();                     // re-applies margin/caret/selection/lexer colors to every currently open tab - used when the style changes at runtime (Prefs closed / Shift+F12)
     void buildThemeMenu();                         // populates View/Theme with one checkable, mutually-exclusive entry per available style (native styles + Dark/Workbench 1.3/Workbench 3.1) - called once from the constructor

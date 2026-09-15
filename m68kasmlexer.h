@@ -1,9 +1,9 @@
 #ifndef M68KASMLEXER_H
 #define M68KASMLEXER_H
 
-#include <Qsci/qscilexercustom.h>
 #include <QSet>
 #include <QString>
+#include <Qsci/qscilexercustom.h>
 
 //
 // Custom QScintilla lexer for m68k assembler source (.asm/.s), as
@@ -46,16 +46,15 @@ class M68kAsmLexer : public QsciLexerCustom
 public:
     // Style numbers used by styleText() - also referenced by
     // defaultColor()/defaultFont()/description() below.
-    enum Style
-    {
-        Default   = 0,
-        Comment   = 1,
-        String    = 2,
-        Mnemonic  = 3,   // instruction opcode (move.l, lea, bra, dbra, ...)
-        Directive = 4,   // assembler directive (dc.l, equ, section, macro, ...)
-        Register  = 5,   // d0-d7 / a0-a7 / sp / usp / pc / sr / ccr
-        Number    = 6,   // decimal, $hex, %binary, @octal
-        Label     = 7    // a column-zero symbol definition
+    enum Style {
+        Default = 0,
+        Comment = 1,
+        String = 2,
+        Mnemonic = 3,  // instruction opcode (move.l, lea, bra, dbra, ...)
+        Directive = 4, // assembler directive (dc.l, equ, section, macro, ...)
+        Register = 5,  // d0-d7 / a0-a7 / sp / usp / pc / sr / ccr
+        Number = 6,    // decimal, $hex, %binary, @octal
+        Label = 7      // a column-zero symbol definition
     };
 
     explicit M68kAsmLexer(QObject *parent = nullptr);

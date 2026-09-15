@@ -1,9 +1,9 @@
 #ifndef AMIGAGUIDELEXER_H
 #define AMIGAGUIDELEXER_H
 
-#include <Qsci/qscilexercustom.h>
 #include <QSet>
 #include <QString>
+#include <Qsci/qscilexercustom.h>
 
 //
 // Custom QScintilla lexer for AmigaGuide files (Commodore's native
@@ -42,13 +42,12 @@ class AmigaGuideLexer : public QsciLexerCustom
 public:
     // Style numbers used by styleText() - also referenced by
     // defaultColor()/defaultFont()/description() below.
-    enum Style
-    {
-        Default  = 0,
-        Command  = 1,   // line-level '@command' (e.g. @node, @width, @author)
-        String   = 2,   // "quoted text" - node names, link titles, titles
-        Link     = 3,   // an entire '@{...}' inline escape sequence
-        Comment  = 4    // '@remark' and the rest of its line
+    enum Style {
+        Default = 0,
+        Command = 1, // line-level '@command' (e.g. @node, @width, @author)
+        String = 2,  // "quoted text" - node names, link titles, titles
+        Link = 3,    // an entire '@{...}' inline escape sequence
+        Comment = 4  // '@remark' and the rest of its line
     };
 
     explicit AmigaGuideLexer(QObject *parent = nullptr);

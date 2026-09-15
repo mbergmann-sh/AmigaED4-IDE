@@ -19,17 +19,17 @@ SplashScreen::SplashScreen(QWidget *parent)
     // (see setProgress()) - without it, some window managers can let
     // another window steal focus and bury the splash mid-startup.
     setFixedSize(440, 260);
-    setAttribute(Qt::WA_DeleteOnClose, false);   // main.cpp owns and deletes this explicitly, once MainWindow is shown
+    setAttribute(Qt::WA_DeleteOnClose,
+                 false); // main.cpp owns and deletes this explicitly, once MainWindow is shown
 
     // Dark, Amiga-Workbench-ish backdrop - the logo itself (aced-logo.png)
     // has a transparent background, so it sits directly on this rather
     // than in its own separate panel.
-    setStyleSheet(
-        "SplashScreen { background-color: #202225; border: 1px solid #444851; }"
-        "QProgressBar { background-color: #2c2f33; border: 1px solid #444851; border-radius: 3px; height: 14px; }"
-        "QProgressBar::chunk { background-color: #e07b1a; border-radius: 2px; }"
-        "QLabel#splashStatus { color: #d5d5d5; }"
-    );
+    setStyleSheet("SplashScreen { background-color: #202225; border: 1px solid #444851; }"
+                  "QProgressBar { background-color: #2c2f33; border: 1px solid #444851; "
+                  "border-radius: 3px; height: 14px; }"
+                  "QProgressBar::chunk { background-color: #e07b1a; border-radius: 2px; }"
+                  "QLabel#splashStatus { color: #d5d5d5; }");
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(24, 24, 24, 18);
@@ -63,8 +63,7 @@ SplashScreen::SplashScreen(QWidget *parent)
     // Center on whichever screen the app will actually appear on, rather
     // than always screen 0 - matters on a multi-monitor setup.
     const QScreen *screen = QGuiApplication::primaryScreen();
-    if (screen)
-    {
+    if (screen) {
         const QRect avail = screen->availableGeometry();
         move(avail.center() - QPoint(width() / 2, height() / 2));
     }

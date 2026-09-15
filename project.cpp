@@ -1,8 +1,8 @@
 #include "project.h"
-#include <QFileInfo>
 #include <QDir>
-#include <QSettings>
 #include <QFile>
+#include <QFileInfo>
+#include <QSettings>
 
 QString Project::projectDir() const
 {
@@ -50,8 +50,7 @@ ProjectFileType Project::typeForFile(const QString &filePath)
     if (ext == "guide")
         return ProjectFileType::AmigaGuide;
 
-    if (ext.isEmpty())
-    {
+    if (ext.isEmpty()) {
         // A handful of well-known extension-less SAS/C build-artifact/
         // config files (commonly seen when importing a foreign SAS/C
         // project - see MainWindow::importExistingProject()) aren't
@@ -59,8 +58,8 @@ ProjectFileType Project::typeForFile(const QString &filePath)
         // like anything else that isn't clearly one of the recognized
         // types.
         QString bare = info.fileName();
-        if (bare.compare("debug", Qt::CaseInsensitive) == 0 ||
-            bare.compare("scoptions", Qt::CaseInsensitive) == 0)
+        if (bare.compare("debug", Qt::CaseInsensitive) == 0
+            || bare.compare("scoptions", Qt::CaseInsensitive) == 0)
             return ProjectFileType::Other;
 
         // A compiled Amiga executable, extension-less like an Installer
@@ -86,8 +85,7 @@ ProjectFileType Project::typeForFile(const QString &filePath)
 bool Project::contains(const QString &filePath) const
 {
     QFileInfo target(filePath);
-    for (const ProjectFile &f : files)
-    {
+    for (const ProjectFile &f : files) {
         if (QFileInfo(f.path) == target)
             return true;
     }
@@ -108,13 +106,11 @@ void Project::addFile(const QString &filePath)
 void Project::removeFile(const QString &filePath)
 {
     QFileInfo target(filePath);
-    for (int i = 0; i < files.count(); ++i)
-    {
-        if (QFileInfo(files.at(i).path) == target)
-        {
+    for (int i = 0; i < files.count(); ++i) {
+        if (QFileInfo(files.at(i).path) == target) {
             files.removeAt(i);
             if (QFileInfo(mainFile) == target)
-                mainFile.clear();   // the main file was just removed from the project
+                mainFile.clear(); // the main file was just removed from the project
             return;
         }
     }
@@ -146,8 +142,7 @@ bool Project::save(const QString &fileName)
     settings.endGroup();
 
     settings.beginWriteArray("Files");
-    for (int i = 0; i < files.count(); ++i)
-    {
+    for (int i = 0; i < files.count(); ++i) {
         settings.setArrayIndex(i);
         settings.setValue("path", files.at(i).path);
         settings.setValue("type", static_cast<int>(files.at(i).type));
@@ -205,8 +200,7 @@ bool Project::load(const QString &fileName)
     settings.endGroup();
 
     int count = settings.beginReadArray("Files");
-    for (int i = 0; i < count; ++i)
-    {
+    for (int i = 0; i < count; ++i) {
         settings.setArrayIndex(i);
         ProjectFile f;
         f.path = settings.value("path").toString();

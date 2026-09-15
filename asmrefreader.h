@@ -32,10 +32,10 @@
 #define ASMREFREADER_H
 
 #include <QDialog>
+#include <QHash>
+#include <QList>
 #include <QString>
 #include <QVector>
-#include <QList>
-#include <QHash>
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -106,8 +106,11 @@ private:
 
     void populateEntries();
 
-    void addEntry(const QString &id, const QString &category, const QString &title,
-                  const QString &htmlEn, const QString &htmlDe);
+    void addEntry(const QString &id,
+                  const QString &category,
+                  const QString &title,
+                  const QString &htmlEn,
+                  const QString &htmlDe);
 
     // One function per category, each appending its own entries via
     // addEntry() above - see asmrefdata.cpp.
@@ -149,7 +152,8 @@ private:
 
     QVector<AsmRefEntry> p_entries;
     QHash<QString, int> p_idToIndex;
-    QHash<QString, int> p_tokenToIndex;   // lower-cased source token -> index into p_entries, see buildTokenIndex()
+    QHash<QString, int>
+        p_tokenToIndex; // lower-cased source token -> index into p_entries, see buildTokenIndex()
     QString p_lang;
 
     QLineEdit *p_filterEdit = nullptr;

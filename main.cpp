@@ -86,8 +86,7 @@ int main(int argc, char *argv[])
     const bool noSplashScreen = QSettings().value("MISC/NoSplashScreen", false).toBool();
 
     SplashScreen splash;
-    if (!noSplashScreen)
-    {
+    if (!noSplashScreen) {
         splash.show();
         splash.setProgress(0, QStringLiteral("AmigaED 4.0"));
     }
@@ -98,12 +97,13 @@ int main(int argc, char *argv[])
     // call during the initial GUI build-up (including every splash status
     // text after that point) already picks up the right language. See
     // MainWindow::readSettings()/applyGuiLanguage().
-    MainWindow mainWin(cmdFileName, noSplashScreen ? nullptr : &splash);   // take first cmd argument to load a file
+    MainWindow mainWin(cmdFileName,
+                       noSplashScreen ? nullptr : &splash); // take first cmd argument to load a file
     QGuiApplication::setQuitOnLastWindowClosed(true);
 
     mainWin.show();
     if (!noSplashScreen)
-        splash.close();   // MainWindow is up and visible now - nothing left to show a splash for
+        splash.close(); // MainWindow is up and visible now - nothing left to show a splash for
 
     return app.exec();
 }

@@ -32,8 +32,8 @@ public:
     // those that also have unsaved in-editor changes right now (used to
     // pre-uncheck + flag them - see buildList()).
     explicit ExternalChangesDialog(const QStringList &changedFiles,
-                                    const QStringList &dirtyFiles,
-                                    QWidget *parent = nullptr);
+                                   const QStringList &dirtyFiles,
+                                   QWidget *parent = nullptr);
 
     // Files the user left checked when they closed the dialog with
     // "Reload Selected" - empty if they cancelled/dismissed instead.

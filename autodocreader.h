@@ -19,11 +19,11 @@
 #define AUTODOCREADER_H
 
 #include <QDialog>
-#include <QString>
-#include <QVector>
+#include <QHash>
 #include <QList>
 #include <QSet>
-#include <QHash>
+#include <QString>
+#include <QVector>
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -113,10 +113,10 @@ private:
     // One parsed AutoDoc function entry.
     struct AutodocEntry
     {
-        QString functionName;   // e.g. "exec.library/Wait" - the entry's own marker-line identifier
-        QString library;        // e.g. "exec" - the source file's own base name, used to group the tree
-        QString sourceFile;     // absolute path of the *.doc file this came from
-        QString fullText;       // the complete AutoDoc text (NAME/SYNOPSIS/FUNCTION/...), ready to display as-is
+        QString functionName; // e.g. "exec.library/Wait" - the entry's own marker-line identifier
+        QString library;    // e.g. "exec" - the source file's own base name, used to group the tree
+        QString sourceFile; // absolute path of the *.doc file this came from
+        QString fullText; // the complete AutoDoc text (NAME/SYNOPSIS/FUNCTION/...), ready to display as-is
     };
 
     void parseAutodocsFolder(const QString &dir);
@@ -143,8 +143,9 @@ private:
     QString linkifySeeAlsoLine(const QString &escapedLine) const;
 
     QVector<AutodocEntry> p_entries;
-    int p_totalFiles = 0;   // distinct source *.doc files found - shown alongside the function count
-    QHash<QString, int> p_nameToIndex;   // lower-cased short function name -> index into p_entries, see buildNameIndex()
+    int p_totalFiles = 0; // distinct source *.doc files found - shown alongside the function count
+    QHash<QString, int>
+        p_nameToIndex; // lower-cased short function name -> index into p_entries, see buildNameIndex()
 
     QLineEdit *p_filterEdit = nullptr;
     QPushButton *p_filterPrevBtn = nullptr;
@@ -154,7 +155,7 @@ private:
     QPushButton *p_openAllBtn = nullptr;
     QPushButton *p_closeAllBtn = nullptr;
 
-    QList<QTreeWidgetItem *> p_currentMatches;   // leaf items matching the current filter, for Prev/Next
+    QList<QTreeWidgetItem *> p_currentMatches; // leaf items matching the current filter, for Prev/Next
     int p_currentMatchIndex = -1;
 };
 

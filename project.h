@@ -1,8 +1,8 @@
 #ifndef PROJECT_H
 #define PROJECT_H
 
-#include <QString>
 #include <QList>
+#include <QString>
 
 //
 // A project groups a set of source files that belong together (an Amiga
@@ -16,22 +16,21 @@
 // settings (QSettings elsewhere in mainwindow.cpp).
 //
 
-enum class ProjectFileType
-{
-    CSource = 0,          // .c / .cpp
-    Header = 1,            // .h / .hpp
-    InstallerScript = 2,   // Amiga Installer script
-    Other = 3,               // anything else added to the project
-    AmigaGuide = 4,          // .guide (AmigaGuide hypertext) - appended, not inserted before
-                             // Other, so existing saved .aep files' stored "type: 3" values
-                             // (Other) keep meaning Other instead of silently becoming this
-    Assembly = 5,            // .asm / .s (m68k assembler) - appended for the same reason
-    Executable = 6           // a compiled Amiga executable (Motorola hunk format) - appended for the same reason
+enum class ProjectFileType {
+    CSource = 0,         // .c / .cpp
+    Header = 1,          // .h / .hpp
+    InstallerScript = 2, // Amiga Installer script
+    Other = 3,           // anything else added to the project
+    AmigaGuide = 4,      // .guide (AmigaGuide hypertext) - appended, not inserted before
+                         // Other, so existing saved .aep files' stored "type: 3" values
+                         // (Other) keep meaning Other instead of silently becoming this
+    Assembly = 5,        // .asm / .s (m68k assembler) - appended for the same reason
+    Executable = 6 // a compiled Amiga executable (Motorola hunk format) - appended for the same reason
 };
 
 struct ProjectFile
 {
-    QString path;   // absolute path
+    QString path; // absolute path
     ProjectFileType type = ProjectFileType::Other;
 
     bool operator==(const ProjectFile &other) const { return path == other.path; }
@@ -40,9 +39,9 @@ struct ProjectFile
 class Project
 {
 public:
-    QString name;                    // project display name
-    QString projectFilePath;         // absolute path of the .aep file itself
-    QString mainFile;                // absolute path of the file to compile/link as the program's main C/C++ unit
+    QString name;            // project display name
+    QString projectFilePath; // absolute path of the .aep file itself
+    QString mainFile; // absolute path of the file to compile/link as the program's main C/C++ unit
     // Extra compiler/linker options are kept SEPARATE per toolchain -
     // Makefile.gcc and Makefile.vbcc use fundamentally different, mutually
     // incompatible option syntaxes (e.g. VBCC's "+aos68k -c99" vs GCC's
@@ -51,10 +50,10 @@ public:
     // itself (see MainWindow::regenerateProjectMakefiles()) - even when
     // G++ is the app's currently selected compiler - so there's no
     // separate G++ variant of these.
-    QString extraGccCompilerOptions;    // appended to Makefile.gcc's CFLAGS
-    QString extraGccLinkerOptions;      // appended to Makefile.gcc's LDFLAGS
-    QString extraVbccCompilerOptions;   // appended to Makefile.vbcc's CFLAGS
-    QString extraVbccLinkerOptions;     // appended to Makefile.vbcc's LDFLAGS
+    QString extraGccCompilerOptions;  // appended to Makefile.gcc's CFLAGS
+    QString extraGccLinkerOptions;    // appended to Makefile.gcc's LDFLAGS
+    QString extraVbccCompilerOptions; // appended to Makefile.vbcc's CFLAGS
+    QString extraVbccLinkerOptions;   // appended to Makefile.vbcc's LDFLAGS
 
     // SHA-1 (hex) of each Makefile's content exactly as AmigaED itself
     // last wrote it - NOT of whatever is currently on disk. Lets
@@ -115,12 +114,12 @@ public:
     // project's Makefiles and relative source paths.
     QString projectDir() const;
 
-    void addFile(const QString &filePath);          // no-op if already present
+    void addFile(const QString &filePath); // no-op if already present
     void removeFile(const QString &filePath);
     bool contains(const QString &filePath) const;
 
-    bool save(const QString &fileName);              // writes this->projectFilePath = fileName on success
-    bool load(const QString &fileName);               // replaces all members from the file on success
+    bool save(const QString &fileName); // writes this->projectFilePath = fileName on success
+    bool load(const QString &fileName); // replaces all members from the file on success
 
     // Guess a file's project category from its extension - used both when
     // adding a file manually and when a new project template's main file

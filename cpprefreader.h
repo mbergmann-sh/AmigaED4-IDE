@@ -27,10 +27,10 @@
 #define CPPREFREADER_H
 
 #include <QDialog>
+#include <QHash>
+#include <QList>
 #include <QString>
 #include <QVector>
-#include <QList>
-#include <QHash>
 
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -136,8 +136,11 @@ private:
     // The one and only place that ever reads p_lang to pick a language;
     // every populateXxx() function in cpprefdata.cpp just calls this
     // once per entry and never branches on language itself.
-    void addEntry(const QString &id, const QString &category, const QString &title,
-                  const QString &htmlEn, const QString &htmlDe);
+    void addEntry(const QString &id,
+                  const QString &category,
+                  const QString &title,
+                  const QString &htmlEn,
+                  const QString &htmlDe);
 
     // One function per category, each appending its own entries via
     // addEntry() above - see cpprefdata.cpp. Split out one function per
@@ -203,9 +206,10 @@ private:
     QString renderEntryHtml(int idx) const;
 
     QVector<CppRefEntry> p_entries;
-    QHash<QString, int> p_idToIndex;      // id -> index into p_entries, see buildIdIndex()
-    QHash<QString, int> p_tokenToIndex;   // literal code token -> index into p_entries, see buildTokenIndex()
-    QString p_lang;   // "de" or "en" - see the constructor
+    QHash<QString, int> p_idToIndex; // id -> index into p_entries, see buildIdIndex()
+    QHash<QString, int>
+        p_tokenToIndex; // literal code token -> index into p_entries, see buildTokenIndex()
+    QString p_lang;     // "de" or "en" - see the constructor
 
     QLineEdit *p_filterEdit = nullptr;
     QPushButton *p_filterPrevBtn = nullptr;
@@ -215,7 +219,7 @@ private:
     QPushButton *p_openAllBtn = nullptr;
     QPushButton *p_closeAllBtn = nullptr;
 
-    QList<QTreeWidgetItem *> p_currentMatches;   // leaf items matching the current filter, for Prev/Next
+    QList<QTreeWidgetItem *> p_currentMatches; // leaf items matching the current filter, for Prev/Next
     int p_currentMatchIndex = -1;
 };
 

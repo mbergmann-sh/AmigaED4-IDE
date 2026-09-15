@@ -1,20 +1,20 @@
 #include "cpprefreader.h"
 #include "version.h"
 
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QSplitter>
-#include <QTreeWidget>
-#include <QTextBrowser>
-#include <QLineEdit>
-#include <QLabel>
-#include <QPushButton>
-#include <QSettings>
 #include <QCloseEvent>
-#include <QSizeGrip>
-#include <QUrl>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QRegularExpression>
 #include <QSet>
+#include <QSettings>
+#include <QSizeGrip>
+#include <QSplitter>
+#include <QTextBrowser>
+#include <QTreeWidget>
+#include <QUrl>
+#include <QVBoxLayout>
 
 CppRefReader::CppRefReader(const QString &guiLanguage, QWidget *parent)
     : QDialog(parent)
@@ -29,13 +29,13 @@ CppRefReader::CppRefReader(const QString &guiLanguage, QWidget *parent)
     setWindowFlag(Qt::WindowMinMaxButtonsHint, true);
 
     QSettings geometrySettings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
-    const QByteArray savedGeometry = geometrySettings.value(QStringLiteral("MISC/CppRefReaderGeometry")).toByteArray();
+    const QByteArray savedGeometry
+        = geometrySettings.value(QStringLiteral("MISC/CppRefReaderGeometry")).toByteArray();
     if (savedGeometry.isEmpty() || !restoreGeometry(savedGeometry))
         resize(950, 650);
 
-    setWindowTitle((p_lang == QStringLiteral("de"))
-                   ? QStringLiteral("AmigaED C/C++-Referenz")
-                   : QStringLiteral("AmigaED C/C++ Reference"));
+    setWindowTitle((p_lang == QStringLiteral("de")) ? QStringLiteral("AmigaED C/C++-Referenz")
+                                                    : QStringLiteral("AmigaED C/C++ Reference"));
 
     populateEntries();
     buildIdIndex();
@@ -49,12 +49,12 @@ CppRefReader::CppRefReader(const QString &guiLanguage, QWidget *parent)
     p_filterEdit->setPlaceholderText(tr("Filter..."));
     p_filterEdit->setClearButtonEnabled(true);
 
-    p_filterPrevBtn = new QPushButton(QStringLiteral("◀"), this);   // <
+    p_filterPrevBtn = new QPushButton(QStringLiteral("◀"), this); // <
     p_filterPrevBtn->setToolTip(tr("Previous match"));
     p_filterPrevBtn->setMaximumWidth(28);
     p_filterPrevBtn->setEnabled(false);
 
-    p_filterNextBtn = new QPushButton(QStringLiteral("▶"), this);   // >
+    p_filterNextBtn = new QPushButton(QStringLiteral("▶"), this); // >
     p_filterNextBtn->setToolTip(tr("Next match"));
     p_filterNextBtn->setMaximumWidth(28);
     p_filterNextBtn->setEnabled(false);
@@ -101,7 +101,7 @@ CppRefReader::CppRefReader(const QString &guiLanguage, QWidget *parent)
     splitter->addWidget(p_textView);
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
-    splitter->setSizes({ 320, 630 });
+    splitter->setSizes({320, 630});
 
     // Bottom-right resize grip - same reasoning and pattern as
     // AutodocReader's own (rev.152): this QDialog is already resizable
@@ -137,10 +137,9 @@ CppRefReader::CppRefReader(const QString &guiLanguage, QWidget *parent)
 void CppRefReader::showCategory(const QString &category)
 {
     if (!p_filterEdit->text().isEmpty())
-        p_filterEdit->clear();   // see showFunction()'s own comment in AutodocReader for why
+        p_filterEdit->clear(); // see showFunction()'s own comment in AutodocReader for why
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
         if (groupItem->data(0, Qt::UserRole + 1).toString() != category)
             continue;
@@ -148,18 +147,20 @@ void CppRefReader::showCategory(const QString &category)
         groupItem->setExpanded(true);
         p_tree->scrollToItem(groupItem);
 
-        if (groupItem->childCount() > 0)
-        {
+        if (groupItem->childCount() > 0) {
             QTreeWidgetItem *firstChild = groupItem->child(0);
-            p_tree->setCurrentItem(firstChild);   // also triggers onTreeSelectionChanged()
+            p_tree->setCurrentItem(firstChild); // also triggers onTreeSelectionChanged()
             p_tree->scrollToItem(firstChild);
         }
         return;
     }
 }
 
-void CppRefReader::addEntry(const QString &id, const QString &category, const QString &title,
-                             const QString &htmlEn, const QString &htmlDe)
+void CppRefReader::addEntry(const QString &id,
+                            const QString &category,
+                            const QString &title,
+                            const QString &htmlEn,
+                            const QString &htmlDe)
 {
     CppRefEntry e;
     e.id = id;
@@ -210,20 +211,22 @@ void CppRefReader::buildTokenIndex()
     p_tokenToIndex.clear();
 
     static const QRegularExpression singleIdentifier(QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$"));
-    for (int idx = 0; idx < p_entries.size(); ++idx)
-    {
+    for (int idx = 0; idx < p_entries.size(); ++idx) {
         const QString &title = p_entries.at(idx).title;
         if (singleIdentifier.match(title).hasMatch() && !p_tokenToIndex.contains(title))
             p_tokenToIndex.insert(title, idx);
     }
 
-    struct ExtraToken { const char *token; const char *id; };
-    static const ExtraToken extraTokens[] = {
-        { "do",    "kw_do" },      // kw_do's own title is "do...while"
-        { "_Bool", "dt_bool" },    // dt_bool's own title is "bool / _Bool"
-    };
-    for (const auto &extra : extraTokens)
+    struct ExtraToken
     {
+        const char *token;
+        const char *id;
+    };
+    static const ExtraToken extraTokens[] = {
+        {"do", "kw_do"},      // kw_do's own title is "do...while"
+        {"_Bool", "dt_bool"}, // dt_bool's own title is "bool / _Bool"
+    };
+    for (const auto &extra : extraTokens) {
         const QString token = QString::fromLatin1(extra.token);
         if (p_tokenToIndex.contains(token))
             continue;
@@ -256,11 +259,9 @@ bool CppRefReader::selectEntryByIndex(int idx)
     if (!p_filterEdit->text().isEmpty())
         p_filterEdit->clear();
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
-        for (int ci = 0; ci < groupItem->childCount(); ++ci)
-        {
+        for (int ci = 0; ci < groupItem->childCount(); ++ci) {
             QTreeWidgetItem *entryItem = groupItem->child(ci);
             if (entryItem->data(0, Qt::UserRole).toInt() != idx)
                 continue;
@@ -307,22 +308,24 @@ void CppRefReader::buildTree()
     displayName.insert(QStringLiteral("Functions"), tr("Functions"));
 
     QHash<QString, QTreeWidgetItem *> groupItems;
-    for (const QString &category : categoryOrder)
-    {
-        QTreeWidgetItem *groupItem = new QTreeWidgetItem(p_tree, QStringList{ displayName.value(category, category) });
+    for (const QString &category : categoryOrder) {
+        QTreeWidgetItem *groupItem = new QTreeWidgetItem(p_tree,
+                                                         QStringList{displayName.value(category,
+                                                                                       category)});
         groupItem->setFlags(groupItem->flags() & ~Qt::ItemIsSelectable);
-        groupItem->setData(0, Qt::UserRole + 1, category);   // language-independent key, see showCategory()
+        groupItem->setData(0,
+                           Qt::UserRole + 1,
+                           category); // language-independent key, see showCategory()
         groupItems.insert(category, groupItem);
     }
 
-    for (int idx = 0; idx < p_entries.size(); ++idx)
-    {
+    for (int idx = 0; idx < p_entries.size(); ++idx) {
         const CppRefEntry &e = p_entries.at(idx);
         QTreeWidgetItem *groupItem = groupItems.value(e.category, nullptr);
         if (!groupItem)
-            continue;   // an entry whose category isn't in categoryOrder above - shouldn't happen, silently skip rather than crash
+            continue; // an entry whose category isn't in categoryOrder above - shouldn't happen, silently skip rather than crash
 
-        QTreeWidgetItem *entryItem = new QTreeWidgetItem(groupItem, QStringList{ e.title });
+        QTreeWidgetItem *entryItem = new QTreeWidgetItem(groupItem, QStringList{e.title});
         entryItem->setData(0, Qt::UserRole, idx);
     }
 
@@ -341,17 +344,14 @@ void CppRefReader::buildTree()
     static const QSet<QString> pinnedFirstIds = {
         QStringLiteral("dt_overview"),
     };
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
-        for (int ci = 0; ci < groupItem->childCount(); ++ci)
-        {
+        for (int ci = 0; ci < groupItem->childCount(); ++ci) {
             QTreeWidgetItem *entryItem = groupItem->child(ci);
             const int idx = entryItem->data(0, Qt::UserRole).toInt();
             if (idx < 0 || idx >= p_entries.size())
                 continue;
-            if (pinnedFirstIds.contains(p_entries.at(idx).id) && ci != 0)
-            {
+            if (pinnedFirstIds.contains(p_entries.at(idx).id) && ci != 0) {
                 groupItem->takeChild(ci);
                 groupItem->insertChild(0, entryItem);
             }
@@ -366,19 +366,17 @@ void CppRefReader::applyFilter(const QString &textRaw)
     int visibleEntries = 0;
     p_currentMatches.clear();
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
         bool anyVisibleChild = false;
 
-        for (int ci = 0; ci < groupItem->childCount(); ++ci)
-        {
+        for (int ci = 0; ci < groupItem->childCount(); ++ci) {
             QTreeWidgetItem *entryItem = groupItem->child(ci);
-            const bool matches = text.isEmpty() || entryItem->text(0).contains(text, Qt::CaseInsensitive);
+            const bool matches = text.isEmpty()
+                                 || entryItem->text(0).contains(text, Qt::CaseInsensitive);
             entryItem->setHidden(!matches);
 
-            if (matches)
-            {
+            if (matches) {
                 anyVisibleChild = true;
                 ++visibleEntries;
                 p_currentMatches << entryItem;
@@ -397,16 +395,14 @@ void CppRefReader::applyFilter(const QString &textRaw)
     p_filterNextBtn->setEnabled(haveFilter && !p_currentMatches.isEmpty());
 
     const QString baseTitle = (p_lang == QStringLiteral("de"))
-            ? QStringLiteral("AmigaED C/C++-Referenz")
-            : QStringLiteral("AmigaED C/C++ Reference");
+                                  ? QStringLiteral("AmigaED C/C++-Referenz")
+                                  : QStringLiteral("AmigaED C/C++ Reference");
 
-    if (haveFilter)
-    {
-        setWindowTitle(baseTitle + QStringLiteral(" - ")
-                        + tr("Filter showing %1/%2 entries").arg(visibleEntries).arg(p_entries.size()));
-    }
-    else
-    {
+    if (haveFilter) {
+        setWindowTitle(
+            baseTitle + QStringLiteral(" - ")
+            + tr("Filter showing %1/%2 entries").arg(visibleEntries).arg(p_entries.size()));
+    } else {
         setWindowTitle(baseTitle + QStringLiteral(" - ") + tr("%1 entries").arg(p_entries.size()));
     }
 }
@@ -419,8 +415,7 @@ void CppRefReader::onFilterTextChanged(const QString &text)
 void CppRefReader::onTreeSelectionChanged()
 {
     QTreeWidgetItem *item = p_tree->currentItem();
-    if (!item || !item->parent())
-    {
+    if (!item || !item->parent()) {
         p_textView->clear();
         return;
     }
@@ -439,7 +434,8 @@ QString CppRefReader::renderEntryHtml(int idx) const
 
     QString html;
     html.reserve(e.html.size() + 128);
-    html += QStringLiteral("<h2 style=\"margin-top:0;\">") + e.title.toHtmlEscaped() + QStringLiteral("</h2>");
+    html += QStringLiteral("<h2 style=\"margin-top:0;\">") + e.title.toHtmlEscaped()
+            + QStringLiteral("</h2>");
     html += e.html;
     return html;
 }
@@ -491,7 +487,8 @@ void CppRefReader::onFilterPrev()
     if (p_currentMatches.isEmpty())
         return;
 
-    p_currentMatchIndex = (p_currentMatchIndex - 1 + p_currentMatches.size()) % p_currentMatches.size();
+    p_currentMatchIndex = (p_currentMatchIndex - 1 + p_currentMatches.size())
+                          % p_currentMatches.size();
     QTreeWidgetItem *item = p_currentMatches.at(p_currentMatchIndex);
     p_tree->setCurrentItem(item);
     p_tree->scrollToItem(item);

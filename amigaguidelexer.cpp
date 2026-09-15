@@ -3,8 +3,7 @@
 
 AmigaGuideLexer::AmigaGuideLexer(QObject *parent)
     : QsciLexerCustom(parent)
-{
-}
+{}
 
 const char *AmigaGuideLexer::language() const
 {
@@ -13,26 +12,35 @@ const char *AmigaGuideLexer::language() const
 
 QString AmigaGuideLexer::description(int style) const
 {
-    switch (style)
-    {
-    case Default: return QObject::tr("Default");
-    case Command: return QObject::tr("Command (@node, @title, ...)");
-    case String:  return QObject::tr("String");
-    case Link:    return QObject::tr("Inline escape / link (@{...})");
-    case Comment: return QObject::tr("Comment (@remark)");
-    default:      return QString();
+    switch (style) {
+    case Default:
+        return QObject::tr("Default");
+    case Command:
+        return QObject::tr("Command (@node, @title, ...)");
+    case String:
+        return QObject::tr("String");
+    case Link:
+        return QObject::tr("Inline escape / link (@{...})");
+    case Comment:
+        return QObject::tr("Comment (@remark)");
+    default:
+        return QString();
     }
 }
 
 QColor AmigaGuideLexer::defaultColor(int style) const
 {
-    switch (style)
-    {
-    case Command: return QColor(0x00, 0x00, 0xff);   // blue
-    case String:  return QColor(0x80, 0x00, 0x00);   // maroon
-    case Link:    return QColor(0x80, 0x00, 0x80);   // purple - hyperlinks/inline styling
-    case Comment: return QColor(0x00, 0x80, 0x00);   // dark green
-    default:      return QsciLexerCustom::defaultColor(style);
+    switch (style) {
+    case Command:
+        return QColor(0x00, 0x00, 0xff); // blue
+    case String:
+        return QColor(0x80, 0x00, 0x00); // maroon
+    case Link:
+        return QColor(0x80, 0x00, 0x80); // purple - hyperlinks/inline styling
+    case Comment:
+        return QColor(0x00, 0x80, 0x00); // dark green
+    default:
+        return QsciLexerCustom::defaultColor(style);
     }
 }
 
@@ -56,20 +64,39 @@ const QSet<QString> &AmigaGuideLexer::commands()
     // All lower-case - matched against the lower-cased command word in
     // styleText(), since AmigaGuide commands are conventionally written
     // upper-case (@NODE) or lower-case (@node) interchangeably.
-    static const QSet<QString> cmds = {
-        // database / node structure
-        "database", "node", "endnode", "master", "deftab", "defext",
-        "defhelp",
-        // node/database metadata
-        "title", "author", "copyright", "index", "toc", "next", "prev",
-        "keywords", "help", "xref",
-        // layout
-        "width", "height", "font", "tab", "wordwrap", "smartwrap",
-        // comment
-        "remark",
-        // event hooks
-        "onopen", "onclose", "embed", "image"
-    };
+    static const QSet<QString> cmds = { // database / node structure
+                                        "database",
+                                        "node",
+                                        "endnode",
+                                        "master",
+                                        "deftab",
+                                        "defext",
+                                        "defhelp",
+                                        // node/database metadata
+                                        "title",
+                                        "author",
+                                        "copyright",
+                                        "index",
+                                        "toc",
+                                        "next",
+                                        "prev",
+                                        "keywords",
+                                        "help",
+                                        "xref",
+                                        // layout
+                                        "width",
+                                        "height",
+                                        "font",
+                                        "tab",
+                                        "wordwrap",
+                                        "smartwrap",
+                                        // comment
+                                        "remark",
+                                        // event hooks
+                                        "onopen",
+                                        "onclose",
+                                        "embed",
+                                        "image"};
     return cmds;
 }
 
@@ -88,12 +115,10 @@ void AmigaGuideLexer::styleText(int start, int end)
     startStyling(start);
 
     int i = 0;
-    while (i < n)
-    {
+    while (i < n) {
         const QChar c = source.at(i);
 
-        if (c == QLatin1Char('@') && i + 1 < n && source.at(i + 1) == QLatin1Char('{'))
-        {
+        if (c == QLatin1Char('@') && i + 1 < n && source.at(i + 1) == QLatin1Char('{')) {
             // Inline escape sequence: '@{' up to the matching '}' (no
             // nesting in AmigaGuide, so the first '}' always closes it).
             // A quoted link title inside it (e.g. @{"Intro" LINK Intro})
@@ -101,14 +126,12 @@ void AmigaGuideLexer::styleText(int start, int end)
             // in the sequence (including the leading '@{'/trailing '}')
             // is styled as Link.
             int j = i + 2;
-            setStyling(2, Link);   // the '@{' itself
-            while (j < n && source.at(j) != QLatin1Char('}'))
-            {
-                if (source.at(j) == QLatin1Char('"'))
-                {
+            setStyling(2, Link); // the '@{' itself
+            while (j < n && source.at(j) != QLatin1Char('}')) {
+                if (source.at(j) == QLatin1Char('"')) {
                     int k = j + 1;
-                    while (k < n && source.at(k) != QLatin1Char('"') && source.at(k) != QLatin1Char('\n'))
-                    {
+                    while (k < n && source.at(k) != QLatin1Char('"')
+                           && source.at(k) != QLatin1Char('\n')) {
                         if (source.at(k) == QLatin1Char('\\') && k + 1 < n)
                             ++k; // skip the escaped character
                         ++k;
@@ -117,22 +140,17 @@ void AmigaGuideLexer::styleText(int start, int end)
                         ++k; // include the closing quote
                     setStyling(k - j, String);
                     j = k;
-                }
-                else
-                {
+                } else {
                     setStyling(1, Link);
                     ++j;
                 }
             }
-            if (j < n)
-            {
-                setStyling(1, Link);   // the closing '}'
+            if (j < n) {
+                setStyling(1, Link); // the closing '}'
                 ++j;
             }
             i = j;
-        }
-        else if (c == QLatin1Char('@') && i + 1 < n && isCommandChar(source.at(i + 1)))
-        {
+        } else if (c == QLatin1Char('@') && i + 1 < n && isCommandChar(source.at(i + 1))) {
             // Line-level command, e.g. @node, @endnode, @remark, @title.
             int j = i + 1;
             while (j < n && isCommandChar(source.at(j)))
@@ -141,8 +159,7 @@ void AmigaGuideLexer::styleText(int start, int end)
             bool isRemark = (word.compare(QLatin1String("remark"), Qt::CaseInsensitive) == 0);
             setStyling(j - i, (isRemark || commands().contains(word.toLower())) ? Command : Default);
 
-            if (isRemark)
-            {
+            if (isRemark) {
                 // @remark's own argument is a plain comment: the rest of
                 // the line, not further command/string parsing.
                 int k = j;
@@ -152,14 +169,11 @@ void AmigaGuideLexer::styleText(int start, int end)
                 j = k;
             }
             i = j;
-        }
-        else if (c == QLatin1Char('"'))
-        {
+        } else if (c == QLatin1Char('"')) {
             // A quoted string outside an @{...} escape, e.g. the node
             // name/title arguments on an @node line.
             int j = i + 1;
-            while (j < n && source.at(j) != QLatin1Char('"') && source.at(j) != QLatin1Char('\n'))
-            {
+            while (j < n && source.at(j) != QLatin1Char('"') && source.at(j) != QLatin1Char('\n')) {
                 if (source.at(j) == QLatin1Char('\\') && j + 1 < n)
                     ++j; // skip the escaped character
                 ++j;
@@ -168,9 +182,7 @@ void AmigaGuideLexer::styleText(int start, int end)
                 ++j; // include the closing quote
             setStyling(j - i, String);
             i = j;
-        }
-        else
-        {
+        } else {
             // Plain browsable body text (and anything else not specially
             // handled) - batch consecutive characters up to the next
             // '@' or '"' into one Default-styled run.

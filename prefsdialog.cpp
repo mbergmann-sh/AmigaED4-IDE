@@ -38,6 +38,13 @@ PrefsDialog::PrefsDialog(QWidget *parent, int tabindex) :
     // for what selecting either one actually does.
     ui->comboBoxDefaultStyle->addItem(QStringLiteral("Workbench 1.3"));
     ui->comboBoxDefaultStyle->addItem(QStringLiteral("Workbench 3.1"));
+    // Same synthetic-entry treatment again - a second, distinct dark
+    // theme (rev.158) that reproduces Microsoft Visual Studio Code's own
+    // "Dark+" colours as closely as possible, both for the application
+    // chrome (MainWindow::vscodeApplicationPalette()) and for the editor
+    // itself (MainWindow::applyLexerDarkColors()) - see MainWindow::
+    // isVSCodeTheme() for what selecting it actually does.
+    ui->comboBoxDefaultStyle->addItem(QStringLiteral("Visual Studio Code Dark"));
 
     // set items for default compiler combobox:
     ui->comboBoxDefaultCompiler->addItems(p_Compilers);

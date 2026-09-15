@@ -1,24 +1,24 @@
 #include "autodocreader.h"
 #include "version.h"
 
+#include <QCloseEvent>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QFontDatabase>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QRegularExpression>
 #include <QSet>
-#include <QFontDatabase>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QSplitter>
-#include <QTreeWidget>
-#include <QTextBrowser>
-#include <QLineEdit>
-#include <QLabel>
-#include <QPushButton>
 #include <QSettings>
-#include <QCloseEvent>
 #include <QSizeGrip>
+#include <QSplitter>
+#include <QTextBrowser>
+#include <QTreeWidget>
 #include <QUrl>
+#include <QVBoxLayout>
 #include <algorithm>
 #include <utility>
 
@@ -37,12 +37,13 @@ AutodocReader::AutodocReader(const QString &autodocsDir, QWidget *parent)
     // Falls back to a sensible default the very first time the reader is
     // ever opened, or if nothing was saved yet.
     QSettings geometrySettings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
-    const QByteArray savedGeometry = geometrySettings.value(QStringLiteral("MISC/AutodocReaderGeometry")).toByteArray();
+    const QByteArray savedGeometry
+        = geometrySettings.value(QStringLiteral("MISC/AutodocReaderGeometry")).toByteArray();
     if (savedGeometry.isEmpty() || !restoreGeometry(savedGeometry))
         resize(950, 650);
 
     parseAutodocsFolder(autodocsDir);
-    buildNameIndex();   // rev.153 - see its own comment; needed before the first renderEntryHtml() call
+    buildNameIndex(); // rev.153 - see its own comment; needed before the first renderEntryHtml() call
 
     QSet<QString> allFiles;
     for (const AutodocEntry &e : std::as_const(p_entries))
@@ -54,12 +55,12 @@ AutodocReader::AutodocReader(const QString &autodocsDir, QWidget *parent)
     p_filterEdit->setPlaceholderText(tr("Filter..."));
     p_filterEdit->setClearButtonEnabled(true);
 
-    p_filterPrevBtn = new QPushButton(QStringLiteral("◀"), this);   // <
+    p_filterPrevBtn = new QPushButton(QStringLiteral("◀"), this); // <
     p_filterPrevBtn->setToolTip(tr("Previous match"));
     p_filterPrevBtn->setMaximumWidth(28);
     p_filterPrevBtn->setEnabled(false);
 
-    p_filterNextBtn = new QPushButton(QStringLiteral("▶"), this);   // >
+    p_filterNextBtn = new QPushButton(QStringLiteral("▶"), this); // >
     p_filterNextBtn->setToolTip(tr("Next match"));
     p_filterNextBtn->setMaximumWidth(28);
     p_filterNextBtn->setEnabled(false);
@@ -119,7 +120,7 @@ AutodocReader::AutodocReader(const QString &autodocsDir, QWidget *parent)
     splitter->addWidget(p_textView);
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
-    splitter->setSizes({ 320, 630 });
+    splitter->setSizes({320, 630});
 
     // Bottom-right resize grip (rev.152) - the window is already
     // resizable from any edge/corner via the window manager (nothing
@@ -141,7 +142,7 @@ AutodocReader::AutodocReader(const QString &autodocsDir, QWidget *parent)
     setLayout(mainLayout);
 
     buildTree();
-    applyFilter(QString());   // also sets the initial window title / Prev-Next enabled state
+    applyFilter(QString()); // also sets the initial window title / Prev-Next enabled state
 
     connect(p_filterEdit, &QLineEdit::textChanged, this, &AutodocReader::onFilterTextChanged);
     connect(p_filterEdit, &QLineEdit::returnPressed, this, &AutodocReader::onFilterNext);
@@ -172,19 +173,17 @@ bool AutodocReader::showFunction(const QString &functionName, const QString &pre
     QTreeWidgetItem *firstMatch = nullptr;
     QTreeWidgetItem *preferredMatch = nullptr;
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount() && !preferredMatch; ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount() && !preferredMatch; ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
 
-        for (int ci = 0; ci < groupItem->childCount(); ++ci)
-        {
+        for (int ci = 0; ci < groupItem->childCount(); ++ci) {
             QTreeWidgetItem *funcItem = groupItem->child(ci);
             const int idx = funcItem->data(0, Qt::UserRole).toInt();
             if (idx < 0 || idx >= p_entries.size())
                 continue;
 
             const AutodocEntry &entry = p_entries.at(idx);
-            const QString &fullName = entry.functionName;   // e.g. "intuition.library/OpenWindow"
+            const QString &fullName = entry.functionName; // e.g. "intuition.library/OpenWindow"
             const int slash = fullName.lastIndexOf(QLatin1Char('/'));
             const QString shortName = (slash >= 0) ? fullName.mid(slash + 1) : fullName;
 
@@ -195,8 +194,7 @@ bool AutodocReader::showFunction(const QString &functionName, const QString &pre
                 firstMatch = funcItem;
 
             if (!preferredLibrary.isEmpty()
-                && entry.library.compare(preferredLibrary, Qt::CaseInsensitive) == 0)
-            {
+                && entry.library.compare(preferredLibrary, Qt::CaseInsensitive) == 0) {
                 preferredMatch = funcItem;
                 break;
             }
@@ -216,7 +214,8 @@ bool AutodocReader::showFunction(const QString &functionName, const QString &pre
 
     if (QTreeWidgetItem *groupItem = funcItem->parent())
         groupItem->setExpanded(true);
-    p_tree->setCurrentItem(funcItem);   // also triggers onTreeSelectionChanged(), filling the text view
+    p_tree->setCurrentItem(
+        funcItem); // also triggers onTreeSelectionChanged(), filling the text view
     p_tree->scrollToItem(funcItem);
     return true;
 }
@@ -233,8 +232,10 @@ void AutodocReader::parseAutodocsFolder(const QString &dir)
 {
     p_entries.clear();
 
-    QDirIterator it(dir, QStringList() << QStringLiteral("*.doc"),
-                     QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator it(dir,
+                    QStringList() << QStringLiteral("*.doc"),
+                    QDir::Files,
+                    QDirIterator::Subdirectories);
     while (it.hasNext())
         parseAutodocFile(it.next());
 }
@@ -277,20 +278,19 @@ void AutodocReader::parseAutodocFile(const QString &filePath)
     static const QChar formFeed(0x0C);
 
     QVector<int> markerPositions;
-    for (int i = 0; i < content.size(); ++i)
-    {
+    for (int i = 0; i < content.size(); ++i) {
         if (content.at(i) == formFeed)
             markerPositions << i;
     }
 
     static const QRegularExpression whitespaceRe(QStringLiteral("\\s+"));
 
-    for (int i = 0; i < markerPositions.size(); ++i)
-    {
-        const int entryStart = markerPositions[i] + 1;   // right after the form-feed byte
-        const int entryEnd = (i + 1 < markerPositions.size()) ? markerPositions[i + 1] : content.size();
+    for (int i = 0; i < markerPositions.size(); ++i) {
+        const int entryStart = markerPositions[i] + 1; // right after the form-feed byte
+        const int entryEnd = (i + 1 < markerPositions.size()) ? markerPositions[i + 1]
+                                                              : content.size();
         if (entryEnd <= entryStart)
-            continue;   // e.g. a lone trailing form-feed right at end of file
+            continue; // e.g. a lone trailing form-feed right at end of file
 
         const QString entryBlock = content.mid(entryStart, entryEnd - entryStart);
 
@@ -307,13 +307,14 @@ void AutodocReader::parseAutodocFile(const QString &filePath)
         if (name.isEmpty() || !name.contains(QLatin1Char('/')))
             continue;
 
-        const QString body = (firstNewline >= 0) ? entryBlock.mid(firstNewline + 1).trimmed() : QString();
+        const QString body = (firstNewline >= 0) ? entryBlock.mid(firstNewline + 1).trimmed()
+                                                 : QString();
         if (body.isEmpty())
             continue;
 
         AutodocEntry entry;
         entry.functionName = name;
-        entry.library = QFileInfo(filePath).completeBaseName();   // see buildTree()
+        entry.library = QFileInfo(filePath).completeBaseName(); // see buildTree()
         entry.sourceFile = filePath;
         entry.fullText = body;
         p_entries << entry;
@@ -338,10 +339,11 @@ QSet<QString> AutodocReader::collectFunctionNames(const QString &autodocsDir)
     static const QChar formFeed(0x0C);
     static const QRegularExpression whitespaceRe(QStringLiteral("\\s+"));
 
-    QDirIterator it(autodocsDir, QStringList() << QStringLiteral("*.doc"),
-                     QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext())
-    {
+    QDirIterator it(autodocsDir,
+                    QStringList() << QStringLiteral("*.doc"),
+                    QDir::Files,
+                    QDirIterator::Subdirectories);
+    while (it.hasNext()) {
         QFile file(it.next());
         if (!file.open(QIODevice::ReadOnly))
             continue;
@@ -350,26 +352,26 @@ QSet<QString> AutodocReader::collectFunctionNames(const QString &autodocsDir)
         file.close();
 
         QVector<int> markerPositions;
-        for (int i = 0; i < content.size(); ++i)
-        {
+        for (int i = 0; i < content.size(); ++i) {
             if (content.at(i) == formFeed)
                 markerPositions << i;
         }
 
-        for (int i = 0; i < markerPositions.size(); ++i)
-        {
+        for (int i = 0; i < markerPositions.size(); ++i) {
             const int entryStart = markerPositions[i] + 1;
-            const int entryEnd = (i + 1 < markerPositions.size()) ? markerPositions[i + 1] : content.size();
+            const int entryEnd = (i + 1 < markerPositions.size()) ? markerPositions[i + 1]
+                                                                  : content.size();
             if (entryEnd <= entryStart)
                 continue;
 
             const QString entryBlock = content.mid(entryStart, entryEnd - entryStart);
             const int firstNewline = entryBlock.indexOf(QLatin1Char('\n'));
-            const QString markerLine = (firstNewline >= 0) ? entryBlock.left(firstNewline) : entryBlock;
+            const QString markerLine = (firstNewline >= 0) ? entryBlock.left(firstNewline)
+                                                           : entryBlock;
             const QString fullName = markerLine.trimmed().section(whitespaceRe, 0, 0);
 
             if (fullName.isEmpty() || !fullName.contains(QLatin1Char('/')))
-                continue;   // not a real marker line - see parseAutodocFile()
+                continue; // not a real marker line - see parseAutodocFile()
 
             const int slash = fullName.lastIndexOf(QLatin1Char('/'));
             const QString shortName = (slash >= 0) ? fullName.mid(slash + 1) : fullName;
@@ -401,21 +403,19 @@ void AutodocReader::buildTree()
 
     QHash<QString, QTreeWidgetItem *> groupItems;
 
-    for (int idx = 0; idx < p_entries.size(); ++idx)
-    {
+    for (int idx = 0; idx < p_entries.size(); ++idx) {
         const AutodocEntry &e = p_entries.at(idx);
 
         QTreeWidgetItem *groupItem = groupItems.value(e.library, nullptr);
-        if (!groupItem)
-        {
-            groupItem = new QTreeWidgetItem(p_tree, QStringList{ e.library });
+        if (!groupItem) {
+            groupItem = new QTreeWidgetItem(p_tree, QStringList{e.library});
             // Group headers are just organisational - only the function
             // leaves underneath carry an actual AutoDoc entry to show.
             groupItem->setFlags(groupItem->flags() & ~Qt::ItemIsSelectable);
             groupItems.insert(e.library, groupItem);
         }
 
-        QTreeWidgetItem *funcItem = new QTreeWidgetItem(groupItem, QStringList{ e.functionName });
+        QTreeWidgetItem *funcItem = new QTreeWidgetItem(groupItem, QStringList{e.functionName});
         funcItem->setData(0, Qt::UserRole, idx);
     }
 
@@ -440,19 +440,17 @@ void AutodocReader::applyFilter(const QString &textRaw)
     QSet<QString> visibleFiles;
     p_currentMatches.clear();
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
         bool anyVisibleChild = false;
 
-        for (int ci = 0; ci < groupItem->childCount(); ++ci)
-        {
+        for (int ci = 0; ci < groupItem->childCount(); ++ci) {
             QTreeWidgetItem *funcItem = groupItem->child(ci);
-            const bool matches = text.isEmpty() || funcItem->text(0).contains(text, Qt::CaseInsensitive);
+            const bool matches = text.isEmpty()
+                                 || funcItem->text(0).contains(text, Qt::CaseInsensitive);
             funcItem->setHidden(!matches);
 
-            if (matches)
-            {
+            if (matches) {
                 anyVisibleChild = true;
                 ++visibleFuncs;
                 const int idx = funcItem->data(0, Qt::UserRole).toInt();
@@ -472,16 +470,16 @@ void AutodocReader::applyFilter(const QString &textRaw)
     p_filterPrevBtn->setEnabled(haveFilter && !p_currentMatches.isEmpty());
     p_filterNextBtn->setEnabled(haveFilter && !p_currentMatches.isEmpty());
 
-    if (haveFilter)
-    {
+    if (haveFilter) {
         setWindowTitle(tr("AmigaED AutoDoc Reader - Filter showing %1/%2 Funcs in %3/%4 Files")
-                        .arg(visibleFuncs).arg(p_entries.size())
-                        .arg(visibleFiles.size()).arg(p_totalFiles));
-    }
-    else
-    {
+                           .arg(visibleFuncs)
+                           .arg(p_entries.size())
+                           .arg(visibleFiles.size())
+                           .arg(p_totalFiles));
+    } else {
         setWindowTitle(tr("AmigaED AutoDoc Reader - %1 Funcs in %2 Files")
-                        .arg(p_entries.size()).arg(p_totalFiles));
+                           .arg(p_entries.size())
+                           .arg(p_totalFiles));
     }
 }
 
@@ -495,8 +493,7 @@ void AutodocReader::onTreeSelectionChanged()
     QTreeWidgetItem *item = p_tree->currentItem();
     // No selection, or a group header (group items have no parent and
     // carry no Qt::UserRole entry index) - nothing to show.
-    if (!item || !item->parent())
-    {
+    if (!item || !item->parent()) {
         p_textView->clear();
         return;
     }
@@ -518,8 +515,7 @@ void AutodocReader::buildNameIndex()
 {
     p_nameToIndex.clear();
 
-    for (int idx = 0; idx < p_entries.size(); ++idx)
-    {
+    for (int idx = 0; idx < p_entries.size(); ++idx) {
         const QString &fullName = p_entries.at(idx).functionName;
         const int slash = fullName.lastIndexOf(QLatin1Char('/'));
         const QString shortName = (slash >= 0) ? fullName.mid(slash + 1) : fullName;
@@ -582,25 +578,20 @@ QString AutodocReader::renderEntryHtml(int idx) const
     html += QStringLiteral("<pre style=\"white-space:pre; margin:0;\">");
 
     bool inSeeAlso = false;
-    for (const QString &rawLine : lines)
-    {
+    for (const QString &rawLine : lines) {
         const QString trimmed = rawLine.trimmed();
         const bool startsWithTab = !rawLine.isEmpty() && rawLine.at(0) == QLatin1Char('\t');
-        const bool isHeaderLine = !trimmed.isEmpty()
-                                    && !startsWithTab
-                                    && headerRe.match(trimmed).hasMatch();
+        const bool isHeaderLine = !trimmed.isEmpty() && !startsWithTab
+                                  && headerRe.match(trimmed).hasMatch();
 
         const QString escapedLine = rawLine.toHtmlEscaped();
 
-        if (isHeaderLine)
-        {
+        if (isHeaderLine) {
             // The header word itself is never linkified, only what
             // follows it - see linkifySeeAlsoLine().
             inSeeAlso = (trimmed.compare(QStringLiteral("SEE ALSO"), Qt::CaseInsensitive) == 0);
             html += escapedLine;
-        }
-        else
-        {
+        } else {
             html += inSeeAlso ? linkifySeeAlsoLine(escapedLine) : escapedLine;
         }
 
@@ -633,8 +624,7 @@ QString AutodocReader::linkifySeeAlsoLine(const QString &escapedLine) const
     int lastEnd = 0;
 
     QRegularExpressionMatchIterator it = tokenRe.globalMatch(escapedLine);
-    while (it.hasNext())
-    {
+    while (it.hasNext()) {
         const QRegularExpressionMatch m = it.next();
         result += escapedLine.mid(lastEnd, m.capturedStart() - lastEnd);
 
@@ -650,16 +640,13 @@ QString AutodocReader::linkifySeeAlsoLine(const QString &escapedLine) const
         const int slash = candidate.lastIndexOf(QLatin1Char('/'));
         const QString shortName = (slash >= 0) ? candidate.mid(slash + 1) : candidate;
 
-        if (!shortName.isEmpty() && p_nameToIndex.contains(shortName.toLower()))
-        {
-            result += QStringLiteral("<a href=\"adoc:") + shortName.toHtmlEscaped() + QStringLiteral("\">")
-                     + candidate + QStringLiteral("</a>");
+        if (!shortName.isEmpty() && p_nameToIndex.contains(shortName.toLower())) {
+            result += QStringLiteral("<a href=\"adoc:") + shortName.toHtmlEscaped()
+                      + QStringLiteral("\">") + candidate + QStringLiteral("</a>");
             if (hadTrailingDot)
                 result += QLatin1Char('.');
-        }
-        else
-        {
-            result += m.captured(0);   // no match - leave the token exactly as found
+        } else {
+            result += m.captured(0); // no match - leave the token exactly as found
         }
 
         lastEnd = m.capturedEnd();
@@ -696,9 +683,8 @@ void AutodocReader::onSeeAlsoLinkClicked(const QUrl &link)
         return;
 
     QString preferredLibrary;
-    if (QTreeWidgetItem *current = p_tree->currentItem())
-    {
-        if (current->parent())   // a group header carries no entry index - see onTreeSelectionChanged()
+    if (QTreeWidgetItem *current = p_tree->currentItem()) {
+        if (current->parent()) // a group header carries no entry index - see onTreeSelectionChanged()
         {
             const int idx = current->data(0, Qt::UserRole).toInt();
             if (idx >= 0 && idx < p_entries.size())
@@ -735,7 +721,8 @@ void AutodocReader::onFilterPrev()
     if (p_currentMatches.isEmpty())
         return;
 
-    p_currentMatchIndex = (p_currentMatchIndex - 1 + p_currentMatches.size()) % p_currentMatches.size();
+    p_currentMatchIndex = (p_currentMatchIndex - 1 + p_currentMatches.size())
+                          % p_currentMatches.size();
     QTreeWidgetItem *item = p_currentMatches.at(p_currentMatchIndex);
     p_tree->setCurrentItem(item);
     p_tree->scrollToItem(item);

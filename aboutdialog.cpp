@@ -2,9 +2,9 @@
 #include "ui_aboutdialog.h"
 #include "version.h"
 
-aboutDialog::aboutDialog(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::aboutDialog)
+aboutDialog::aboutDialog(QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::aboutDialog)
 {
     ui->setupUi(this);
     // Remove Close-, help-, size gadgets

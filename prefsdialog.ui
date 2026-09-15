@@ -1163,7 +1163,7 @@
          <item row="3" column="2">
           <widget class="QLineEdit" name="lineEdit_getAutodocsDir">
            <property name="toolTip">
-            <string>NDK AutoDocs folder, e.g. Include_I's "Autodocs" drawer - used by Build &gt; AutoDoc Reader...</string>
+            <string>NDK AutoDocs folder, e.g. Include_I's &quot;Autodocs&quot; drawer - used by Build &gt; AutoDoc Reader...</string>
            </property>
            <property name="text">
             <string/>

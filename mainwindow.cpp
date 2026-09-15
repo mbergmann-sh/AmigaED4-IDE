@@ -4030,7 +4030,7 @@ void MainWindow::applyBraceBlockHighlight(QsciScintilla *editor, long bracePos, 
 
     editor->SendScintilla(QsciScintillaBase::SCI_INDICSETSTYLE, indicator, QsciScintillaBase::INDIC_STRAIGHTBOX);
     editor->SendScintilla(QsciScintillaBase::SCI_INDICSETFORE, indicator,
-                           isDarkTheme() ? QColor("#264f78") : QColor("#add6ff"));   // same tone as the selection background (initializeCaretLine()) - already proven not to fight syntax colours
+                           (isDarkTheme() || isVSCodeTheme()) ? QColor("#264f78") : QColor("#add6ff"));   // same tone as the selection background (initializeCaretLine()) - already proven not to fight syntax colours
     editor->SendScintilla(QsciScintillaBase::SCI_INDICSETALPHA, indicator, 120);
     // Explicit cast needed here for the same reason as the SCI_BRACEMATCH
     // call in actionGoto_matching_brace() above: a bare literal "0" is
@@ -6197,6 +6197,16 @@ bool MainWindow::isWorkbench31Theme() const
 }
 
 //
+// true if p_default_style selects the synthetic "Visual Studio Code Dark"
+// entry - see the .h comment for the rationale of having this as a
+// separate theme from "Dark" rather than folding it into that one.
+//
+bool MainWindow::isVSCodeTheme() const
+{
+    return p_default_style == QLatin1String("Visual Studio Code Dark");
+}
+
+//
 // Builds the dark QPalette used together with the "Fusion" style for the
 // "Dark" application style. Native styles (e.g. "windowsvista" on
 // Windows) mostly ignore a custom QPalette for their own chrome - Fusion
@@ -6320,6 +6330,48 @@ QPalette MainWindow::workbench31ApplicationPalette() const
 }
 
 //
+// Builds the QPalette used together with "Fusion" for the "Visual Studio
+// Code Dark" application style (rev.158) - unlike "Dark"'s own palette
+// (a generic flat dark grey, #353535/#232323), every colour here is taken
+// directly from Visual Studio Code's real "Dark+" theme definition: Window
+// uses sideBar.background (#252526), Base uses editor.background (#1E1E1E,
+// so text fields/lists/trees match the editor exactly), Highlight uses
+// list.activeSelectionBackground (#094771 - VS Code's own UI selection
+// blue, distinct from the editor's own selection blue #264F78 used
+// elsewhere in this file), and Link uses textLink.foreground (#3794FF).
+// applyApplicationStyle() additionally layers a small stylesheet on top of
+// this palette for the status bar/menu bar/tab bar, the same way it
+// already does for "Workbench 1.3"'s menu bar - see its own comment.
+//
+QPalette MainWindow::vscodeApplicationPalette() const
+{
+    QPalette palette;
+
+    palette.setColor(QPalette::Window,            QColor(0x25, 0x25, 0x26));   // sideBar.background
+    palette.setColor(QPalette::WindowText,        QColor(0xcc, 0xcc, 0xcc));   // foreground
+    palette.setColor(QPalette::Base,              QColor(0x1e, 0x1e, 0x1e));   // editor.background
+    palette.setColor(QPalette::AlternateBase,     QColor(0x2d, 0x2d, 0x2d));   // tab.inactiveBackground / list hover
+    palette.setColor(QPalette::ToolTipBase,       QColor(0x25, 0x25, 0x26));
+    palette.setColor(QPalette::ToolTipText,       QColor(0xcc, 0xcc, 0xcc));
+    palette.setColor(QPalette::Text,              QColor(0xd4, 0xd4, 0xd4));   // editor.foreground
+    palette.setColor(QPalette::Button,            QColor(0x3c, 0x3c, 0x3c));   // input/dropdown.background
+    palette.setColor(QPalette::ButtonText,        QColor(0xcc, 0xcc, 0xcc));
+    palette.setColor(QPalette::BrightText,        QColor(0xf4, 0x84, 0x71));   // errorForeground-ish
+    palette.setColor(QPalette::Link,              QColor(0x37, 0x94, 0xff));   // textLink.foreground
+    palette.setColor(QPalette::LinkVisited,       QColor(0xb1, 0x80, 0xd7));
+    palette.setColor(QPalette::Highlight,         QColor(0x09, 0x47, 0x71));   // list.activeSelectionBackground
+    palette.setColor(QPalette::HighlightedText,   QColor(0xff, 0xff, 0xff));
+
+    palette.setColor(QPalette::Disabled, QPalette::WindowText,      QColor(0x6a, 0x6a, 0x6a));
+    palette.setColor(QPalette::Disabled, QPalette::Text,            QColor(0x6a, 0x6a, 0x6a));
+    palette.setColor(QPalette::Disabled, QPalette::ButtonText,      QColor(0x6a, 0x6a, 0x6a));
+    palette.setColor(QPalette::Disabled, QPalette::Highlight,       QColor(0x3c, 0x3c, 0x3c));
+    palette.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(0x6a, 0x6a, 0x6a));
+
+    return palette;
+}
+
+//
 // Applies the configured "Default application style" (Prefs > Misc) to
 // the running application. Called once from the constructor (initial
 // startup style) and again, live, from readSettings() whenever the value
@@ -6342,6 +6394,11 @@ void MainWindow::applyApplicationStyle()
     {
         QApplication::setStyle(QStyleFactory::create("Fusion"));
         QApplication::setPalette(workbench31ApplicationPalette());
+    }
+    else if (isVSCodeTheme())
+    {
+        QApplication::setStyle(QStyleFactory::create("Fusion"));
+        QApplication::setPalette(vscodeApplicationPalette());
     }
     else
     {
@@ -6370,9 +6427,36 @@ void MainWindow::applyApplicationStyle()
             "QMenu::item:selected { background-color: #FF8800; color: black; }"
         );
     }
+    else if (isVSCodeTheme())
+    {
+        // Fusion's palette-driven chrome alone doesn't reach the status
+        // bar's own background (always the palette's plain Window colour
+        // otherwise) or give the tab bar VS Code's distinct active/
+        // inactive tab shades - both are iconic enough for a recognizable
+        // VS Code look that they get their own stylesheet here, the same
+        // "palette for the bulk, stylesheet for a couple of standout
+        // details" approach "Workbench 1.3" already uses above. Menu/menu-
+        // bar colours are spelled out explicitly too (rather than left to
+        // the palette) purely so the selected/pressed state can use VS
+        // Code's real list.activeSelectionBackground blue (#094771)
+        // consistently with QPalette::Highlight above.
+        this->setStyleSheet(
+            "QStatusBar { background-color: #007ACC; color: #ffffff; }"
+            "QStatusBar::item { border: none; }"
+            "QStatusBar QLabel { color: #ffffff; }"
+            "QMenuBar { background-color: #3c3c3c; color: #cccccc; }"
+            "QMenuBar::item { background-color: #3c3c3c; color: #cccccc; }"
+            "QMenuBar::item:selected, QMenuBar::item:pressed { background-color: #094771; color: #ffffff; }"
+            "QMenu { background-color: #252526; color: #cccccc; border: 1px solid #454545; }"
+            "QMenu::item:selected { background-color: #094771; color: #ffffff; }"
+            "QToolBar { background-color: #333333; border: none; spacing: 2px; }"
+            "QTabBar::tab { background-color: #2d2d2d; color: #969696; padding: 4px 10px; }"
+            "QTabBar::tab:selected { background-color: #1e1e1e; color: #ffffff; }"
+        );
+    }
     else
     {
-        this->setStyleSheet(QString());   // clear any stale stylesheet override, e.g. after switching away from "Workbench 1.3"/"Dark"
+        this->setStyleSheet(QString());   // clear any stale stylesheet override, e.g. after switching away from "Workbench 1.3"/"Dark"/"Visual Studio Code Dark"
     }
 
     syncThemeMenuCheckedState();      // keep View > Theme's checkmark in sync, however the style just changed (Prefs, this menu itself, or Shift+F12 reload)
@@ -6431,7 +6515,8 @@ void MainWindow::buildThemeMenu()
     // must keep matching exactly).
     const QStringList syntheticThemes = { QStringLiteral("Dark"),
                                            QStringLiteral("Workbench 1.3"),
-                                           QStringLiteral("Workbench 3.1") };
+                                           QStringLiteral("Workbench 3.1"),
+                                           QStringLiteral("Visual Studio Code Dark") };
     for (const QString &name : syntheticThemes)
     {
         QAction *act = themeMenue->addAction(name);
@@ -6561,10 +6646,11 @@ void MainWindow::syncThemeMenuCheckedState()
 
 //
 // Recolors an already-created lexer's styles for the CURRENT theme -
-// dark colours for "Dark", or a reset back to this app's own light-theme
-// colours for every other theme (native styles, Workbench 1.3,
-// Workbench 3.1) - see the reset branch's own comment for why that
-// second half exists at all. Called right after every lexer is created
+// dark colours for "Dark" or "Visual Studio Code Dark" (the two Amiga-
+// specific highlight colours differ between them, see below), or a reset
+// back to this app's own light-theme colours for every other theme
+// (native styles, Workbench 1.3, Workbench 3.1) - see the reset branch's
+// own comment for why that second half exists at all. Called right after every lexer is created
 // (initializeLexerCPP()/.../initializeLexerPascal()) AND, unchanged, from
 // reapplyEditorTheme() to recolor an existing tab's lexer IN PLACE when
 // the style is switched live: it deliberately never recreates the lexer
@@ -6592,7 +6678,7 @@ void MainWindow::applyLexerDarkColors(QsciLexer *lexer)
     if (!lexer)
         return;
 
-    if (!isDarkTheme())
+    if (!isDarkTheme() && !isVSCodeTheme())
     {
         // Mirrors the dark branch below exactly (same blanket-then-
         // individual-retint mechanism, same named styles per lexer type)
@@ -6700,13 +6786,26 @@ void MainWindow::applyLexerDarkColors(QsciLexer *lexer)
     lexer->setPaper(QColor(0x1e, 0x1e, 0x1e));
     lexer->setColor(QColor(0xd4, 0xd4, 0xd4));
 
+    // Base syntax colours (comment/keyword/number/string/preprocessor) are
+    // shared verbatim between "Dark" and "Visual Studio Code Dark" - they
+    // were already exact VS Code Dark+ token colours here from the start.
+    // Only the two Amiga-specific categories (NDK/MUI types and function
+    // names - not part of VS Code's own C/C++ grammar) differ: "Dark" uses
+    // this project's own long-standing purple/amber choice, while the
+    // VS Code theme retunes them to VS Code's REAL semantic-token colours
+    // for a type (#4EC9B0, teal) and a function name (#DCDCAA, pale
+    // yellow) respectively, for a more authentic match.
     const QColor comment(0x6a, 0x99, 0x55);
     const QColor keyword(0x56, 0x9c, 0xd6);
     const QColor number(0xb5, 0xce, 0xa8);
     const QColor string(0xce, 0x91, 0x78);
     const QColor preprocessor(0xc5, 0x86, 0xc0);
-    const QColor amigaType(0xb3, 0x92, 0xf0);       // GlobalClass - was indigo, brightened for dark-background contrast
-    const QColor amigaFunction(0xe5, 0xc0, 0x7b);   // KeywordSet2 - was firebrick, warm amber instead
+    const QColor amigaType = isVSCodeTheme()
+        ? QColor(0x4e, 0xc9, 0xb0)     // GlobalClass - VS Code's own type colour (teal)
+        : QColor(0xb3, 0x92, 0xf0);    // GlobalClass - "Dark"'s own choice: was indigo, brightened for dark-background contrast
+    const QColor amigaFunction = isVSCodeTheme()
+        ? QColor(0xdc, 0xdc, 0xaa)     // KeywordSet2 - VS Code's own function-name colour (pale yellow)
+        : QColor(0xe5, 0xc0, 0x7b);    // KeywordSet2 - "Dark"'s own choice: was firebrick, warm amber instead
 
     if (auto *cpp = dynamic_cast<QsciLexerCPP *>(lexer))
     {
@@ -6900,10 +6999,12 @@ void MainWindow::initializeMargin(QsciScintilla *editor)
     editor->setMarginWidth(0, fontmetrics.horizontalAdvance(QString::number(editor->lines())) + 10);
     editor->setMarginLineNumbers(0, true);
 
-    if (isDarkTheme())
+    if (isDarkTheme() || isVSCodeTheme())
     {
         // Dark-theme margin colours - subdued line-number gutter, still
-        // clearly separated from the editor background itself.
+        // clearly separated from the editor background itself. Already
+        // exact VS Code Dark+ values, reused as-is for "Visual Studio
+        // Code Dark".
         editor->setMarginsBackgroundColor(QColor("#252526"));
         editor->setMarginsForegroundColor(QColor("#858585"));
         editor->setFoldMarginColors(QColor("#3c3c3c"), QColor("#252526"));
@@ -6972,7 +7073,7 @@ void MainWindow::initializeLexerNone(QsciScintilla *editor, bool announceChange)
     // indefinitely after switching away from "Dark" to any other theme -
     // this function used to only ever handle "make it dark", with
     // nothing to undo that afterward.
-    if (isDarkTheme())
+    if (isDarkTheme() || isVSCodeTheme())
     {
         editor->SendScintilla(QsciScintilla::SCI_STYLESETBACK, QsciScintilla::STYLE_DEFAULT, QColor(0x1e, 0x1e, 0x1e));
         editor->SendScintilla(QsciScintilla::SCI_STYLESETFORE, QsciScintilla::STYLE_DEFAULT, QColor(0xd4, 0xd4, 0xd4));
@@ -7230,7 +7331,7 @@ void MainWindow::initializeCaretLine(QsciScintilla *editor)
     // Current line visible with special background color
     editor->setCaretLineVisible(false);
 
-    if (isDarkTheme())
+    if (isDarkTheme() || isVSCodeTheme())
     {
         editor->setCaretLineBackgroundColor(QColor("#2d2d2d"));
         editor->setCaretForegroundColor(QColor("#ffffff"));
@@ -12264,7 +12365,7 @@ void MainWindow::highlightOutputDiagnostics()
         return;
 
     QColor errorBg, errorFg, warningBg, warningFg;
-    if (isDarkTheme())
+    if (isDarkTheme() || isVSCodeTheme())
     {
         errorBg   = QColor(0x5A, 0x1A, 0x1A);
         errorFg   = QColor(0xFF, 0x6B, 0x6B);

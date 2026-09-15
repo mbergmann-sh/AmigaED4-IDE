@@ -1,17 +1,17 @@
 #include "externalchangesdialog.h"
 
-#include <QVBoxLayout>
+#include <QDialogButtonBox>
+#include <QFileInfo>
+#include <QFont>
 #include <QLabel>
 #include <QListWidget>
 #include <QListWidgetItem>
-#include <QDialogButtonBox>
 #include <QPushButton>
-#include <QFileInfo>
-#include <QFont>
+#include <QVBoxLayout>
 
 ExternalChangesDialog::ExternalChangesDialog(const QStringList &changedFiles,
-                                               const QStringList &dirtyFiles,
-                                               QWidget *parent)
+                                             const QStringList &dirtyFiles,
+                                             QWidget *parent)
     : QDialog(parent)
 {
     setWindowTitle(tr("Files Changed on Disk"));
@@ -20,12 +20,11 @@ ExternalChangesDialog::ExternalChangesDialog(const QStringList &changedFiles,
 
     QVBoxLayout *layout = new QVBoxLayout(this);
 
-    QLabel *intro = new QLabel(
-        tr("The following open file(s) have been changed outside AmigaED. "
-           "Choose which ones to reload from disk - reloading discards "
-           "any in-editor content for that file and replaces it with "
-           "what's currently on disk."),
-        this);
+    QLabel *intro = new QLabel(tr("The following open file(s) have been changed outside AmigaED. "
+                                  "Choose which ones to reload from disk - reloading discards "
+                                  "any in-editor content for that file and replaces it with "
+                                  "what's currently on disk."),
+                               this);
     intro->setWordWrap(true);
     layout->addWidget(intro);
 
@@ -52,8 +51,7 @@ ExternalChangesDialog::ExternalChangesDialog(const QStringList &changedFiles,
 //
 void ExternalChangesDialog::buildList(const QStringList &changedFiles, const QStringList &dirtyFiles)
 {
-    for (const QString &fileName : changedFiles)
-    {
+    for (const QString &fileName : changedFiles) {
         bool isDirty = dirtyFiles.contains(fileName);
 
         QString label = QFileInfo(fileName).fileName();
@@ -66,8 +64,7 @@ void ExternalChangesDialog::buildList(const QStringList &changedFiles, const QSt
         item->setCheckState(isDirty ? Qt::Unchecked : Qt::Checked);
         item->setData(Qt::UserRole, fileName);
 
-        if (isDirty)
-        {
+        if (isDirty) {
             QFont f = item->font();
             f.setItalic(true);
             item->setFont(f);
@@ -79,8 +76,7 @@ QStringList ExternalChangesDialog::filesToReload() const
 {
     QStringList result;
 
-    for (int i = 0; i < p_list->count(); ++i)
-    {
+    for (int i = 0; i < p_list->count(); ++i) {
         QListWidgetItem *item = p_list->item(i);
         if (item->checkState() == Qt::Checked)
             result.append(item->data(Qt::UserRole).toString());

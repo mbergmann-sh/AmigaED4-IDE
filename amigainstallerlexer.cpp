@@ -3,8 +3,7 @@
 
 AmigaInstallerLexer::AmigaInstallerLexer(QObject *parent)
     : QsciLexerCustom(parent)
-{
-}
+{}
 
 const char *AmigaInstallerLexer::language() const
 {
@@ -13,32 +12,47 @@ const char *AmigaInstallerLexer::language() const
 
 QString AmigaInstallerLexer::description(int style) const
 {
-    switch (style)
-    {
-    case Default:  return QObject::tr("Default");
-    case Comment:  return QObject::tr("Comment");
-    case String:   return QObject::tr("String");
-    case Keyword:  return QObject::tr("Keyword");
-    case Operator: return QObject::tr("Operator");
-    case Number:   return QObject::tr("Number");
-    case Symbol:   return QObject::tr("Predefined symbol (@...)");
-    case Variable: return QObject::tr("Variable (#...)");
-    default:       return QString();
+    switch (style) {
+    case Default:
+        return QObject::tr("Default");
+    case Comment:
+        return QObject::tr("Comment");
+    case String:
+        return QObject::tr("String");
+    case Keyword:
+        return QObject::tr("Keyword");
+    case Operator:
+        return QObject::tr("Operator");
+    case Number:
+        return QObject::tr("Number");
+    case Symbol:
+        return QObject::tr("Predefined symbol (@...)");
+    case Variable:
+        return QObject::tr("Variable (#...)");
+    default:
+        return QString();
     }
 }
 
 QColor AmigaInstallerLexer::defaultColor(int style) const
 {
-    switch (style)
-    {
-    case Comment:  return QColor(0x00, 0x80, 0x00);   // dark green
-    case String:   return QColor(0x80, 0x00, 0x00);   // maroon
-    case Keyword:  return QColor(0x00, 0x00, 0xff);   // blue
-    case Operator: return QColor(0x40, 0x40, 0x40);   // dark grey
-    case Number:   return QColor(0x00, 0x80, 0x80);   // teal
-    case Symbol:   return QColor(0x80, 0x00, 0x80);   // purple - @help/predefined symbols
-    case Variable: return QColor(0xb8, 0x86, 0x0b);   // dark goldenrod - #user variables
-    default:       return QsciLexerCustom::defaultColor(style);
+    switch (style) {
+    case Comment:
+        return QColor(0x00, 0x80, 0x00); // dark green
+    case String:
+        return QColor(0x80, 0x00, 0x00); // maroon
+    case Keyword:
+        return QColor(0x00, 0x00, 0xff); // blue
+    case Operator:
+        return QColor(0x40, 0x40, 0x40); // dark grey
+    case Number:
+        return QColor(0x00, 0x80, 0x80); // teal
+    case Symbol:
+        return QColor(0x80, 0x00, 0x80); // purple - @help/predefined symbols
+    case Variable:
+        return QColor(0xb8, 0x86, 0x0b); // dark goldenrod - #user variables
+    default:
+        return QsciLexerCustom::defaultColor(style);
     }
 }
 
@@ -62,27 +76,81 @@ const QSet<QString> &AmigaInstallerLexer::keywords()
     // All lower-case - matching against the lower-cased token in
     // styleText(), since Installer scripts are conventionally written
     // in lower case but the interpreter itself is case-insensitive.
-    static const QSet<QString> kw = {
-        // control flow / structure
-        "if", "while", "procedure", "onerror", "abort", "exit", "complete",
-        "skip", "quiet",
-        // requesters ("ask...")
-        "askbool", "askchoice", "askdir", "askdisk", "askfile", "asknumber",
-        "askoptions", "askstring", "welcome", "message", "prompt", "help",
-        // file/directory operations
-        "copyfiles", "copylib", "delete", "deltree", "makedir", "makeassign",
-        "rename", "protect", "textfile", "patch", "tooltype",
-        // system / environment queries
-        "exists", "getversion", "getassign", "getdevice", "getdiskspace",
-        "getenv", "getsize", "run", "execute", "startup", "user", "working",
-        "database",
-        // string / path / value helpers
-        "cat", "expandpath", "pathonly", "tackon", "strequal", "string",
-        "substr", "select", "includes", "in", "and", "or", "not",
-        // variable / value handling
-        "set", "put", "parse", "orlist", "midfile", "transcript",
-        "showlog", "delopts", "all", "confirm", "infos"
-    };
+    static const QSet<QString> kw = { // control flow / structure
+                                      "if",
+                                      "while",
+                                      "procedure",
+                                      "onerror",
+                                      "abort",
+                                      "exit",
+                                      "complete",
+                                      "skip",
+                                      "quiet",
+                                      // requesters ("ask...")
+                                      "askbool",
+                                      "askchoice",
+                                      "askdir",
+                                      "askdisk",
+                                      "askfile",
+                                      "asknumber",
+                                      "askoptions",
+                                      "askstring",
+                                      "welcome",
+                                      "message",
+                                      "prompt",
+                                      "help",
+                                      // file/directory operations
+                                      "copyfiles",
+                                      "copylib",
+                                      "delete",
+                                      "deltree",
+                                      "makedir",
+                                      "makeassign",
+                                      "rename",
+                                      "protect",
+                                      "textfile",
+                                      "patch",
+                                      "tooltype",
+                                      // system / environment queries
+                                      "exists",
+                                      "getversion",
+                                      "getassign",
+                                      "getdevice",
+                                      "getdiskspace",
+                                      "getenv",
+                                      "getsize",
+                                      "run",
+                                      "execute",
+                                      "startup",
+                                      "user",
+                                      "working",
+                                      "database",
+                                      // string / path / value helpers
+                                      "cat",
+                                      "expandpath",
+                                      "pathonly",
+                                      "tackon",
+                                      "strequal",
+                                      "string",
+                                      "substr",
+                                      "select",
+                                      "includes",
+                                      "in",
+                                      "and",
+                                      "or",
+                                      "not",
+                                      // variable / value handling
+                                      "set",
+                                      "put",
+                                      "parse",
+                                      "orlist",
+                                      "midfile",
+                                      "transcript",
+                                      "showlog",
+                                      "delopts",
+                                      "all",
+                                      "confirm",
+                                      "infos"};
     return kw;
 }
 
@@ -103,25 +171,20 @@ void AmigaInstallerLexer::styleText(int start, int end)
     startStyling(start);
 
     int i = 0;
-    while (i < n)
-    {
+    while (i < n) {
         const QChar c = source.at(i);
 
-        if (c == ';')
-        {
+        if (c == ';') {
             // Comment: ';' to end of line.
             int j = i;
             while (j < n && source.at(j) != QLatin1Char('\n'))
                 ++j;
             setStyling(j - i, Comment);
             i = j;
-        }
-        else if (c == QLatin1Char('"'))
-        {
+        } else if (c == QLatin1Char('"')) {
             // String: double-quoted, backslash-escaped (e.g. \" \n).
             int j = i + 1;
-            while (j < n && source.at(j) != QLatin1Char('"'))
-            {
+            while (j < n && source.at(j) != QLatin1Char('"')) {
                 if (source.at(j) == QLatin1Char('\\') && j + 1 < n)
                     ++j; // skip the escaped character
                 ++j;
@@ -130,49 +193,37 @@ void AmigaInstallerLexer::styleText(int start, int end)
                 ++j; // include the closing quote
             setStyling(j - i, String);
             i = j;
-        }
-        else if (c == QLatin1Char('(') || c == QLatin1Char(')'))
-        {
+        } else if (c == QLatin1Char('(') || c == QLatin1Char(')')) {
             setStyling(1, Operator);
             ++i;
-        }
-        else if (c == QLatin1Char('@'))
-        {
+        } else if (c == QLatin1Char('@')) {
             // Predefined symbol, e.g. @makedir-help, @app-name.
             int j = i + 1;
             while (j < n && isIdentChar(source.at(j)))
                 ++j;
             setStyling(j - i, Symbol);
             i = j;
-        }
-        else if (c == QLatin1Char('#'))
-        {
+        } else if (c == QLatin1Char('#')) {
             // User-defined script variable, e.g. #dest, #copy-files.
             int j = i + 1;
             while (j < n && isIdentChar(source.at(j)))
                 ++j;
             setStyling(j - i, Variable);
             i = j;
-        }
-        else if (c.isDigit())
-        {
+        } else if (c.isDigit()) {
             int j = i;
             while (j < n && source.at(j).isDigit())
                 ++j;
             setStyling(j - i, Number);
             i = j;
-        }
-        else if (c.isLetter() || c == QLatin1Char('_'))
-        {
+        } else if (c.isLetter() || c == QLatin1Char('_')) {
             int j = i;
             while (j < n && isIdentChar(source.at(j)))
                 ++j;
             const QString word = source.mid(i, j - i);
             setStyling(j - i, keywords().contains(word.toLower()) ? Keyword : Default);
             i = j;
-        }
-        else
-        {
+        } else {
             // whitespace and anything else not specially handled
             setStyling(1, Default);
             ++i;

@@ -1,17 +1,17 @@
 #ifndef PREFSDIALOG_H
 #define PREFSDIALOG_H
 
+#include <QComboBox>
+#include <QCoreApplication>
 #include <QDialog>
+#include <QDir>
 #include <QFileDialog>
+#include <QProcess>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QStringList>
-#include <QDir>
 #include <QStyle>
 #include <QStyleFactory>
-#include <QComboBox>
-#include <QSettings>
-#include <QCoreApplication>
-#include <QProcess>
 
 class MainWindow;
 
@@ -28,7 +28,9 @@ public:
     //explicit PrefsDialog(int tabindex);
     ~PrefsDialog();
 
-    QStringList p_Compilers = {"VBCC (C mode only)", "GNU gcc (C mode)", "GNU g++ (C++ mode)"};    // used for building combobox entries
+    QStringList p_Compilers = {"VBCC (C mode only)",
+                               "GNU gcc (C mode)",
+                               "GNU g++ (C++ mode)"}; // used for building combobox entries
     QStringList p_style_items;
 
     QSettings mySettings;
@@ -55,9 +57,9 @@ private slots:
     void on_btn_getEmulatorExefile_clicked();
     void on_btn_getOS13Configfile_clicked();
     void on_btn_getOS3Configfile_clicked();
-    void on_btn_editOS13Configfile_clicked();  // Prefs > Emulator: "Edit" next to OS 1.3 config - opens the file in the system's own text editor
-    void on_btn_editOS3Configfile_clicked();   // Prefs > Emulator: "Edit" next to OS 3.x config - opens the file in the system's own text editor
-    void on_btn_getAutodocsDir_clicked();      // Prefs > Emulator: "AutoDocs folder:" - selects the NDK AutoDocs folder used by Build > AutoDoc Reader...
+    void on_btn_editOS13Configfile_clicked(); // Prefs > Emulator: "Edit" next to OS 1.3 config - opens the file in the system's own text editor
+    void on_btn_editOS3Configfile_clicked(); // Prefs > Emulator: "Edit" next to OS 3.x config - opens the file in the system's own text editor
+    void on_btn_getAutodocsDir_clicked(); // Prefs > Emulator: "AutoDocs folder:" - selects the NDK AutoDocs folder used by Build > AutoDoc Reader...
     void on_btn_CancelSave_clicked();
 
     void on_checkBoxSimpleStatusbar_clicked();

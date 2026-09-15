@@ -1,20 +1,20 @@
 #include "asmrefreader.h"
 #include "version.h"
 
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QSplitter>
-#include <QTreeWidget>
-#include <QTextBrowser>
-#include <QLineEdit>
-#include <QLabel>
-#include <QPushButton>
-#include <QSettings>
 #include <QCloseEvent>
-#include <QSizeGrip>
-#include <QUrl>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QRegularExpression>
 #include <QSet>
+#include <QSettings>
+#include <QSizeGrip>
+#include <QSplitter>
+#include <QTextBrowser>
+#include <QTreeWidget>
+#include <QUrl>
+#include <QVBoxLayout>
 
 AsmRefReader::AsmRefReader(const QString &guiLanguage, QWidget *parent)
     : QDialog(parent)
@@ -29,13 +29,14 @@ AsmRefReader::AsmRefReader(const QString &guiLanguage, QWidget *parent)
     setWindowFlag(Qt::WindowMinMaxButtonsHint, true);
 
     QSettings geometrySettings(AMIGAED_SETTINGS_ORG, AMIGAED_SETTINGS_APP);
-    const QByteArray savedGeometry = geometrySettings.value(QStringLiteral("MISC/AsmRefReaderGeometry")).toByteArray();
+    const QByteArray savedGeometry
+        = geometrySettings.value(QStringLiteral("MISC/AsmRefReaderGeometry")).toByteArray();
     if (savedGeometry.isEmpty() || !restoreGeometry(savedGeometry))
         resize(950, 650);
 
     setWindowTitle((p_lang == QStringLiteral("de"))
-                   ? QStringLiteral("AmigaED Assembler-Referenz")
-                   : QStringLiteral("AmigaED Assembler Reference"));
+                       ? QStringLiteral("AmigaED Assembler-Referenz")
+                       : QStringLiteral("AmigaED Assembler Reference"));
 
     populateEntries();
     buildIdIndex();
@@ -49,12 +50,12 @@ AsmRefReader::AsmRefReader(const QString &guiLanguage, QWidget *parent)
     p_filterEdit->setPlaceholderText(tr("Filter..."));
     p_filterEdit->setClearButtonEnabled(true);
 
-    p_filterPrevBtn = new QPushButton(QStringLiteral("◀"), this);   // <
+    p_filterPrevBtn = new QPushButton(QStringLiteral("◀"), this); // <
     p_filterPrevBtn->setToolTip(tr("Previous match"));
     p_filterPrevBtn->setMaximumWidth(28);
     p_filterPrevBtn->setEnabled(false);
 
-    p_filterNextBtn = new QPushButton(QStringLiteral("▶"), this);   // >
+    p_filterNextBtn = new QPushButton(QStringLiteral("▶"), this); // >
     p_filterNextBtn->setToolTip(tr("Next match"));
     p_filterNextBtn->setMaximumWidth(28);
     p_filterNextBtn->setEnabled(false);
@@ -88,14 +89,14 @@ AsmRefReader::AsmRefReader(const QString &guiLanguage, QWidget *parent)
     p_textView = new QTextBrowser(this);
     p_textView->setReadOnly(true);
     p_textView->setOpenExternalLinks(false);
-    p_textView->setOpenLinks(false);   // "asmref:<id>" links, see onCrossRefLinkClicked()
+    p_textView->setOpenLinks(false); // "asmref:<id>" links, see onCrossRefLinkClicked()
 
     QSplitter *splitter = new QSplitter(Qt::Horizontal, this);
     splitter->addWidget(leftWidget);
     splitter->addWidget(p_textView);
     splitter->setStretchFactor(0, 0);
     splitter->setStretchFactor(1, 1);
-    splitter->setSizes({ 320, 630 });
+    splitter->setSizes({320, 630});
 
     // Bottom-right resize grip - same reasoning as CppRefReader/
     // AutodocReader's own.
@@ -131,8 +132,7 @@ void AsmRefReader::showCategory(const QString &category)
     if (!p_filterEdit->text().isEmpty())
         p_filterEdit->clear();
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
         if (groupItem->data(0, Qt::UserRole + 1).toString() != category)
             continue;
@@ -140,8 +140,7 @@ void AsmRefReader::showCategory(const QString &category)
         groupItem->setExpanded(true);
         p_tree->scrollToItem(groupItem);
 
-        if (groupItem->childCount() > 0)
-        {
+        if (groupItem->childCount() > 0) {
             QTreeWidgetItem *firstChild = groupItem->child(0);
             p_tree->setCurrentItem(firstChild);
             p_tree->scrollToItem(firstChild);
@@ -150,8 +149,11 @@ void AsmRefReader::showCategory(const QString &category)
     }
 }
 
-void AsmRefReader::addEntry(const QString &id, const QString &category, const QString &title,
-                             const QString &htmlEn, const QString &htmlDe)
+void AsmRefReader::addEntry(const QString &id,
+                            const QString &category,
+                            const QString &title,
+                            const QString &htmlEn,
+                            const QString &htmlDe)
 {
     AsmRefEntry e;
     e.id = id;
@@ -209,83 +211,163 @@ void AsmRefReader::buildTokenIndex()
 {
     p_tokenToIndex.clear();
 
-    struct TokenAlias { const char *token; const char *id; };
+    struct TokenAlias
+    {
+        const char *token;
+        const char *id;
+    };
     static const TokenAlias aliases[] = {
         // --- Registers ---
-        { "d0", "reg_data_registers" }, { "d1", "reg_data_registers" }, { "d2", "reg_data_registers" },
-        { "d3", "reg_data_registers" }, { "d4", "reg_data_registers" }, { "d5", "reg_data_registers" },
-        { "d6", "reg_data_registers" }, { "d7", "reg_data_registers" },
-        { "a0", "reg_address_registers" }, { "a1", "reg_address_registers" }, { "a2", "reg_address_registers" },
-        { "a3", "reg_address_registers" }, { "a4", "reg_address_registers" }, { "a5", "reg_address_registers" },
-        { "a6", "reg_address_registers" },
-        { "a7", "reg_stack_pointer" }, { "sp", "reg_stack_pointer" }, { "usp", "reg_stack_pointer" }, { "ssp", "reg_stack_pointer" },
-        { "pc", "reg_pc" },
-        { "sr", "reg_sr_ccr" }, { "ccr", "reg_sr_ccr" },
-        { "vbr", "reg_cpu_variants" }, { "cacr", "reg_cpu_variants" }, { "caar", "reg_cpu_variants" },
-        { "fpcr", "reg_cpu_variants" }, { "fpsr", "reg_cpu_variants" }, { "fpiar", "reg_cpu_variants" },
-        { "fp0", "reg_cpu_variants" }, { "fp1", "reg_cpu_variants" }, { "fp2", "reg_cpu_variants" }, { "fp3", "reg_cpu_variants" },
-        { "fp4", "reg_cpu_variants" }, { "fp5", "reg_cpu_variants" }, { "fp6", "reg_cpu_variants" }, { "fp7", "reg_cpu_variants" },
+        {"d0", "reg_data_registers"},
+        {"d1", "reg_data_registers"},
+        {"d2", "reg_data_registers"},
+        {"d3", "reg_data_registers"},
+        {"d4", "reg_data_registers"},
+        {"d5", "reg_data_registers"},
+        {"d6", "reg_data_registers"},
+        {"d7", "reg_data_registers"},
+        {"a0", "reg_address_registers"},
+        {"a1", "reg_address_registers"},
+        {"a2", "reg_address_registers"},
+        {"a3", "reg_address_registers"},
+        {"a4", "reg_address_registers"},
+        {"a5", "reg_address_registers"},
+        {"a6", "reg_address_registers"},
+        {"a7", "reg_stack_pointer"},
+        {"sp", "reg_stack_pointer"},
+        {"usp", "reg_stack_pointer"},
+        {"ssp", "reg_stack_pointer"},
+        {"pc", "reg_pc"},
+        {"sr", "reg_sr_ccr"},
+        {"ccr", "reg_sr_ccr"},
+        {"vbr", "reg_cpu_variants"},
+        {"cacr", "reg_cpu_variants"},
+        {"caar", "reg_cpu_variants"},
+        {"fpcr", "reg_cpu_variants"},
+        {"fpsr", "reg_cpu_variants"},
+        {"fpiar", "reg_cpu_variants"},
+        {"fp0", "reg_cpu_variants"},
+        {"fp1", "reg_cpu_variants"},
+        {"fp2", "reg_cpu_variants"},
+        {"fp3", "reg_cpu_variants"},
+        {"fp4", "reg_cpu_variants"},
+        {"fp5", "reg_cpu_variants"},
+        {"fp6", "reg_cpu_variants"},
+        {"fp7", "reg_cpu_variants"},
 
         // --- Mnemonics ---
-        { "move", "mn_move" }, { "movea", "mn_move" }, { "moveq", "mn_move" },
-        { "lea", "mn_lea" },
-        { "pea", "mn_pea" },
-        { "movem", "mn_movem" },
-        { "exg", "mn_exg" },
-        { "swap", "mn_swap" },
-        { "clr", "mn_clr" },
-        { "ext", "mn_ext" }, { "extb", "mn_ext" },
-        { "add", "mn_add" }, { "adda", "mn_add" }, { "addi", "mn_add" }, { "addq", "mn_add" },
-        { "sub", "mn_sub" }, { "suba", "mn_sub" }, { "subi", "mn_sub" }, { "subq", "mn_sub" },
-        { "addx", "mn_addx_subx" }, { "subx", "mn_addx_subx" },
-        { "muls", "mn_muls_mulu" }, { "mulu", "mn_muls_mulu" },
-        { "divs", "mn_divs_divu" }, { "divu", "mn_divs_divu" },
-        { "neg", "mn_neg" }, { "negx", "mn_neg" },
-        { "cmp", "mn_cmp" }, { "cmpa", "mn_cmp" }, { "cmpi", "mn_cmp" }, { "cmpm", "mn_cmp" },
-        { "tst", "mn_tst" },
-        { "and", "mn_and_or_eor" }, { "or", "mn_and_or_eor" }, { "eor", "mn_and_or_eor" },
-        { "not", "mn_not" },
-        { "asl", "mn_asl_asr" }, { "asr", "mn_asl_asr" },
-        { "lsl", "mn_lsl_lsr" }, { "lsr", "mn_lsl_lsr" },
-        { "rol", "mn_rol_ror" }, { "ror", "mn_rol_ror" },
-        { "roxl", "mn_roxl_roxr" }, { "roxr", "mn_roxl_roxr" },
-        { "btst", "mn_bit_manipulation" }, { "bset", "mn_bit_manipulation" }, { "bclr", "mn_bit_manipulation" }, { "bchg", "mn_bit_manipulation" },
-        { "bra", "mn_bra_bcc" }, { "bcc", "mn_bra_bcc" }, { "bcs", "mn_bra_bcc" }, { "beq", "mn_bra_bcc" }, { "bne", "mn_bra_bcc" },
-        { "bge", "mn_bra_bcc" }, { "bgt", "mn_bra_bcc" }, { "ble", "mn_bra_bcc" }, { "blt", "mn_bra_bcc" },
-        { "bhi", "mn_bra_bcc" }, { "bls", "mn_bra_bcc" }, { "bpl", "mn_bra_bcc" }, { "bmi", "mn_bra_bcc" },
-        { "bvc", "mn_bra_bcc" }, { "bvs", "mn_bra_bcc" },
-        { "bsr", "mn_bsr_jsr" }, { "jsr", "mn_bsr_jsr" },
-        { "jmp", "mn_jmp" },
-        { "rts", "mn_rts_rte" }, { "rte", "mn_rts_rte" },
-        { "dbcc", "mn_dbcc" }, { "dbra", "mn_dbcc" }, { "dbf", "mn_dbcc" }, { "dbt", "mn_dbcc" },
-        { "dbeq", "mn_dbcc" }, { "dbne", "mn_dbcc" },
-        { "scc", "mn_scc" }, { "seq", "mn_scc" }, { "sne", "mn_scc" }, { "st", "mn_scc" }, { "sf", "mn_scc" },
-        { "link", "mn_link_unlk" }, { "unlk", "mn_link_unlk" },
-        { "nop", "mn_nop" },
-        { "trap", "mn_trap" }, { "trapv", "mn_trap" },
-        { "chk", "mn_chk" },
+        {"move", "mn_move"},
+        {"movea", "mn_move"},
+        {"moveq", "mn_move"},
+        {"lea", "mn_lea"},
+        {"pea", "mn_pea"},
+        {"movem", "mn_movem"},
+        {"exg", "mn_exg"},
+        {"swap", "mn_swap"},
+        {"clr", "mn_clr"},
+        {"ext", "mn_ext"},
+        {"extb", "mn_ext"},
+        {"add", "mn_add"},
+        {"adda", "mn_add"},
+        {"addi", "mn_add"},
+        {"addq", "mn_add"},
+        {"sub", "mn_sub"},
+        {"suba", "mn_sub"},
+        {"subi", "mn_sub"},
+        {"subq", "mn_sub"},
+        {"addx", "mn_addx_subx"},
+        {"subx", "mn_addx_subx"},
+        {"muls", "mn_muls_mulu"},
+        {"mulu", "mn_muls_mulu"},
+        {"divs", "mn_divs_divu"},
+        {"divu", "mn_divs_divu"},
+        {"neg", "mn_neg"},
+        {"negx", "mn_neg"},
+        {"cmp", "mn_cmp"},
+        {"cmpa", "mn_cmp"},
+        {"cmpi", "mn_cmp"},
+        {"cmpm", "mn_cmp"},
+        {"tst", "mn_tst"},
+        {"and", "mn_and_or_eor"},
+        {"or", "mn_and_or_eor"},
+        {"eor", "mn_and_or_eor"},
+        {"not", "mn_not"},
+        {"asl", "mn_asl_asr"},
+        {"asr", "mn_asl_asr"},
+        {"lsl", "mn_lsl_lsr"},
+        {"lsr", "mn_lsl_lsr"},
+        {"rol", "mn_rol_ror"},
+        {"ror", "mn_rol_ror"},
+        {"roxl", "mn_roxl_roxr"},
+        {"roxr", "mn_roxl_roxr"},
+        {"btst", "mn_bit_manipulation"},
+        {"bset", "mn_bit_manipulation"},
+        {"bclr", "mn_bit_manipulation"},
+        {"bchg", "mn_bit_manipulation"},
+        {"bra", "mn_bra_bcc"},
+        {"bcc", "mn_bra_bcc"},
+        {"bcs", "mn_bra_bcc"},
+        {"beq", "mn_bra_bcc"},
+        {"bne", "mn_bra_bcc"},
+        {"bge", "mn_bra_bcc"},
+        {"bgt", "mn_bra_bcc"},
+        {"ble", "mn_bra_bcc"},
+        {"blt", "mn_bra_bcc"},
+        {"bhi", "mn_bra_bcc"},
+        {"bls", "mn_bra_bcc"},
+        {"bpl", "mn_bra_bcc"},
+        {"bmi", "mn_bra_bcc"},
+        {"bvc", "mn_bra_bcc"},
+        {"bvs", "mn_bra_bcc"},
+        {"bsr", "mn_bsr_jsr"},
+        {"jsr", "mn_bsr_jsr"},
+        {"jmp", "mn_jmp"},
+        {"rts", "mn_rts_rte"},
+        {"rte", "mn_rts_rte"},
+        {"dbcc", "mn_dbcc"},
+        {"dbra", "mn_dbcc"},
+        {"dbf", "mn_dbcc"},
+        {"dbt", "mn_dbcc"},
+        {"dbeq", "mn_dbcc"},
+        {"dbne", "mn_dbcc"},
+        {"scc", "mn_scc"},
+        {"seq", "mn_scc"},
+        {"sne", "mn_scc"},
+        {"st", "mn_scc"},
+        {"sf", "mn_scc"},
+        {"link", "mn_link_unlk"},
+        {"unlk", "mn_link_unlk"},
+        {"nop", "mn_nop"},
+        {"trap", "mn_trap"},
+        {"trapv", "mn_trap"},
+        {"chk", "mn_chk"},
 
         // --- Directives ---
-        { "section", "dir_section" },
-        { "dc", "dir_dc" },
-        { "ds", "dir_ds" },
-        { "equ", "dir_equ" },
-        { "xdef", "dir_xdef" },
-        { "xref", "dir_xref" },
-        { "include", "dir_include" },
-        { "even", "dir_even" },
-        { "org", "dir_org" },
-        { "end", "dir_end" },
-        { "ifd", "dir_ifdef_endif" }, { "ifne", "dir_ifdef_endif" }, { "ifeq", "dir_ifdef_endif" }, { "endc", "dir_ifdef_endif" },
-        { "rsreset", "dir_rsreset_rs" }, { "rs", "dir_rsreset_rs" },
+        {"section", "dir_section"},
+        {"dc", "dir_dc"},
+        {"ds", "dir_ds"},
+        {"equ", "dir_equ"},
+        {"xdef", "dir_xdef"},
+        {"xref", "dir_xref"},
+        {"include", "dir_include"},
+        {"even", "dir_even"},
+        {"org", "dir_org"},
+        {"end", "dir_end"},
+        {"ifd", "dir_ifdef_endif"},
+        {"ifne", "dir_ifdef_endif"},
+        {"ifeq", "dir_ifdef_endif"},
+        {"endc", "dir_ifdef_endif"},
+        {"rsreset", "dir_rsreset_rs"},
+        {"rs", "dir_rsreset_rs"},
 
         // --- Macros ---
-        { "macro", "mac_macro_endm" }, { "endm", "mac_macro_endm" },
-        { "rept", "mac_rept_endr" }, { "endr", "mac_rept_endr" },
+        {"macro", "mac_macro_endm"},
+        {"endm", "mac_macro_endm"},
+        {"rept", "mac_rept_endr"},
+        {"endr", "mac_rept_endr"},
     };
 
-    for (const auto &alias : aliases)
-    {
+    for (const auto &alias : aliases) {
         const int entryIdx = p_idToIndex.value(QString::fromLatin1(alias.id), -1);
         if (entryIdx >= 0)
             p_tokenToIndex.insert(QString::fromLatin1(alias.token), entryIdx);
@@ -332,26 +414,27 @@ void AsmRefReader::buildTree()
     displayName.insert(QStringLiteral("Mnemonics"), tr("Mnemonics"));
     displayName.insert(QStringLiteral("Directives"), tr("Directives"));
     displayName.insert(QStringLiteral("Macros"), tr("Macros"));
-    displayName.insert(QStringLiteral("Subroutines & Calling Conventions"), tr("Subroutines & Calling Conventions"));
+    displayName.insert(QStringLiteral("Subroutines & Calling Conventions"),
+                       tr("Subroutines & Calling Conventions"));
     displayName.insert(QStringLiteral("vasm vs GNU-as"), tr("vasm vs GNU-as"));
 
     QHash<QString, QTreeWidgetItem *> groupItems;
-    for (const QString &category : categoryOrder)
-    {
-        QTreeWidgetItem *groupItem = new QTreeWidgetItem(p_tree, QStringList{ displayName.value(category, category) });
+    for (const QString &category : categoryOrder) {
+        QTreeWidgetItem *groupItem = new QTreeWidgetItem(p_tree,
+                                                         QStringList{displayName.value(category,
+                                                                                       category)});
         groupItem->setFlags(groupItem->flags() & ~Qt::ItemIsSelectable);
         groupItem->setData(0, Qt::UserRole + 1, category);
         groupItems.insert(category, groupItem);
     }
 
-    for (int idx = 0; idx < p_entries.size(); ++idx)
-    {
+    for (int idx = 0; idx < p_entries.size(); ++idx) {
         const AsmRefEntry &e = p_entries.at(idx);
         QTreeWidgetItem *groupItem = groupItems.value(e.category, nullptr);
         if (!groupItem)
             continue;
 
-        QTreeWidgetItem *entryItem = new QTreeWidgetItem(groupItem, QStringList{ e.title });
+        QTreeWidgetItem *entryItem = new QTreeWidgetItem(groupItem, QStringList{e.title});
         entryItem->setData(0, Qt::UserRole, idx);
     }
 
@@ -367,17 +450,14 @@ void AsmRefReader::buildTree()
         QStringLiteral("am_overview"),
         QStringLiteral("mn_overview"),
     };
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
-        for (int ci = 0; ci < groupItem->childCount(); ++ci)
-        {
+        for (int ci = 0; ci < groupItem->childCount(); ++ci) {
             QTreeWidgetItem *entryItem = groupItem->child(ci);
             const int idx = entryItem->data(0, Qt::UserRole).toInt();
             if (idx < 0 || idx >= p_entries.size())
                 continue;
-            if (pinnedFirstIds.contains(p_entries.at(idx).id) && ci != 0)
-            {
+            if (pinnedFirstIds.contains(p_entries.at(idx).id) && ci != 0) {
                 groupItem->takeChild(ci);
                 groupItem->insertChild(0, entryItem);
             }
@@ -393,11 +473,9 @@ bool AsmRefReader::selectEntryByIndex(int idx)
     if (!p_filterEdit->text().isEmpty())
         p_filterEdit->clear();
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
-        for (int ci = 0; ci < groupItem->childCount(); ++ci)
-        {
+        for (int ci = 0; ci < groupItem->childCount(); ++ci) {
             QTreeWidgetItem *entryItem = groupItem->child(ci);
             if (entryItem->data(0, Qt::UserRole).toInt() != idx)
                 continue;
@@ -418,19 +496,17 @@ void AsmRefReader::applyFilter(const QString &textRaw)
     int visibleEntries = 0;
     p_currentMatches.clear();
 
-    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi)
-    {
+    for (int gi = 0; gi < p_tree->topLevelItemCount(); ++gi) {
         QTreeWidgetItem *groupItem = p_tree->topLevelItem(gi);
         bool anyVisibleChild = false;
 
-        for (int ci = 0; ci < groupItem->childCount(); ++ci)
-        {
+        for (int ci = 0; ci < groupItem->childCount(); ++ci) {
             QTreeWidgetItem *entryItem = groupItem->child(ci);
-            const bool matches = text.isEmpty() || entryItem->text(0).contains(text, Qt::CaseInsensitive);
+            const bool matches = text.isEmpty()
+                                 || entryItem->text(0).contains(text, Qt::CaseInsensitive);
             entryItem->setHidden(!matches);
 
-            if (matches)
-            {
+            if (matches) {
                 anyVisibleChild = true;
                 ++visibleEntries;
                 p_currentMatches << entryItem;
@@ -449,16 +525,14 @@ void AsmRefReader::applyFilter(const QString &textRaw)
     p_filterNextBtn->setEnabled(haveFilter && !p_currentMatches.isEmpty());
 
     const QString baseTitle = (p_lang == QStringLiteral("de"))
-            ? QStringLiteral("AmigaED Assembler-Referenz")
-            : QStringLiteral("AmigaED Assembler Reference");
+                                  ? QStringLiteral("AmigaED Assembler-Referenz")
+                                  : QStringLiteral("AmigaED Assembler Reference");
 
-    if (haveFilter)
-    {
-        setWindowTitle(baseTitle + QStringLiteral(" - ")
-                        + tr("Filter showing %1/%2 entries").arg(visibleEntries).arg(p_entries.size()));
-    }
-    else
-    {
+    if (haveFilter) {
+        setWindowTitle(
+            baseTitle + QStringLiteral(" - ")
+            + tr("Filter showing %1/%2 entries").arg(visibleEntries).arg(p_entries.size()));
+    } else {
         setWindowTitle(baseTitle + QStringLiteral(" - ") + tr("%1 entries").arg(p_entries.size()));
     }
 }
@@ -471,8 +545,7 @@ void AsmRefReader::onFilterTextChanged(const QString &text)
 void AsmRefReader::onTreeSelectionChanged()
 {
     QTreeWidgetItem *item = p_tree->currentItem();
-    if (!item || !item->parent())
-    {
+    if (!item || !item->parent()) {
         p_textView->clear();
         return;
     }
@@ -491,7 +564,8 @@ QString AsmRefReader::renderEntryHtml(int idx) const
 
     QString html;
     html.reserve(e.html.size() + 128);
-    html += QStringLiteral("<h2 style=\"margin-top:0;\">") + e.title.toHtmlEscaped() + QStringLiteral("</h2>");
+    html += QStringLiteral("<h2 style=\"margin-top:0;\">") + e.title.toHtmlEscaped()
+            + QStringLiteral("</h2>");
     html += e.html;
     return html;
 }
@@ -534,7 +608,8 @@ void AsmRefReader::onFilterPrev()
     if (p_currentMatches.isEmpty())
         return;
 
-    p_currentMatchIndex = (p_currentMatchIndex - 1 + p_currentMatches.size()) % p_currentMatches.size();
+    p_currentMatchIndex = (p_currentMatchIndex - 1 + p_currentMatches.size())
+                          % p_currentMatches.size();
     QTreeWidgetItem *item = p_currentMatches.at(p_currentMatchIndex);
     p_tree->setCurrentItem(item);
     p_tree->scrollToItem(item);

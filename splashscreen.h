@@ -25,8 +25,8 @@
 #ifndef SPLASHSCREEN_H
 #define SPLASHSCREEN_H
 
-#include <QWidget>
 #include <QString>
+#include <QWidget>
 
 class QLabel;
 class QProgressBar;

@@ -1,9 +1,9 @@
 #ifndef AMIGAINSTALLERLEXER_H
 #define AMIGAINSTALLERLEXER_H
 
-#include <Qsci/qscilexercustom.h>
 #include <QSet>
 #include <QString>
+#include <Qsci/qscilexercustom.h>
 
 //
 // Custom QScintilla lexer for the Amiga "Installer" scripting language
@@ -40,16 +40,15 @@ class AmigaInstallerLexer : public QsciLexerCustom
 public:
     // Style numbers used by styleText() - also referenced by
     // defaultColor()/defaultFont()/description() below.
-    enum Style
-    {
-        Default  = 0,
-        Comment  = 1,
-        String   = 2,
-        Keyword  = 3,
-        Operator = 4,   // parentheses
-        Number   = 5,
-        Symbol   = 6,   // '@name' predefined symbols
-        Variable = 7    // '#name' user script variables
+    enum Style {
+        Default = 0,
+        Comment = 1,
+        String = 2,
+        Keyword = 3,
+        Operator = 4, // parentheses
+        Number = 5,
+        Symbol = 6,  // '@name' predefined symbols
+        Variable = 7 // '#name' user script variables
     };
 
     explicit AmigaInstallerLexer(QObject *parent = nullptr);

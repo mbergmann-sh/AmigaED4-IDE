@@ -59,7 +59,7 @@ SourceDir=install_src
 ; previously compiled Setup.exe sitting inside it right along with the
 ; rest.
 OutputDir=..\Output
-OutputBaseFilename=AmigaED4_4.0.156_windows_amd64Setup
+OutputBaseFilename=AmigaED4_rev157_Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -106,6 +106,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 ; script.
 english.InstallDocsQuestion=Would you like to install the documentation (manual as PDF)?
 german.InstallDocsQuestion=Möchten Sie die Dokumentation (Handbuch als PDF) installieren?
+
+; Same mechanism as InstallDocsQuestion above, asked right after it - for
+; AmigaED-Examples, the folder of ready-made example projects (C, ReAction,
+; Assembler) staged into install_src\AmigaED-Examples by install_stage.bat.
+english.InstallExamplesQuestion=Would you like to install the example projects (C, ReAction, Assembler)?
+german.InstallExamplesQuestion=Möchten Sie die Beispielprojekte installieren (C, ReAction, Assembler)?
 
 ; Used by the custom "already installed" dialog (AskInstallChoice in
 ; [Code] below) instead of a plain Yes/No/Cancel MsgBox - a stock MsgBox
@@ -159,6 +165,11 @@ Source: "*"; DestDir: "{app}"; Excludes: "DOC\*"; Flags: recursesubdirs createal
 ; the chosen install directory if the user answers "Yes" to the
 ; documentation prompt asked from InitializeSetup below.
 Source: "DOC\*"; DestDir: "{app}\DOC"; Flags: recursesubdirs createallsubdirs ignoreversion; Check: ShouldInstallDocs
+; Example projects (AmigaED-Examples), staged into install_src\
+; AmigaED-Examples by AmigaED.pro's win32 build step (see
+; install_stage.bat) - same "Yes/No prompt, only copied if answered Yes"
+; pattern as DOC above.
+Source: "AmigaED-Examples\*"; DestDir: "{app}\AmigaED-Examples"; Flags: recursesubdirs createallsubdirs ignoreversion; Check: ShouldInstallExamples
 ; Staged into {tmp} (not {app} - never installed alongside the program)
 ; purely so the license disclaimer dialog in [Code] can load it at
 ; runtime. Only present if HasDisclaimerImage was defined above.
@@ -196,6 +207,11 @@ var
   // {cm:InstallDocsQuestion} below always comes out in that language.
   InstallDocs: Boolean;
 
+  // Same idea as InstallDocs above, for the AmigaED-Examples prompt; read
+  // back by ShouldInstallExamples() as the Check: for the examples entry
+  // in [Files].
+  InstallExamples: Boolean;
+
   // Set by the button click handlers below; AskInstallChoice() reads it
   // back once the dialog closes. 1 = reinstall over the top, 2 = clean
   // update (uninstall then reinstall), 3 = uninstall only, 0 = cancel
@@ -220,6 +236,11 @@ var
 function ShouldInstallDocs(): Boolean;
 begin
   Result := InstallDocs;
+end;
+
+function ShouldInstallExamples(): Boolean;
+begin
+  Result := InstallExamples;
 end;
 
 // One shared handler for all four buttons - simpler than four near-
@@ -506,5 +527,6 @@ begin
   if Result then
   begin
     InstallDocs := (MsgBox(ExpandConstant('{cm:InstallDocsQuestion}'), mbConfirmation, MB_YESNO) = IDYES);
+    InstallExamples := (MsgBox(ExpandConstant('{cm:InstallExamplesQuestion}'), mbConfirmation, MB_YESNO) = IDYES);
   end;
 end;

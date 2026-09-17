@@ -1,1 +1,0 @@
-	idnt	"AmigaInfo.c"

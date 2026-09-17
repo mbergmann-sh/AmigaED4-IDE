@@ -57,6 +57,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDateTime>
+#include <QUuid>
 #include <QSet>
 #include <QTextStream>
 #include <QStringConverter>
@@ -244,6 +245,17 @@ public:
     QString p_emulator_to_start;    // Argument for default OS to start in UAE
     QString p_projectsRootDir;      // Path to default folder to store projects in (use that path as a hd mount in UAE in order to test compiled app!)
     bool p_saveProjectFilesAutomatically = false;   // Prefs > Project > "Save Project Files Automatically" - see saveModifiedProjectFiles()
+
+    // TAB: Tools (rev.158) - the 4 external GUI-builder/user tool slots
+    // configured on Prefs > Tools (MUI/GadTools/ReAction GUI Designer +
+    // one free "User Tool" slot). See rebuildToolsMenu() for how these
+    // become the dynamic Tools > GUI Builders / Tools > <name> menu
+    // entries, and launchToolAction() for how a click on one of them
+    // actually starts the tool.
+    QString p_tool1Path, p_tool1Params, p_tool1Name;   // MUI GUI Designer
+    QString p_tool2Path, p_tool2Params, p_tool2Name;   // GadTools GUI Designer
+    QString p_tool3Path, p_tool3Params, p_tool3Name;   // ReAction GUI Designer
+    QString p_tool4Path, p_tool4Params, p_tool4Name;   // User Tool
     // used for building compiler preselection combobox entries - indices
     // 0-2 are C/C++ compilers (VBCC/GCC/G++, see getCompilerAndLinkerOptsForTarget()),
     // 3-4 are the two pure assemblers (see SelectCompiler()) - appended
@@ -338,6 +350,67 @@ public slots:
     void actionProjectOptions();     // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
     void actionOpenShell();          // "Open Shell" - opens the system's default command line in the current project's folder (or Prefs "Projects root" if none loaded)
     void closeAllOpenShells();       // terminates every shell/terminal actionOpenShell() launched and is still tracking - called from closeEvent()
+
+    // rev.158: Prefs > Tools integration - (re)builds the dynamic
+    // Tools > GUI Builders / Tools > <User Tool name> menu entries from
+    // the current p_tool1..4* settings, adding a menu entry for a tool
+    // only once it is configured (non-empty Path AND Name) AND its Path
+    // actually exists on disk - called once from initializeGUI() right
+    // after createMenus() builds toolsMenue for the first time, and again
+    // from readSettings() every time Prefs are (re)loaded (Prefs dialog
+    // closed, or View > Reload settings), so a tool added/removed/renamed
+    // in Prefs takes effect immediately, without an app restart.
+    void rebuildToolsMenu();
+    // Launches one configured tool (QProcess::startDetached(), matching
+    // the "fire and forget" style already used for the emulator/shell
+    // actions above) - params is split into an argument list the same way
+    // a real shell command line would be (QProcess::splitCommand()), so a
+    // quoted value like --GUI_Theme="Visual Studio Code Dark" (see
+    // PrefsDialog::load_mySettings()'s Tool 1 default) survives intact.
+    void launchToolAction(const QString &path, const QString &params);
+    // Enables/disables the 3 "New Project > GUI Builder Projects" entries
+    // to match whichever of Tools 1-3 are currently configured AND exist
+    // on disk right now - same qualification rule as rebuildToolsMenu()'s
+    // own Tools > GUI Builders submenu, deliberately kept as a separate
+    // function rather than folded into it: rebuildToolsMenu() tears down
+    // and rebuilds actual dynamic menu structure, while these three
+    // actions are created once in createActions() and only ever toggle
+    // their enabled state. Called from the same two places as
+    // rebuildToolsMenu() (initializeGUI()'s first build, and every
+    // readSettings() reload), so a Tools > Prefs change takes effect
+    // immediately here too.
+    void updateGuiBuilderProjectActions();
+    void actionNewGuiBuilderProjectMUI();
+    void actionNewGuiBuilderProjectGadTools();
+    void actionNewGuiBuilderProjectReAction();
+    // Shared implementation behind all 3 actions above: prompts for a
+    // target directory + project name (same UX as createNewProject()),
+    // then launches the configured builder (kind: 0=MUI, 1=GadTools,
+    // 2=ReAction - matches p_tool1..3*/guiBuilderKind) as a plain, owned
+    // QProcess (NOT detached - AmigaED needs to know when it exits) with
+    // its own command-line protocol: --AmigaED_ProjectDir=<dir>
+    // --AmigaED_ProjectName=<name> --AmigaED_ResultFile=<tmp path>. The
+    // builder is expected to let the user design the GUI, then on its own
+    // "File > Finalise AmigaED Project" write that result file (an
+    // .ini-style file read back via QSettings: MainFile, ProjectName,
+    // GeneratedFiles) and exit - see onGuiBuilderProcessFinished()/
+    // importGuiBuilderProject() for what happens then. Refuses to start a
+    // second builder while one launched this way is already running.
+    void launchGuiBuilderForNewProject(int kind);
+    void onGuiBuilderProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    // Parses the just-finished builder's result file (if any - the user
+    // may simply have closed it without finalising, which is NOT an
+    // error) and imports the project it describes. Shares its file-
+    // scanning/.aep-writing/project-loading tail with importExistingProject(),
+    // but sources dir/mainFile/name/files from the result file instead of
+    // interactive prompts - the builder itself already asked/decided all
+    // of that. For guiBuilderKind==0 (MUI), also sets the new project's
+    // extraGccLinkerOptions to "-lmui": every MUI program needs
+    // muimaster.library's MUI GNU stub library linked in, which no other
+    // "New Project" template needs and the user would otherwise have no
+    // way to know to add themselves. Returns true if a project was
+    // actually imported.
+    bool importGuiBuilderProject();
     void onProjectTreeDoubleClicked(QTreeWidgetItem *item, int column);
     void onFunctionsTreeDoubleClicked(QTreeWidgetItem *item, int column);
     void onProjectTreeContextMenu(const QPoint &pos);
@@ -711,7 +784,19 @@ private:
     QMenu *indentationMenue = nullptr;          // View/Indentation - "2/4/8 Characters", mutually exclusive (see buildIndentationMenu())
     QActionGroup *indentationActionGroup = nullptr;   // enforces the mutual exclusion (radio-button behaviour) for indentationMenue's entries
     QMenu *syntaxMenue;         // holds actions to change syntax lexers
-    QMenu *toolsMenue;          // holds misc actions
+    // rev.158 bugfix: MUST default to nullptr, just like recentFilesMenue/
+    // recentProjectsMenue above - readSettings() (called from the
+    // constructor BEFORE createMenus() ever assigns this) now does an
+    // early "if (toolsMenue) rebuildToolsMenu();" guard (see its own TAB:
+    // Tools section) to refresh the dynamic Tools menu on every settings
+    // reload. Without this initializer, that first read is undefined
+    // behaviour - an indeterminate pointer value that happened to read as
+    // 0 on the Linux/Xvfb builds this was tested on, but as some nonzero
+    // garbage address on a real Windows/MinGW build, making the guard
+    // wrongly pass and rebuildToolsMenu() dereference/parent-assign a
+    // bogus QMenu* - the exact cause of a "crashes on startup" report
+    // once at least one Tools slot was already configured/saved.
+    QMenu *toolsMenue = nullptr;          // holds misc actions
     QMenu *emulatorMenue;       // Submenue of toolsMenue, holds startups for different Amiga emulation models
     QMenu *helpMenue;           // holds help topics
     QMenu *preprocessorMenue;   // Submenue of insertMenue, holds preprocessor inserts
@@ -794,6 +879,30 @@ private:
     QAction *newProjectAmigaOS3xAct;
     QAction *newProjectReActionAct;
     QAction *newProjectMUIAct;
+    // "New Project > GUI Builder Projects" submenu (rev.160), right after
+    // newProjectMUIAct above - launches the matching external GUI-builder
+    // tool (same Prefs > Tools paths as Tools > GUI Builders, see
+    // p_tool1..3Path below) to design a brand new project's GUI
+    // interactively, instead of writing a static template file the way
+    // every other "New Project" entry does. See
+    // launchGuiBuilderForNewProject()/importGuiBuilderProject() for the
+    // full launch/handshake/import protocol.
+    QMenu *guiBuilderProjectsMenue = nullptr;
+    // = nullptr on all 3: readSettings() (called from the constructor
+    // BEFORE createActions() - see its own header comment above and
+    // MainWindow::MainWindow()) calls updateGuiBuilderProjectActions() on
+    // that very first pass too, guarded by "if (newGuiBuilderProjectMuiAct)"
+    // (see mainwindow.cpp) exactly like the existing toolsMenue/
+    // guiBuildersMenue/userToolAct guards just below - that guard only
+    // works if the pointer is guaranteed zero-initialized before
+    // createActions() runs; without "= nullptr" here it held indeterminate
+    // stack garbage instead, which was usually non-zero and made
+    // updateGuiBuilderProjectActions() dereference/QAction::setEnabled() on
+    // a garbage pointer - a reliable startup segfault, found via gdb
+    // backtrace during rev.160 runtime verification.
+    QAction *newGuiBuilderProjectMuiAct = nullptr;        // "MUI" - enabled only while Tool 1 (MUI GUI Designer) is configured and exists, see updateGuiBuilderProjectActions()
+    QAction *newGuiBuilderProjectGadToolsAct = nullptr;   // "GadTools" - same, Tool 2 - no such builder exists yet (rev.160), so this stays disabled until one does
+    QAction *newGuiBuilderProjectReActionAct = nullptr;   // "ReAction" - same, Tool 3 - no such builder exists yet (rev.160), so this stays disabled until one does
     QAction *newProjectAssemblerAct;
     QAction *importExistingProjectAct;
     QAction *loadProjectAct;
@@ -881,6 +990,33 @@ private:
     QAction *emulator13Act;           // start UAE with Workbench 1.3
     QAction *emulator30Act;           // start UAE with Workbench 3.x
     QAction *killEmulatorAct;         // attempt to kil a running Emulation
+    // Dynamic Tools > GUI Builders / Tools > <User Tool name> entries
+    // (rev.158) - built/rebuilt entirely by rebuildToolsMenu(), never by
+    // createMenus()/createActions() directly, since which of these exist
+    // at all (and what they're labelled) depends on live Prefs > Tools
+    // configuration rather than being fixed at compile time. Left null
+    // until the first rebuildToolsMenu() call actually creates them.
+    QMenu *guiBuildersMenue = nullptr;         // Tools > "GUI Builders" submenu - only present while at least one of tools 1-3 is configured and exists
+    QAction *guiBuildersSeparatorAct = nullptr;// separator directly above guiBuildersMenue
+    QAction *userToolSeparatorAct = nullptr;   // separator directly above the Tool 4 ("User Tool") entry
+    QAction *userToolAct = nullptr;            // Tools > <Tool 4's configured name> - only present while Tool 4 is configured and exists
+
+    // "New Project > GUI Builder Projects" handshake (rev.160): tracks the
+    // ONE external GUI-builder process currently running for a brand-new
+    // project (only one at a time - launchGuiBuilderForNewProject() refuses
+    // to start a second while this is non-null), plus everything
+    // onGuiBuilderProcessFinished()/importGuiBuilderProject() need once it
+    // exits: which of the three builders it was (0=MUI/1=GadTools/
+    // 2=ReAction - matches p_tool1..3* above), the target directory and
+    // project name the user chose up front, and the temp result file path
+    // passed to the builder on its own command line. All five are only
+    // meaningful while guiBuilderProcess is non-null - see the .cpp for the
+    // exact launch arguments and result-file format.
+    QProcess *guiBuilderProcess = nullptr;
+    int guiBuilderKind = -1;
+    QString guiBuilderTargetDir;
+    QString guiBuilderProjectName;
+    QString guiBuilderResultFilePath;
     // Actions for syntaxMenue
     QAction *lexCPPAct;             // switch lexer to C++ syntax
     QAction *lexBatchAct;           // switch lexer to Batch / Shell syntax

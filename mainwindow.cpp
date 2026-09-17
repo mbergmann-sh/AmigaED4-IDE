@@ -1099,6 +1099,24 @@ void MainWindow::createActions()
     newProjectMUIAct = new QAction(tr("MUI Project"), this);
     connect(newProjectMUIAct, SIGNAL(triggered()), this, SLOT(actionNewProjectMUI()));
 
+    // "New Project > GUI Builder Projects" (rev.160) - see mainwindow.h's
+    // own comment on guiBuilderProjectsMenue for the full picture. All 3
+    // start disabled; updateGuiBuilderProjectActions() (called right after
+    // createMenus() builds the submenu below, and again from readSettings()
+    // whenever Prefs are (re)loaded) enables each one only once its
+    // matching Tools > Prefs slot is actually configured and exists.
+    newGuiBuilderProjectMuiAct = new QAction(tr("MUI"), this);
+    newGuiBuilderProjectMuiAct->setEnabled(false);
+    connect(newGuiBuilderProjectMuiAct, SIGNAL(triggered()), this, SLOT(actionNewGuiBuilderProjectMUI()));
+
+    newGuiBuilderProjectGadToolsAct = new QAction(tr("GadTools"), this);
+    newGuiBuilderProjectGadToolsAct->setEnabled(false);
+    connect(newGuiBuilderProjectGadToolsAct, SIGNAL(triggered()), this, SLOT(actionNewGuiBuilderProjectGadTools()));
+
+    newGuiBuilderProjectReActionAct = new QAction(tr("ReAction"), this);
+    newGuiBuilderProjectReActionAct->setEnabled(false);
+    connect(newGuiBuilderProjectReActionAct, SIGNAL(triggered()), this, SLOT(actionNewGuiBuilderProjectReAction()));
+
     newProjectAssemblerAct = new QAction(tr("New Assembler Project"), this);
     connect(newProjectAssemblerAct, SIGNAL(triggered()), this, SLOT(actionNewProjectAssembler()));
 
@@ -1742,6 +1760,15 @@ void MainWindow::createMenus()
     newProjectMenue->addAction(newProjectAmigaOS3xAct);
     newProjectMenue->addAction(newProjectReActionAct);
     newProjectMenue->addAction(newProjectMUIAct);
+    // "New Project > GUI Builder Projects" (rev.160) - right after "MUI
+    // Project" per the Chefentwickler's own request. All 3 entries start
+    // disabled (see createActions()) - updateGuiBuilderProjectActions()
+    // right below enables each once its matching Tools > Prefs slot
+    // qualifies.
+    guiBuilderProjectsMenue = newProjectMenue->addMenu(tr("GUI Builder Projects"));
+    guiBuilderProjectsMenue->addAction(newGuiBuilderProjectMuiAct);
+    guiBuilderProjectsMenue->addAction(newGuiBuilderProjectGadToolsAct);
+    guiBuilderProjectsMenue->addAction(newGuiBuilderProjectReActionAct);
     newProjectMenue->addSeparator();
     newProjectMenue->addAction(newProjectAssemblerAct);
     fileMenue->addAction(loadProjectAct);
@@ -2016,6 +2043,9 @@ void MainWindow::retranslateUi()
     newProjectAmigaOS3xAct->setText(tr("AmigaOS 3.x Project"));
     newProjectReActionAct->setText(tr("ReAction Project"));
     newProjectMUIAct->setText(tr("MUI Project"));
+    newGuiBuilderProjectMuiAct->setText(tr("MUI"));
+    newGuiBuilderProjectGadToolsAct->setText(tr("GadTools"));
+    newGuiBuilderProjectReActionAct->setText(tr("ReAction"));
     newProjectAssemblerAct->setText(tr("New Assembler Project"));
     importExistingProjectAct->setText(tr("Import existing Project..."));
     importExistingProjectAct->setStatusTip(tr("Import an existing C/C++ project folder that AmigaED doesn't know yet"));
@@ -2235,6 +2265,7 @@ void MainWindow::retranslateUi()
     // -- Menu titles --
     fileMenue->setTitle(tr("&File"));
     newProjectMenue->setTitle(tr("New Project..."));
+    guiBuilderProjectsMenue->setTitle(tr("GUI Builder Projects"));
     recentProjectsMenue->setTitle(tr("Recent Projects"));
     recentFilesMenue->setTitle(tr("Recent files"));
     editMenue->setTitle(tr("&Edit"));
@@ -2569,6 +2600,26 @@ void MainWindow::readSettings()
     p_os13_config = (settings.value("UAE/Os13ConfigPath").toString());
     p_os30_config = (settings.value("UAE/Os30ConfigPath").toString());
     p_defaultEmulator = p_compiler_vc_default_target;   // both now fed by the ONE "Default Target OS" combobox on Prefs' Project tab (VBCC/VcDefaultTarget) - see prefsdialog.cpp's save/load_mySettings()
+
+    // TAB: Tools (rev.158) - see PrefsDialog::save_mySettings()/load_mySettings()
+    // for the matching Prefs-side keys/defaults, and rebuildToolsMenu() for
+    // what these 12 values actually drive.
+    p_tool1Path = settings.value("Tools/Tool1Path").toString();
+    p_tool1Params = settings.value("Tools/Tool1Params").toString();
+    p_tool1Name = settings.value("Tools/Tool1Name").toString();
+    p_tool2Path = settings.value("Tools/Tool2Path").toString();
+    p_tool2Params = settings.value("Tools/Tool2Params").toString();
+    p_tool2Name = settings.value("Tools/Tool2Name").toString();
+    p_tool3Path = settings.value("Tools/Tool3Path").toString();
+    p_tool3Params = settings.value("Tools/Tool3Params").toString();
+    p_tool3Name = settings.value("Tools/Tool3Name").toString();
+    p_tool4Path = settings.value("Tools/Tool4Path").toString();
+    p_tool4Params = settings.value("Tools/Tool4Params").toString();
+    p_tool4Name = settings.value("Tools/Tool4Name").toString();
+    if (toolsMenue)              // not yet created on the very first call (constructor runs
+        rebuildToolsMenu();      // readSettings() before createMenus()) - initializeGUI() covers that first build itself
+    if (newGuiBuilderProjectMuiAct)   // same "not yet created on the very first call" guard as above
+        updateGuiBuilderProjectActions();
 
     // TAB: Misc
     QString newDefaultStyle = settings.value("MISC/DefaultStyle").toString();
@@ -10529,6 +10580,458 @@ void MainWindow::closeAllOpenShells()
 }
 
 //
+// rev.158: Prefs > Tools integration - launches one configured external
+// GUI-builder/user tool. Fire-and-forget, same as actionEmulator()/
+// actionOpenShell()'s own detached processes - AmigaED doesn't track or
+// need to kill these the way it does the emulator. params is split into
+// individual arguments the same way a shell would (QProcess::splitCommand()
+// understands single/double-quoted segments), so a value like
+// --GUI_Theme="Visual Studio Code Dark" (Tool 1's own default - see
+// PrefsDialog::load_mySettings()) is passed through as ONE argument rather
+// than being torn apart at the space.
+//
+void MainWindow::launchToolAction(const QString &path, const QString &params)
+{
+    if (!QFileInfo::exists(path))
+    {
+        // The path was verified as existing when this menu entry was
+        // built (see rebuildToolsMenu()), but could have been deleted,
+        // unmounted, etc. in the meantime - re-check right before actually
+        // launching rather than trusting a menu built possibly minutes ago.
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("This tool no longer exists:\n%1\n\n"
+                                 "Check Prefs > Tools.").arg(path));
+        return;
+    }
+
+    const QStringList args = params.trimmed().isEmpty()
+        ? QStringList()
+        : QProcess::splitCommand(params);
+
+    if (!QProcess::startDetached(path, args))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("Could not start:\n%1").arg(path));
+    }
+}
+
+//
+// rev.158: Prefs > Tools integration - (re)builds the dynamic part of the
+// Tools menu from the current p_tool1..4* settings. See mainwindow.h's own
+// member comments (guiBuildersMenue/guiBuildersSeparatorAct/
+// userToolSeparatorAct/userToolAct) for what's tracked and why.
+//
+// Every entry this function adds is strictly conditional on that tool
+// being both configured (non-empty Path AND Name - a menu entry needs a
+// label) and its Path existing on disk right now - per the Chefentwickler's
+// own explicit requirement, an unconfigured or currently-missing tool gets
+// NO menu presence at all, not even a disabled/greyed-out one. This also
+// means the "GUI Builders" submenu itself (and its separator) only appears
+// once at least one of tools 1-3 qualifies - an empty submenu would be
+// pointless - and likewise the Tool 4 separator+entry only appears once
+// Tool 4 itself qualifies.
+//
+// Safe to call repeatedly: always tears down whatever it previously built
+// (tracked via the 4 member pointers above) before rebuilding from
+// scratch, so a tool renamed/removed/added in Prefs is reflected exactly,
+// never left stale or duplicated.
+//
+void MainWindow::rebuildToolsMenu()
+{
+    if (!toolsMenue)
+        return;   // called too early (shouldn't happen - see readSettings()'s own guard) - nothing to build into yet
+
+    // Tear down whatever the previous call built. QMenu::addAction(text)-
+    // created actions are owned by the menu itself, so deleting
+    // guiBuildersMenue also deletes its own submenu entries - only the
+    // separators and the standalone userToolAct need removing/deleting
+    // individually.
+    if (guiBuildersSeparatorAct)
+    {
+        toolsMenue->removeAction(guiBuildersSeparatorAct);
+        delete guiBuildersSeparatorAct;
+        guiBuildersSeparatorAct = nullptr;
+    }
+    if (guiBuildersMenue)
+    {
+        toolsMenue->removeAction(guiBuildersMenue->menuAction());
+        delete guiBuildersMenue;
+        guiBuildersMenue = nullptr;
+    }
+    if (userToolSeparatorAct)
+    {
+        toolsMenue->removeAction(userToolSeparatorAct);
+        delete userToolSeparatorAct;
+        userToolSeparatorAct = nullptr;
+    }
+    if (userToolAct)
+    {
+        toolsMenue->removeAction(userToolAct);
+        delete userToolAct;
+        userToolAct = nullptr;
+    }
+
+    // Tools 1-3 -> Tools > GUI Builders > <name>, one entry each, only for
+    // whichever of the three actually qualify right now.
+    struct GuiBuilderTool { QString path, params, name; };
+    const QList<GuiBuilderTool> guiBuilderTools = {
+        { p_tool1Path, p_tool1Params, p_tool1Name },
+        { p_tool2Path, p_tool2Params, p_tool2Name },
+        { p_tool3Path, p_tool3Params, p_tool3Name },
+    };
+
+    QMenu *newGuiBuildersMenue = nullptr;
+    for (const GuiBuilderTool &tool : guiBuilderTools)
+    {
+        if (tool.path.trimmed().isEmpty() || tool.name.trimmed().isEmpty())
+            continue;
+        if (!QFileInfo::exists(tool.path))
+            continue;
+
+        if (!newGuiBuildersMenue)
+            newGuiBuildersMenue = new QMenu(tr("GUI Builders"), toolsMenue);
+
+        QAction *toolAct = newGuiBuildersMenue->addAction(tool.name);
+
+        // Give the entry MuiBuilderQt's own program icon (see MuiBuilderQt's
+        // gui/images/muibuilderqt.png / images.qrc - the very same PNG,
+        // copied into AmigaED's own images/ and embedded via
+        // application.qrc) purely by recognising the executable itself
+        // (basename, case-insensitive, extension-agnostic so it matches
+        // both "MUIBuilderQt.exe" on Windows and "MUIBuilderQt" on Linux -
+        // see the Tool 1 defaults in PrefsDialog::load_mySettings()) -
+        // NOT by assuming this is always Tool 1: the user can freely
+        // rename/repoint any of the three GUI-Builder slots in Prefs >
+        // Tools, so whichever slot actually points at MuiBuilderQt gets
+        // the icon, and a slot repointed at something else never does.
+        // The other two slots (GadTools/ReAction GUI Designer) are still
+        // placeholders for future builders that don't exist yet, so they
+        // intentionally stay icon-less for now.
+        if (QFileInfo(tool.path).completeBaseName().compare(
+                QStringLiteral("MUIBuilderQt"), Qt::CaseInsensitive) == 0)
+        {
+            toolAct->setIcon(QIcon(QStringLiteral(":/images/muibuilderqt.png")));
+        }
+
+        const QString toolPath = tool.path;     // captured by value - tool itself goes out of scope at loop end
+        const QString toolParams = tool.params;
+        connect(toolAct, &QAction::triggered, this, [this, toolPath, toolParams]()
+        {
+            launchToolAction(toolPath, toolParams);
+        });
+    }
+
+    if (newGuiBuildersMenue)
+    {
+        guiBuildersSeparatorAct = toolsMenue->addSeparator();
+        guiBuildersMenue = newGuiBuildersMenue;
+        toolsMenue->addMenu(guiBuildersMenue);
+    }
+
+    // Tool 4 ("User Tool") -> a single standalone Tools > <name> entry,
+    // sibling to (not nested under) "GUI Builders" - separator + entry
+    // added only once Tool 4 itself qualifies, independent of whether any
+    // of tools 1-3 do.
+    if (!p_tool4Path.trimmed().isEmpty() && !p_tool4Name.trimmed().isEmpty()
+        && QFileInfo::exists(p_tool4Path))
+    {
+        userToolSeparatorAct = toolsMenue->addSeparator();
+        userToolAct = toolsMenue->addAction(p_tool4Name);
+        const QString toolPath = p_tool4Path;
+        const QString toolParams = p_tool4Params;
+        connect(userToolAct, &QAction::triggered, this, [this, toolPath, toolParams]()
+        {
+            launchToolAction(toolPath, toolParams);
+        });
+    }
+}
+
+//
+// "New Project > GUI Builder Projects" (rev.160) - see mainwindow.h's own
+// comments on guiBuilderProjectsMenue/guiBuilderProcess for the overall
+// picture. Same qualification rule as rebuildToolsMenu()'s own Tools >
+// GUI Builders submenu (configured AND currently exists on disk), just
+// expressed as enabled/disabled on 3 permanent actions instead of
+// building/tearing down menu structure - these three actions always
+// exist (created once in createActions()), so there's nothing to
+// (re)build here, only their enabled state to refresh.
+//
+void MainWindow::updateGuiBuilderProjectActions()
+{
+    if (newGuiBuilderProjectMuiAct)
+        newGuiBuilderProjectMuiAct->setEnabled(!p_tool1Path.trimmed().isEmpty() && QFileInfo::exists(p_tool1Path));
+    if (newGuiBuilderProjectGadToolsAct)
+        newGuiBuilderProjectGadToolsAct->setEnabled(!p_tool2Path.trimmed().isEmpty() && QFileInfo::exists(p_tool2Path));
+    if (newGuiBuilderProjectReActionAct)
+        newGuiBuilderProjectReActionAct->setEnabled(!p_tool3Path.trimmed().isEmpty() && QFileInfo::exists(p_tool3Path));
+}
+
+void MainWindow::actionNewGuiBuilderProjectMUI()      { launchGuiBuilderForNewProject(0); }
+void MainWindow::actionNewGuiBuilderProjectGadTools() { launchGuiBuilderForNewProject(1); }
+void MainWindow::actionNewGuiBuilderProjectReAction() { launchGuiBuilderForNewProject(2); }
+
+//
+// Shared implementation behind all 3 "New Project > GUI Builder Projects"
+// entries - see mainwindow.h's own doc comment for the full picture. Asks
+// for a target directory + project name (same UX/prompts as
+// createNewProject()), launches the matching configured builder as a
+// plain, owned QProcess (deliberately NOT detached, unlike
+// launchToolAction()'s Tools-menu launches - AmigaED needs to know the
+// moment it exits, see onGuiBuilderProcessFinished()), and then simply
+// waits: there is no polling, no timeout, and no synchronous blocking -
+// the builder can stay open for as long as the user needs to design their
+// GUI, and AmigaED itself remains fully responsive throughout via the
+// finished() signal below.
+//
+void MainWindow::launchGuiBuilderForNewProject(int kind)
+{
+    if (guiBuilderProcess)
+    {
+        QMessageBox::information(this, tr(AMIGAED_VERSION_STRING),
+            tr("A GUI Builder is already running for a new project.\n\n"
+               "Finish or close it first."));
+        return;
+    }
+
+    QString toolPath, toolParams, toolName;
+    switch (kind)
+    {
+        case 0: toolPath = p_tool1Path; toolParams = p_tool1Params; toolName = p_tool1Name; break;
+        case 1: toolPath = p_tool2Path; toolParams = p_tool2Params; toolName = p_tool2Name; break;
+        case 2: toolPath = p_tool3Path; toolParams = p_tool3Params; toolName = p_tool3Name; break;
+        default: return;   // shouldn't happen - the 3 callers above only ever pass 0/1/2
+    }
+
+    // Re-check right before actually launching, exactly like
+    // launchToolAction() does for the Tools menu - the corresponding
+    // action was verified enabled when the menu was BUILT/refreshed (see
+    // updateGuiBuilderProjectActions()), but the path could have been
+    // deleted/unmounted since.
+    if (toolPath.trimmed().isEmpty() || !QFileInfo::exists(toolPath))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("This tool no longer exists:\n%1\n\nCheck Prefs > Tools.").arg(toolPath));
+        return;
+    }
+
+    QString startDir = p_projectsRootDir.isEmpty() ? QDir::currentPath() : p_projectsRootDir;
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Choose a directory for the new project"), startDir);
+    if (dir.isEmpty())
+        return;
+
+    bool ok = false;
+    QString name = QInputDialog::getText(this, tr("New Project"), tr("Project name:"), QLineEdit::Normal, QString(), &ok);
+    if (!ok || name.trimmed().isEmpty())
+        return;
+    name = name.trimmed();
+
+    // A plain temp file, never created by AmigaED itself - its mere
+    // EXISTENCE once the process exits (checked in
+    // onGuiBuilderProcessFinished()) is what tells apart "the builder
+    // finalised the project" from "the user just closed it without
+    // finishing". QUuid keeps this collision-free even if two GUI Builder
+    // launches somehow overlapped (they can't in practice - the guard
+    // above only ever allows one at a time - but this costs nothing and
+    // removes any doubt).
+    QString resultFile = QDir::temp().filePath(
+        QStringLiteral("AmigaED_GuiBuilderResult_%1.ini").arg(QUuid::createUuid().toString(QUuid::Id128)));
+
+    // The general external-GUI-builder protocol (any future GadTools/
+    // ReAction builder needs to speak the exact same one): 3 named
+    // command-line options telling it where to create the project and
+    // where to report back, on top of whatever the user's own configured
+    // Params string already asks for (e.g. Tool 1's own default
+    // --GUI_Language=.../--GUI_Theme=... - see PrefsDialog::
+    // load_mySettings()) - QProcess::splitCommand() parses that
+    // configured string the same way launchToolAction() already does, so
+    // a quoted value with spaces in it survives intact.
+    QStringList args = toolParams.trimmed().isEmpty() ? QStringList() : QProcess::splitCommand(toolParams);
+    args << QStringLiteral("--AmigaED_ProjectDir=%1").arg(dir)
+         << QStringLiteral("--AmigaED_ProjectName=%1").arg(name)
+         << QStringLiteral("--AmigaED_ResultFile=%1").arg(resultFile);
+
+    guiBuilderProcess = new QProcess(this);
+    guiBuilderKind = kind;
+    guiBuilderTargetDir = dir;
+    guiBuilderProjectName = name;
+    guiBuilderResultFilePath = resultFile;
+
+    connect(guiBuilderProcess, &QProcess::finished, this, &MainWindow::onGuiBuilderProcessFinished);
+
+    guiBuilderProcess->start(toolPath, args);
+    if (!guiBuilderProcess->waitForStarted(5000))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("Could not start:\n%1").arg(toolPath));
+        guiBuilderProcess->deleteLater();
+        guiBuilderProcess = nullptr;
+        guiBuilderKind = -1;
+        guiBuilderTargetDir.clear();
+        guiBuilderProjectName.clear();
+        guiBuilderResultFilePath.clear();
+        return;
+    }
+
+    createStatusBarMessage(tr("Waiting for %1 - use its \"File > Finalise AmigaED Project\" when done...").arg(toolName), 0);
+}
+
+//
+// The launched builder exited, one way or another. Its own "File >
+// Finalise AmigaED Project" is the ONLY thing that ever writes
+// guiBuilderResultFilePath - so its mere existence (never AmigaED's own
+// business to create, check, or clean up beforehand) is exactly what
+// tells a genuine handoff apart from the user simply closing the builder
+// without finishing: that's a legitimate change of mind, not an error,
+// and is silently treated as a no-op below.
+//
+void MainWindow::onGuiBuilderProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    Q_UNUSED(exitCode);
+
+    bool handedOff = QFileInfo::exists(guiBuilderResultFilePath);
+
+    if (handedOff)
+    {
+        importGuiBuilderProject();
+        QFile::remove(guiBuilderResultFilePath);   // one-shot handoff file - AmigaED is its only reader, ever
+    }
+    else if (exitStatus == QProcess::CrashExit)
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("The GUI Builder closed unexpectedly without finalising a project."));
+    }
+    // else: the user simply closed the builder without using "File >
+    // Finalise AmigaED Project" - nothing to do, no message needed.
+
+    guiBuilderProcess->deleteLater();
+    guiBuilderProcess = nullptr;
+    guiBuilderKind = -1;
+    guiBuilderTargetDir.clear();
+    guiBuilderProjectName.clear();
+    guiBuilderResultFilePath.clear();
+}
+
+//
+// Reads guiBuilderResultFilePath (an .ini-style file, read back the same
+// way it was written - via QSettings - see the matching write side in
+// e.g. MuiBuilderQt's MainWindow::onFinaliseAmigaEDProject()): MainFile
+// (absolute path to the project's main compile unit), ProjectName, and
+// GeneratedFiles (every file the builder wrote, so only those - not
+// whatever else might happen to already be sitting in that directory -
+// become part of the new Project; falls back to a plain directory scan,
+// exactly like importExistingProject(), if the builder's own list is
+// missing or empty). Shares the rest of its tail (closeProjectTabs(),
+// regenerateProjectMakefiles(), refreshProjectTree(), ...) with
+// importExistingProject() - see that function for why each step is there.
+//
+bool MainWindow::importGuiBuilderProject()
+{
+    QSettings result(guiBuilderResultFilePath, QSettings::IniFormat);
+    QString mainFilePath = result.value(QStringLiteral("MainFile")).toString();
+    QString name = result.value(QStringLiteral("ProjectName"), guiBuilderProjectName).toString();
+    QStringList generatedFiles = result.value(QStringLiteral("GeneratedFiles")).toStringList();
+
+    if (mainFilePath.isEmpty() || !QFileInfo::exists(mainFilePath))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+            tr("The GUI Builder reported finishing, but its main file is missing:\n%1").arg(mainFilePath));
+        return false;
+    }
+
+    QStringList candidateFiles;
+    if (!generatedFiles.isEmpty())
+    {
+        for (const QString &fileName : generatedFiles)
+        {
+            QString path = QFileInfo(fileName).isAbsolute() ? fileName
+                                                              : guiBuilderTargetDir + QDir::separator() + fileName;
+            if (QFileInfo::exists(path))
+                candidateFiles << path;
+        }
+    }
+    if (candidateFiles.isEmpty())   // the builder's own list was missing/empty, or none of it actually exists - fall back to a plain scan, same as importExistingProject()
+    {
+        const QFileInfoList entries = QDir(guiBuilderTargetDir).entryInfoList(QDir::Files, QDir::Name);
+        for (const QFileInfo &info : entries)
+        {
+            if (isImportSkippableFile(info.absoluteFilePath()))
+                continue;
+            candidateFiles << info.absoluteFilePath();
+        }
+    }
+    if (!candidateFiles.contains(mainFilePath))
+        candidateFiles << mainFilePath;
+
+    Project *project = new Project();
+    project->name = name;
+    // 7=MUI/8=GadTools/9=ReAction GUI Builder Project - see project.h's
+    // own templateKind doc comment.
+    project->templateKind = 7 + guiBuilderKind;
+    for (const QString &path : candidateFiles)
+        project->addFile(path);
+    project->mainFile = mainFilePath;
+
+    // Every MUI program needs muimaster.library's MUI GNU stub library
+    // linked in (-lmui) - no other "New Project" template needs this, and
+    // MuiBuilderQt's own generated code has no way to add it to a
+    // Makefile it doesn't write itself, so AmigaED sets it here, once, at
+    // import time (see regenerateProjectMakefiles(), which already folds
+    // extraGccLinkerOptions into Makefile.gcc's LDFLAGS for every
+    // project - this is the only GUI-Builder-specific special case
+    // needed). Left for the user to adjust afterward via Project
+    // Options... like any other project's linker options, same as
+    // everywhere else in AmigaED.
+    if (guiBuilderKind == 0)
+        project->extraGccLinkerOptions = QStringLiteral("-lmui");
+
+    QString aepPath = guiBuilderTargetDir + QDir::separator() + name + QStringLiteral(".aep");
+    if (QFileInfo::exists(aepPath))
+    {
+        QMessageBox::StandardButton ret = QMessageBox::question(this, tr(AMIGAED_VERSION_STRING),
+            tr("A project file named \"%1\" already exists in that folder.\n\nOverwrite it?").arg(name + ".aep"),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (ret != QMessageBox::Yes)
+        {
+            delete project;
+            return false;
+        }
+    }
+
+    if (!project->save(aepPath))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                              tr("Could not save the project file:\n%1").arg(aepPath));
+        delete project;
+        return false;
+    }
+
+    if (!closeProjectTabs())
+    {
+        delete project;
+        return false;
+    }
+
+    delete currentProject;
+    currentProject = project;
+    p_projectModified = false;
+    if (saveProjectAct)
+        saveProjectAct->setEnabled(false);
+    regenerateProjectMakefiles();   // must run BEFORE refreshProjectTree() - it scans disk for which Makefiles exist
+    refreshProjectTree();
+    refreshFunctionsList();
+
+    applyProjectTargetOSIfNeeded();   // no forced target - templateKind 7/8/9 default to "OS 3.x", same as the MUI/ReAction templates above
+
+    openFileInTab(mainFilePath);
+    if (tabWidget->count() == 0)
+        newEditorTab();   // safety net - shouldn't normally trigger, see closeProjectTabs()
+    addToRecentProjects(aepPath);
+
+    createStatusBarMessage(tr("Project \"%1\" created via GUI Builder (%2 file(s)).").arg(name).arg(candidateFiles.count()), 0);
+    return true;
+}
+
+//
 // Persist currentProject to its .aep and clear the "unsaved changes"
 // state. The single choke point every project save (auto or via the
 // explicit "Save Project" menu entry) goes through, so
@@ -11296,6 +11799,8 @@ void MainWindow::initializeGUI()
     createActions();
     updateSplash(70, tr("Building menus..."));
     createMenus();
+    rebuildToolsMenu();   // first-time population of the dynamic Tools > GUI Builders / Tools > <User Tool name> entries (see readSettings() for every subsequent refresh)
+    updateGuiBuilderProjectActions();   // first-time enable/disable pass for "New Project > GUI Builder Projects" (see readSettings() for every subsequent refresh)
     updateSplash(85, tr("Building toolbars..."));
     createToolBars();
     createStatusBarMessage(tr("Ready"), 0);

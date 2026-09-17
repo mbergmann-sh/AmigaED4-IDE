@@ -383,29 +383,29 @@
         <translation>Compiler auf GNU as setzen (Assembler-Modus)...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="4285"/>
+        <location filename="../mainwindow.cpp" line="4303"/>
         <source>You can&apos;t compile your ASM-Project with a C-Compiler! Please choose vasm or GNU as.</source>
         <translation>Du kannst dein ASM-Projekt nicht mit einem C-Compiler übersetzen! Bitte wähle vasm oder GNU as.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="4300"/>
-        <location filename="../mainwindow.cpp" line="9574"/>
+        <location filename="../mainwindow.cpp" line="4318"/>
+        <location filename="../mainwindow.cpp" line="9693"/>
         <source>vasm</source>
         <translation>vasm</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="4300"/>
-        <location filename="../mainwindow.cpp" line="9575"/>
+        <location filename="../mainwindow.cpp" line="4318"/>
+        <location filename="../mainwindow.cpp" line="9694"/>
         <source>GNU as</source>
         <translation>GNU as</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="4302"/>
+        <location filename="../mainwindow.cpp" line="4320"/>
         <source>This Assembler Project was created for &quot;%1&quot; - only its Makefile was generated. Start a new Assembler Project to use a different assembler.</source>
         <translation>Dieses Assembler-Projekt wurde für &quot;%1&quot; erstellt - nur dessen Makefile wurde erzeugt. Starte ein neues Assembler-Projekt, um einen anderen Assembler zu verwenden.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9572"/>
+        <location filename="../mainwindow.cpp" line="9691"/>
         <source>Due to Compiler differences, you can&apos;t have both a vasm- or GNU as-driven Assembler Project. 
 Do you want to create this assembler Project for vasm or GNU as Compiler?</source>
         <translation>Aufgrund von Compiler-Unterschieden kannst du nicht gleichzeitig ein vasm- und ein GNU-as-basiertes Assembler-Projekt haben.
@@ -460,7 +460,7 @@ Möchtest du dieses Assembler-Projekt für den vasm- oder den GNU-as-Compiler er
         <translation>Schließt das aktuelle Projekt und alle dazugehörigen offenen Tabs</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10527"/>
+        <location filename="../mainwindow.cpp" line="10792"/>
         <source>Project &quot;%1&quot; closed.</source>
         <translation>Projekt &quot;%1&quot; geschlossen.</translation>
     </message>
@@ -530,14 +530,14 @@ Möchtest du dieses Assembler-Projekt für den vasm- oder den GNU-as-Compiler er
         <translation>Öffnet die Standard-Kommandozeile des Systems, gestartet im Ordner des aktuellen Projekts (oder in Prefs &gt; Project &gt; &quot;Projects root&quot;, falls keines geladen ist)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10298"/>
+        <location filename="../mainwindow.cpp" line="10417"/>
         <source>This folder no longer exists:
 %1</source>
         <translation>Dieser Ordner existiert nicht mehr:
 %1</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10397"/>
+        <location filename="../mainwindow.cpp" line="10516"/>
         <source>Could not open a shell in:
 %1
 
@@ -548,7 +548,7 @@ None of the usual terminal programs (x-terminal-emulator, gnome-terminal, konsol
 Keines der üblichen Terminal-Programme (x-terminal-emulator, gnome-terminal, konsole, xfce4-terminal, xterm) konnte gestartet werden - ist mindestens eines davon installiert?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10403"/>
+        <location filename="../mainwindow.cpp" line="10522"/>
         <source>Could not open a shell in:
 %1
 
@@ -559,37 +559,37 @@ The system&apos;s default command line could not be started.</source>
 Die Standard-Kommandozeile des Systems konnte nicht gestartet werden.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10193"/>
+        <location filename="../mainwindow.cpp" line="10312"/>
         <source>Project Options - &quot;%1&quot;</source>
         <translation>Projekt-Optionen - &quot;%1&quot;</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10201"/>
+        <location filename="../mainwindow.cpp" line="10320"/>
         <source>GCC/G++ extra compiler options:</source>
         <translation>GCC/G++ zusätzliche Compiler-Optionen:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10202"/>
+        <location filename="../mainwindow.cpp" line="10321"/>
         <source>GCC/G++ extra linker options:</source>
         <translation>GCC/G++ zusätzliche Linker-Optionen:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10203"/>
+        <location filename="../mainwindow.cpp" line="10322"/>
         <source>VBCC extra compiler options:</source>
         <translation>VBCC zusätzliche Compiler-Optionen:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10204"/>
+        <location filename="../mainwindow.cpp" line="10323"/>
         <source>VBCC extra linker options:</source>
         <translation>VBCC zusätzliche Linker-Optionen:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10206"/>
+        <location filename="../mainwindow.cpp" line="10325"/>
         <source>These are added on top of the toolchain baseline configured in Prefs (and any auto-detected additions, such as a floating-point math library) - they do not replace it. Applied the next time this project&apos;s Makefiles are regenerated (immediately, and automatically before every build) - unless a Makefile has since been hand-edited, in which case it&apos;s left untouched; delete it to let AmigaED manage it again.</source>
         <translation>Diese werden zusätzlich zur in Prefs konfigurierten Basis der Toolchain angewendet (und zu automatisch erkannten Ergänzungen wie einer Gleitkomma-Mathe-Bibliothek) - sie ersetzen sie nicht. Wirksam beim nächsten Neuerzeugen der Makefiles dieses Projekts (sofort, und automatisch vor jedem Build) - außer eine Makefile wurde inzwischen von Hand bearbeitet; in dem Fall bleibt sie unangetastet. Lösche sie, damit AmigaED sie wieder verwaltet.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10263"/>
+        <location filename="../mainwindow.cpp" line="10382"/>
         <source>Project options updated.</source>
         <translation>Projekt-Optionen aktualisiert.</translation>
     </message>
@@ -830,104 +830,127 @@ Die Standard-Kommandozeile des Systems konnte nicht gestartet werden.</translati
         <translation>Suchen und Ersetzen öffnen, mit dem angeklickten Wort als Suchbegriff</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="8668"/>
+        <location filename="../mainwindow.cpp" line="8787"/>
         <source>left unchanged - edited by hand: %1 (delete it to let AmigaED manage it again)</source>
         <translation>unverändert gelassen - von Hand bearbeitet: %1 (Datei löschen, damit AmigaED sie wieder verwaltet)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="8670"/>
+        <location filename="../mainwindow.cpp" line="8789"/>
         <source>not generated - removed by you: %1 (re-enable in Project Options... to bring it back)</source>
         <translation>nicht erzeugt - von dir entfernt: %1 (in Projektoptionen... wieder aktivieren, um sie zurückzuholen)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="8672"/>
+        <location filename="../mainwindow.cpp" line="8791"/>
         <source>Makefiles updated (%1).</source>
         <translation>Makefiles aktualisiert (%1).</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10220"/>
+        <location filename="../mainwindow.cpp" line="10339"/>
         <source>Generate Makefile.gcc (m68k-amigaos-gcc)</source>
         <translation>Makefile.gcc erzeugen (m68k-amigaos-gcc)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10221"/>
+        <location filename="../mainwindow.cpp" line="10340"/>
         <source>Generate Makefile.vbcc (vbcc/vc)</source>
         <translation>Makefile.vbcc erzeugen (vbcc/vc)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10222"/>
+        <location filename="../mainwindow.cpp" line="10341"/>
         <source>Generate Makefile.sc (SAS/C hint, plain .c files only)</source>
         <translation>Makefile.sc erzeugen (SAS/C-Hinweis, nur reine .c-Dateien)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10227"/>
+        <location filename="../mainwindow.cpp" line="10346"/>
         <source>Generated Makefiles</source>
         <translation>Generierte Makefiles</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10232"/>
+        <location filename="../mainwindow.cpp" line="10351"/>
         <source>Unchecked after &quot;Remove&quot; on that Makefile in the project tree - check it again here to let AmigaED generate and manage it once more.</source>
         <translation>Wird deaktiviert, nachdem dieses Makefile im Projektbaum über &quot;Remove&quot; entfernt wurde - hier wieder aktivieren, damit AmigaED es erneut erzeugt und verwaltet.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10834"/>
+        <location filename="../mainwindow.cpp" line="10569"/>
+        <source>This tool no longer exists:
+%1
+
+Check Prefs &gt; Tools.</source>
+        <translation>Dieses Werkzeug existiert nicht mehr:
+%1
+
+Bitte in Prefs &gt; Werkzeuge prüfen.</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="10581"/>
+        <source>Could not start:
+%1</source>
+        <translation>Es konnte nicht gestartet werden:
+%1</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="10659"/>
+        <source>GUI Builders</source>
+        <translation>GUI-Builder</translation>
+    </message>
+    <message>
+        <location filename="../mainwindow.cpp" line="11099"/>
         <source>Could not delete &quot;%1&quot; from disk.</source>
         <translation>&quot;%1&quot; konnte nicht von der Festplatte gelöscht werden.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11194"/>
+        <location filename="../mainwindow.cpp" line="11459"/>
         <source>Creating actions...</source>
         <translation>Aktionen werden erstellt...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11196"/>
+        <location filename="../mainwindow.cpp" line="11461"/>
         <source>Building menus...</source>
         <translation>Menüs werden aufgebaut...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11198"/>
+        <location filename="../mainwindow.cpp" line="11464"/>
         <source>Building toolbars...</source>
         <translation>Werkzeugleisten werden aufgebaut...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11201"/>
+        <location filename="../mainwindow.cpp" line="11467"/>
         <source>Almost ready...</source>
         <translation>Fast fertig...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12209"/>
+        <location filename="../mainwindow.cpp" line="12475"/>
         <source>Mark all and copy</source>
         <translation>Alles markieren und kopieren</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12210"/>
+        <location filename="../mainwindow.cpp" line="12476"/>
         <source>Empty Console</source>
         <translation>Konsole leeren</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12627"/>
+        <location filename="../mainwindow.cpp" line="12893"/>
         <source>Nothing to search for.</source>
         <translation>Kein Suchbegriff eingegeben.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12644"/>
-        <location filename="../mainwindow.cpp" line="12675"/>
-        <location filename="../mainwindow.cpp" line="12704"/>
+        <location filename="../mainwindow.cpp" line="12910"/>
+        <location filename="../mainwindow.cpp" line="12941"/>
+        <location filename="../mainwindow.cpp" line="12970"/>
         <source>&quot;%1&quot; not found.</source>
         <translation>&quot;%1&quot; nicht gefunden.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12668"/>
+        <location filename="../mainwindow.cpp" line="12934"/>
         <source>No more occurrences of &quot;%1&quot;.</source>
         <translation>Keine weiteren Vorkommen von &quot;%1&quot;.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12707"/>
+        <location filename="../mainwindow.cpp" line="12973"/>
         <source>Replaced 1 occurrence of &quot;%1&quot;.</source>
         <translation>1 Vorkommen von &quot;%1&quot; ersetzt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12708"/>
+        <location filename="../mainwindow.cpp" line="12974"/>
         <source>Replaced %1 occurrences of &quot;%2&quot;.</source>
         <translation>%1 Vorkommen von &quot;%2&quot; ersetzt.</translation>
     </message>
@@ -1000,12 +1023,12 @@ Die Standard-Kommandozeile des Systems konnte nicht gestartet werden.</translati
         <translation>Zur passenden Klammer springen...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3968"/>
+        <location filename="../mainwindow.cpp" line="3986"/>
         <source>No bracket next to the cursor.</source>
         <translation>Keine Klammer neben dem Cursor.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3984"/>
+        <location filename="../mainwindow.cpp" line="4002"/>
         <source>No matching bracket found.</source>
         <translation>Keine passende Klammer gefunden.</translation>
     </message>
@@ -1382,7 +1405,7 @@ Eine Assembler-Referenz (Motorola-68k-Mnemonics, Makros und mehr) ist für eine 
         <location filename="../mainwindow.cpp" line="1439"/>
         <location filename="../mainwindow.cpp" line="2171"/>
         <location filename="../mainwindow.cpp" line="2233"/>
-        <location filename="../mainwindow.cpp" line="11158"/>
+        <location filename="../mainwindow.cpp" line="11423"/>
         <source>Compile current file...</source>
         <translation>Aktuelle Datei compilieren...</translation>
     </message>
@@ -2020,17 +2043,17 @@ Delete the old settings file now? It is no longer used.</source>
 Möchtest du die alte Einstellungsdatei jetzt löschen? Sie wird nicht mehr benötigt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="4320"/>
+        <location filename="../mainwindow.cpp" line="4338"/>
         <source>You can&apos;t compile your C/C++ Project with an Assembler! Please choose VBCC, GNU C or GNU C++.</source>
         <translation>Du kannst dein C/C++-Projekt nicht mit einem Assembler übersetzen! Bitte wähle VBCC, GNU C oder GNU C++.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5589"/>
+        <location filename="../mainwindow.cpp" line="5607"/>
         <source>Block uncommented.</source>
         <translation>Block entkommentiert.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5589"/>
+        <location filename="../mainwindow.cpp" line="5607"/>
         <source>Block commented.</source>
         <translation>Block kommentiert.</translation>
     </message>
@@ -2245,31 +2268,31 @@ Möchtest du die alte Einstellungsdatei jetzt löschen? Sie wird nicht mehr ben�
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2318"/>
-        <location filename="../mainwindow.cpp" line="6412"/>
+        <location filename="../mainwindow.cpp" line="6514"/>
         <source>Theme</source>
         <translation>Design</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2328"/>
-        <location filename="../mainwindow.cpp" line="6458"/>
+        <location filename="../mainwindow.cpp" line="6561"/>
         <source>Indentation</source>
         <translation>Einrückung</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2333"/>
-        <location filename="../mainwindow.cpp" line="6463"/>
+        <location filename="../mainwindow.cpp" line="6566"/>
         <source>2 Characters</source>
         <translation>2 Zeichen</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2334"/>
-        <location filename="../mainwindow.cpp" line="6464"/>
+        <location filename="../mainwindow.cpp" line="6567"/>
         <source>4 Characters</source>
         <translation>4 Zeichen</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2335"/>
-        <location filename="../mainwindow.cpp" line="6465"/>
+        <location filename="../mainwindow.cpp" line="6568"/>
         <source>8 Characters</source>
         <translation>8 Zeichen</translation>
     </message>
@@ -2334,69 +2357,69 @@ Möchtest du die alte Einstellungsdatei jetzt löschen? Sie wird nicht mehr ben�
     <message>
         <location filename="../mainwindow.cpp" line="2229"/>
         <location filename="../mainwindow.cpp" line="2274"/>
-        <location filename="../mainwindow.cpp" line="7404"/>
+        <location filename="../mainwindow.cpp" line="7523"/>
         <source>Add an existing file to the project</source>
         <translation>Vorhandene Datei zum Projekt hinzufügen</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2230"/>
         <location filename="../mainwindow.cpp" line="2276"/>
-        <location filename="../mainwindow.cpp" line="7408"/>
+        <location filename="../mainwindow.cpp" line="7527"/>
         <source>Remove the selected file from the project</source>
         <translation>Ausgewählte Datei aus dem Projekt entfernen</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2231"/>
-        <location filename="../mainwindow.cpp" line="11146"/>
+        <location filename="../mainwindow.cpp" line="11411"/>
         <source>Select compiler to use for this file</source>
         <translation>Compiler für diese Datei auswählen</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2232"/>
-        <location filename="../mainwindow.cpp" line="11154"/>
+        <location filename="../mainwindow.cpp" line="11419"/>
         <source>Change default target OS</source>
         <translation>Standard-Ziel-OS ändern</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2268"/>
-        <location filename="../mainwindow.cpp" line="7374"/>
+        <location filename="../mainwindow.cpp" line="7493"/>
         <source>Project</source>
         <translation>Projekt</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2269"/>
-        <location filename="../mainwindow.cpp" line="7385"/>
+        <location filename="../mainwindow.cpp" line="7504"/>
         <source>C/C++ Files</source>
         <translation>C/C++-Dateien</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2270"/>
-        <location filename="../mainwindow.cpp" line="7386"/>
+        <location filename="../mainwindow.cpp" line="7505"/>
         <source>Header Files</source>
         <translation>Header-Dateien</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2271"/>
-        <location filename="../mainwindow.cpp" line="7387"/>
+        <location filename="../mainwindow.cpp" line="7506"/>
         <source>Installer Scripts</source>
         <translation>Installer-Skripte</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2272"/>
-        <location filename="../mainwindow.cpp" line="7392"/>
+        <location filename="../mainwindow.cpp" line="7511"/>
         <source>Makefiles</source>
         <translation>Makefiles</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2273"/>
-        <location filename="../mainwindow.cpp" line="7403"/>
+        <location filename="../mainwindow.cpp" line="7522"/>
         <source>Add...</source>
         <translation>Hinzufügen...</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2275"/>
-        <location filename="../mainwindow.cpp" line="7407"/>
-        <location filename="../mainwindow.cpp" line="10939"/>
+        <location filename="../mainwindow.cpp" line="7526"/>
+        <location filename="../mainwindow.cpp" line="11204"/>
         <source>Remove</source>
         <translation>Entfernen</translation>
     </message>
@@ -2404,33 +2427,33 @@ Möchtest du die alte Einstellungsdatei jetzt löschen? Sie wird nicht mehr ben�
         <location filename="../mainwindow.cpp" line="1679"/>
         <location filename="../mainwindow.cpp" line="2116"/>
         <location filename="../mainwindow.cpp" line="2280"/>
-        <location filename="../mainwindow.cpp" line="7592"/>
+        <location filename="../mainwindow.cpp" line="7711"/>
         <source>Functions</source>
         <translation>Funktionen</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2285"/>
-        <location filename="../mainwindow.cpp" line="11137"/>
+        <location filename="../mainwindow.cpp" line="11402"/>
         <source>Compiler:</source>
         <translation>Compiler:</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2286"/>
-        <location filename="../mainwindow.cpp" line="11162"/>
+        <location filename="../mainwindow.cpp" line="11427"/>
         <source>Line:</source>
         <translation>Zeile:</translation>
     </message>
     <message>
         <location filename="../mainwindow.cpp" line="2287"/>
-        <location filename="../mainwindow.cpp" line="11174"/>
+        <location filename="../mainwindow.cpp" line="11439"/>
         <source>Column:</source>
         <translation>Spalte:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2671"/>
-        <location filename="../mainwindow.cpp" line="3119"/>
-        <location filename="../mainwindow.cpp" line="3144"/>
-        <location filename="../mainwindow.cpp" line="3169"/>
+        <location filename="../mainwindow.cpp" line="2689"/>
+        <location filename="../mainwindow.cpp" line="3137"/>
+        <location filename="../mainwindow.cpp" line="3162"/>
+        <location filename="../mainwindow.cpp" line="3187"/>
         <source>untitled.c</source>
         <translation>unbenannt.c</translation>
     </message>
@@ -2439,7 +2462,7 @@ Möchtest du die alte Einstellungsdatei jetzt löschen? Sie wird nicht mehr ben�
         <translation type="vanished">C/C++ Amiga Cross Editor</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2674"/>
+        <location filename="../mainwindow.cpp" line="2692"/>
         <source>The document &quot;%1&quot; has been modified.
 Do you want to save your changes?</source>
         <translation>Das Dokument &quot;%1&quot; wurde geändert.
@@ -2450,40 +2473,40 @@ Möchten Sie Ihre Änderungen speichern?</translation>
         <translation type="vanished">Amiga Cross Editor</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2708"/>
+        <location filename="../mainwindow.cpp" line="2726"/>
         <source>Cannot read file %1:
 %2.</source>
         <translation>Datei %1 kann nicht gelesen werden:
 %2.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2724"/>
-        <location filename="../mainwindow.cpp" line="3051"/>
+        <location filename="../mainwindow.cpp" line="2742"/>
+        <location filename="../mainwindow.cpp" line="3069"/>
         <source>File loaded</source>
         <translation>Datei geladen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2738"/>
+        <location filename="../mainwindow.cpp" line="2756"/>
         <source>(no recent files)</source>
         <translation>(keine zuletzt geöffneten Dateien)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2751"/>
+        <location filename="../mainwindow.cpp" line="2769"/>
         <source>Forget recent files</source>
         <translation>Zuletzt geöffnete Dateien vergessen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2808"/>
+        <location filename="../mainwindow.cpp" line="2826"/>
         <source>(no recent projects)</source>
         <translation>(keine zuletzt geöffneten Projekte)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2822"/>
+        <location filename="../mainwindow.cpp" line="2840"/>
         <source>Forget recent Projects</source>
         <translation>Zuletzt geöffnete Projekte vergessen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2882"/>
+        <location filename="../mainwindow.cpp" line="2900"/>
         <source>The project file no longer exists:
 %1
 
@@ -2494,7 +2517,7 @@ It will be removed from the &quot;Recent Projects&quot; list.</source>
 Sie wird aus der Liste &quot;Zuletzt geöffnete Projekte&quot; entfernt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2906"/>
+        <location filename="../mainwindow.cpp" line="2924"/>
         <source>The file no longer exists:
 %1
 
@@ -2505,45 +2528,45 @@ It will be removed from the &quot;Recent files&quot; list.</source>
 Sie wird aus der Liste &quot;Zuletzt geöffnete Dateien&quot; entfernt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="2949"/>
+        <location filename="../mainwindow.cpp" line="2967"/>
         <source>File does not exist: %1&lt;br&gt;&lt;br&gt;Do you want me to create it?</source>
         <translation>Die Datei existiert nicht: %1&lt;br&gt;&lt;br&gt;Soll sie erstellt werden?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3007"/>
+        <location filename="../mainwindow.cpp" line="3025"/>
         <source>&lt;b&gt;Something went terribly wrong!&lt;/b&gt;&lt;br&gt;File could &lt;b&gt;not&lt;/b&gt; been created: %1&lt;br&gt;&lt;br&gt;You will have to &lt;b&gt;&lt;i&gt;save as...&lt;/i&gt;&lt;/b&gt; an empty file,&lt;br&gt;providing the requested file name.&lt;br&gt;&lt;br&gt;&lt;b&gt;Hint:&lt;/b&gt; Selecting CANCEL quits AmigaED!</source>
         <translation>&lt;b&gt;Etwas ist gründlich schiefgelaufen!&lt;/b&gt;&lt;br&gt;Die Datei konnte &lt;b&gt;nicht&lt;/b&gt; erstellt werden: %1&lt;br&gt;&lt;br&gt;Sie müssen eine leere Datei mit &lt;b&gt;&lt;i&gt;Speichern unter...&lt;/i&gt;&lt;/b&gt;&lt;br&gt;unter dem gewünschten Dateinamen speichern.&lt;br&gt;&lt;br&gt;&lt;b&gt;Hinweis:&lt;/b&gt; Ein Klick auf ABBRECHEN beendet AmigaED!</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3068"/>
+        <location filename="../mainwindow.cpp" line="3086"/>
         <source>Cannot write file %1:
 %2.</source>
         <translation>Datei %1 kann nicht geschrieben werden:
 %2.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3081"/>
+        <location filename="../mainwindow.cpp" line="3099"/>
         <source>File saved</source>
         <translation>Datei gespeichert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3145"/>
+        <location filename="../mainwindow.cpp" line="3163"/>
         <source>%1[*] - %2</source>
         <translation>%1[*] - %2</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3902"/>
+        <location filename="../mainwindow.cpp" line="3920"/>
         <source>Goto line</source>
         <translation>Zu Zeile springen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3903"/>
+        <location filename="../mainwindow.cpp" line="3921"/>
         <source>Line number:</source>
         <translation>Zeilennummer:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="4472"/>
-        <location filename="../mainwindow.cpp" line="4493"/>
+        <location filename="../mainwindow.cpp" line="4490"/>
+        <location filename="../mainwindow.cpp" line="4511"/>
         <source>There is a problem with your compiler presets!
 Please set preferences according to your compiler locations and default options.
 
@@ -2554,8 +2577,8 @@ Bitte passen Sie die Einstellungen an die Pfade und Standardoptionen Ihres Compi
 Anschließend müssen Sie Amiga Cross Editor neu starten!</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="4596"/>
-        <location filename="../mainwindow.cpp" line="4610"/>
+        <location filename="../mainwindow.cpp" line="4614"/>
+        <location filename="../mainwindow.cpp" line="4628"/>
         <source>Compiler Options:</source>
         <translation>Compiler-Optionen:</translation>
     </message>
@@ -2584,12 +2607,12 @@ Anschließend müssen Sie Amiga Cross Editor neu starten!</translation>
 &lt;br&gt;&lt;br&gt;Möchten Sie fortfahren?&lt;/br&gt;&lt;/br&gt;</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5792"/>
+        <location filename="../mainwindow.cpp" line="5810"/>
         <source>An emulator instance is already running - stop it first.</source>
         <translation>Es läuft bereits eine Emulator-Instanz - bitte zuerst stoppen.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5800"/>
+        <location filename="../mainwindow.cpp" line="5818"/>
         <source>An emulator process (%1) already appears to be running - possibly left open from a previous AmigaED session, or started outside AmigaED entirely.
 
 Start another instance anyway?</source>
@@ -2598,7 +2621,7 @@ Start another instance anyway?</source>
 Trotzdem eine weitere Instanz starten?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5820"/>
+        <location filename="../mainwindow.cpp" line="5838"/>
         <source>Not starting a second emulator instance.</source>
         <translation>Es wird keine zweite Emulator-Instanz gestartet.</translation>
     </message>
@@ -2608,123 +2631,123 @@ Trotzdem eine weitere Instanz starten?</translation>
         <translation>AmigaED wird beendet, während dein Amiga-Emulator noch läuft. Soll ich den Emulator geöffnet lassen?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5876"/>
+        <location filename="../mainwindow.cpp" line="5894"/>
         <source>There seems to be &lt;i&gt;&lt;b&gt;NO path to the emulator executable&lt;/b&gt;&lt;/i&gt; configured (UAE path)!&lt;br&gt;Please revisit the Prefs editor, Emulator tab, and set it.&lt;br&gt;&lt;br&gt;This helps, ya know?!</source>
         <translation>Es scheint &lt;i&gt;&lt;b&gt;KEIN Pfad zur Emulator-Programmdatei&lt;/b&gt;&lt;/i&gt; konfiguriert zu sein (UAE-Pfad)!&lt;br&gt;Bitte öffnen Sie die Einstellungen, Reiter Emulator, und tragen Sie ihn ein.&lt;br&gt;&lt;br&gt;Das hilft ungemein!</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5889"/>
+        <location filename="../mainwindow.cpp" line="5907"/>
         <source>Attempting to start UAE...</source>
         <translation>Versuche, UAE zu starten...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="5980"/>
-        <location filename="../mainwindow.cpp" line="5992"/>
+        <location filename="../mainwindow.cpp" line="5998"/>
+        <location filename="../mainwindow.cpp" line="6010"/>
         <source>Stopping emulator...</source>
         <translation>Emulator wird gestoppt...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7006"/>
+        <location filename="../mainwindow.cpp" line="7125"/>
         <source>Syntax changed to PlainText</source>
         <translation>Syntax auf Reinen Text geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7083"/>
+        <location filename="../mainwindow.cpp" line="7202"/>
         <source>Syntax changed to C/C++</source>
         <translation>Syntax auf C/C++ geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7111"/>
+        <location filename="../mainwindow.cpp" line="7230"/>
         <source>Syntax changed to Makefiles</source>
         <translation>Syntax auf Makefiles geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7131"/>
+        <location filename="../mainwindow.cpp" line="7250"/>
         <source>Syntax changed to Shell</source>
         <translation>Syntax auf Shell geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7153"/>
+        <location filename="../mainwindow.cpp" line="7272"/>
         <source>Syntax changed to Amiga installer</source>
         <translation>Syntax auf Amiga-Installer geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7176"/>
+        <location filename="../mainwindow.cpp" line="7295"/>
         <source>Syntax changed to AmigaGuide</source>
         <translation>Syntax auf AmigaGuide geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7197"/>
+        <location filename="../mainwindow.cpp" line="7316"/>
         <source>Syntax changed to m68k Assembler</source>
         <translation>Syntax auf m68k-Assembler geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7217"/>
+        <location filename="../mainwindow.cpp" line="7336"/>
         <source>Syntax changed to Pascal</source>
         <translation>Syntax auf Pascal geändert</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7315"/>
+        <location filename="../mainwindow.cpp" line="7434"/>
         <source>Folding is not available for this file type.</source>
         <translation>Einklappen ist für diesen Dateityp nicht verfügbar.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7324"/>
+        <location filename="../mainwindow.cpp" line="7443"/>
         <source>All folds collapsed.</source>
         <translation>Alles eingeklappt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7324"/>
+        <location filename="../mainwindow.cpp" line="7443"/>
         <source>All folds expanded.</source>
         <translation>Alles ausgeklappt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7388"/>
+        <location filename="../mainwindow.cpp" line="7507"/>
         <source>AmigaGuide</source>
         <translation>AmigaGuide</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7389"/>
+        <location filename="../mainwindow.cpp" line="7508"/>
         <source>Assembler Sources</source>
         <translation>Assembler-Quellen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7390"/>
+        <location filename="../mainwindow.cpp" line="7509"/>
         <source>Executable</source>
         <translation>Ausführbare Datei</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7391"/>
+        <location filename="../mainwindow.cpp" line="7510"/>
         <source>Other Files</source>
         <translation>Weitere Dateien</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7487"/>
+        <location filename="../mainwindow.cpp" line="7606"/>
         <source> [main]</source>
         <translation> [Haupt]</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7824"/>
+        <location filename="../mainwindow.cpp" line="7943"/>
         <source>%1, line %2</source>
         <translation>%1, Zeile %2</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7911"/>
+        <location filename="../mainwindow.cpp" line="8030"/>
         <source>Compiler Options</source>
         <translation>Compiler-Optionen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7912"/>
+        <location filename="../mainwindow.cpp" line="8031"/>
         <source>Additional compiler options for this project (optional):</source>
         <translation>Zusätzliche Compiler-Optionen für dieses Projekt (optional):</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7917"/>
+        <location filename="../mainwindow.cpp" line="8036"/>
         <source>Linker Options</source>
         <translation>Linker-Optionen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="7918"/>
+        <location filename="../mainwindow.cpp" line="8037"/>
         <source>Additional linker options for this project (optional):</source>
         <translation>Zusätzliche Linker-Optionen für dieses Projekt (optional):</translation>
     </message>
@@ -2733,7 +2756,7 @@ Trotzdem eine weitere Instanz starten?</translation>
         <translation type="vanished">Noch keine C/C++-Quelldatei im Projekt - Makefiles wurden nicht (neu) erzeugt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="8661"/>
+        <location filename="../mainwindow.cpp" line="8780"/>
         <source>Could not write the following Makefile(s) in
 %1:
 
@@ -2744,7 +2767,7 @@ Trotzdem eine weitere Instanz starten?</translation>
 %2</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="8676"/>
+        <location filename="../mainwindow.cpp" line="8795"/>
         <source>Makefiles updated.</source>
         <translation>Makefiles aktualisiert.</translation>
     </message>
@@ -2753,56 +2776,56 @@ Trotzdem eine weitere Instanz starten?</translation>
         <translation type="vanished">Makefiles aktualisiert (unverändert gelassen - von Hand bearbeitet: %1. Datei löschen, damit AmigaED sie wieder verwaltet.)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9582"/>
+        <location filename="../mainwindow.cpp" line="9701"/>
         <source>Choose a directory for the new project</source>
         <translation>Verzeichnis für das neue Projekt wählen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9587"/>
+        <location filename="../mainwindow.cpp" line="9706"/>
         <source>New Project</source>
         <translation>Neues Projekt</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9587"/>
-        <location filename="../mainwindow.cpp" line="9799"/>
+        <location filename="../mainwindow.cpp" line="9706"/>
+        <location filename="../mainwindow.cpp" line="9918"/>
         <source>Project name:</source>
         <translation>Projektname:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9608"/>
+        <location filename="../mainwindow.cpp" line="9727"/>
         <source>Could not create the project&apos;s main file:
 %1</source>
         <translation>Die Hauptdatei des Projekts konnte nicht erstellt werden:
 %1</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9648"/>
-        <location filename="../mainwindow.cpp" line="9841"/>
-        <location filename="../mainwindow.cpp" line="10488"/>
+        <location filename="../mainwindow.cpp" line="9767"/>
+        <location filename="../mainwindow.cpp" line="9960"/>
+        <location filename="../mainwindow.cpp" line="10753"/>
         <source>Could not save the project file:
 %1</source>
         <translation>Die Projektdatei konnte nicht gespeichert werden:
 %1</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9699"/>
+        <location filename="../mainwindow.cpp" line="9818"/>
         <source>Project &quot;%1&quot; created.</source>
         <translation>Projekt &quot;%1&quot; erstellt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9749"/>
+        <location filename="../mainwindow.cpp" line="9868"/>
         <source>Choose the existing project&apos;s folder</source>
         <translation>Ordner des bestehenden Projekts auswählen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9765"/>
+        <location filename="../mainwindow.cpp" line="9884"/>
         <source>No importable files were found in:
 %1</source>
         <translation>Es wurden keine importierbaren Dateien gefunden in:
 %1</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9781"/>
+        <location filename="../mainwindow.cpp" line="9900"/>
         <source>No C/C++ source file (.c/.cpp) was found in:
 %1
 
@@ -2813,34 +2836,34 @@ AmigaED needs one to import the project.</source>
 AmigaED benötigt eine, um das Projekt zu importieren.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9791"/>
-        <location filename="../mainwindow.cpp" line="9799"/>
-        <location filename="../mainwindow.cpp" line="9811"/>
+        <location filename="../mainwindow.cpp" line="9910"/>
+        <location filename="../mainwindow.cpp" line="9918"/>
+        <location filename="../mainwindow.cpp" line="9930"/>
         <source>Import existing Project</source>
         <translation>Bestehendes Projekt importieren</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9792"/>
+        <location filename="../mainwindow.cpp" line="9911"/>
         <source>Main file of the project:</source>
         <translation>Hauptdatei des Projekts:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9812"/>
+        <location filename="../mainwindow.cpp" line="9931"/>
         <source>Target OS for this project:</source>
         <translation>Ziel-Betriebssystem für dieses Projekt:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9809"/>
+        <location filename="../mainwindow.cpp" line="9928"/>
         <source>AmigaOS 3.x</source>
         <translation>AmigaOS 3.x</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9809"/>
+        <location filename="../mainwindow.cpp" line="9928"/>
         <source>AmigaOS 1.3</source>
         <translation>AmigaOS 1.3</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9829"/>
+        <location filename="../mainwindow.cpp" line="9948"/>
         <source>A project file named &quot;%1&quot; already exists in that folder.
 
 Overwrite it?</source>
@@ -2849,43 +2872,43 @@ Overwrite it?</source>
 Überschreiben?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9873"/>
+        <location filename="../mainwindow.cpp" line="9992"/>
         <source>Project &quot;%1&quot; imported (%2 file(s)).</source>
         <translation>Projekt &quot;%1&quot; importiert (%2 Datei(en)).</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9884"/>
+        <location filename="../mainwindow.cpp" line="10003"/>
         <source>Load Project</source>
         <translation>Projekt laden</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9884"/>
+        <location filename="../mainwindow.cpp" line="10003"/>
         <source>AmigaED projects (*.aep)</source>
         <translation>AmigaED projects (*.aep)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9902"/>
+        <location filename="../mainwindow.cpp" line="10021"/>
         <source>Could not load project file:
 %1</source>
         <translation>Die Projektdatei konnte nicht geladen werden:
 %1</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="9971"/>
+        <location filename="../mainwindow.cpp" line="10090"/>
         <source>Project &quot;%1&quot; loaded.</source>
         <translation>Projekt &quot;%1&quot; geladen.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10025"/>
-        <location filename="../mainwindow.cpp" line="10118"/>
-        <location filename="../mainwindow.cpp" line="10188"/>
-        <location filename="../mainwindow.cpp" line="10475"/>
-        <location filename="../mainwindow.cpp" line="10507"/>
+        <location filename="../mainwindow.cpp" line="10144"/>
+        <location filename="../mainwindow.cpp" line="10237"/>
+        <location filename="../mainwindow.cpp" line="10307"/>
+        <location filename="../mainwindow.cpp" line="10740"/>
+        <location filename="../mainwindow.cpp" line="10772"/>
         <source>No project is currently loaded.</source>
         <translation>Aktuell ist kein Projekt geladen.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="3670"/>
+        <location filename="../mainwindow.cpp" line="3688"/>
         <source>The following open project files have unsaved changes:
 
 %1
@@ -2898,7 +2921,7 @@ Save them before building? (Prefs &gt; Project &gt; &quot;Save Project Files Aut
 Vor dem Bauen speichern? (Prefs &gt; Project &gt; &quot;Save Project Files Automatically&quot; überspringt diese Frage künftig.)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10057"/>
+        <location filename="../mainwindow.cpp" line="10176"/>
         <source>Makefile not found:
 %1
 
@@ -2909,7 +2932,7 @@ Add at least one C/C++ file to the project first.</source>
 Fügen Sie dem Projekt zuerst mindestens eine C/C++-Datei hinzu.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10067"/>
+        <location filename="../mainwindow.cpp" line="10186"/>
         <source>Could not find a &quot;make&quot; executable at:
 %1</source>
         <translation>Keine &quot;make&quot;-Programmdatei gefunden unter:
@@ -2922,17 +2945,17 @@ Fügen Sie dem Projekt zuerst mindestens eine C/C++-Datei hinzu.</translation>
 %1</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10481"/>
+        <location filename="../mainwindow.cpp" line="10746"/>
         <source>Project &quot;%1&quot; is already up to date.</source>
         <translation>Projekt &quot;%1&quot; ist bereits aktuell.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10492"/>
+        <location filename="../mainwindow.cpp" line="10757"/>
         <source>Project &quot;%1&quot; saved.</source>
         <translation>Projekt &quot;%1&quot; gespeichert.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10559"/>
+        <location filename="../mainwindow.cpp" line="10824"/>
         <source>A file named &quot;%1&quot; already exists in the project directory.
 
 Overwrite it with the file you&apos;re adding?</source>
@@ -2941,93 +2964,93 @@ Overwrite it with the file you&apos;re adding?</source>
 Soll sie mit der hinzuzufügenden Datei überschrieben werden?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10570"/>
+        <location filename="../mainwindow.cpp" line="10835"/>
         <source>Could not copy &quot;%1&quot; into the project directory.</source>
         <translation>&quot;%1&quot; konnte nicht in das Projektverzeichnis kopiert werden.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10704"/>
+        <location filename="../mainwindow.cpp" line="10969"/>
         <source>Add &quot;%1&quot; to the project &quot;%2&quot;?</source>
         <translation>Soll &quot;%1&quot; zum Projekt &quot;%2&quot; hinzugefügt werden?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10711"/>
+        <location filename="../mainwindow.cpp" line="10976"/>
         <source>Add these %1 files to the project &quot;%2&quot;?%3</source>
         <translation>Sollen diese %1 Dateien zum Projekt &quot;%2&quot; hinzugefügt werden?%3</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10736"/>
+        <location filename="../mainwindow.cpp" line="11001"/>
         <source>No project is currently loaded. Use File &gt; New Project... or File &gt; Load Project first.</source>
         <translation>Aktuell ist kein Projekt geladen. Verwenden Sie zuerst Datei &gt; Neues Projekt... oder Datei &gt; Projekt laden.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10740"/>
+        <location filename="../mainwindow.cpp" line="11005"/>
         <source>Add files to project</source>
         <translation>Dateien zum Projekt hinzufügen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10742"/>
+        <location filename="../mainwindow.cpp" line="11007"/>
         <source>All files (*.*)</source>
         <translation>All files (*.*)</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10766"/>
+        <location filename="../mainwindow.cpp" line="11031"/>
         <source>Select a file in the project tree to remove first.</source>
         <translation>Wählen Sie zuerst eine Datei im Projektbaum zum Entfernen aus.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10920"/>
+        <location filename="../mainwindow.cpp" line="11185"/>
         <source>Rename...</source>
         <translation>Umbenennen...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10929"/>
+        <location filename="../mainwindow.cpp" line="11194"/>
         <source>Open</source>
         <translation>Öffnen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10944"/>
+        <location filename="../mainwindow.cpp" line="11209"/>
         <source>Set as main file for compilation</source>
         <translation>Als Hauptdatei für die Compilierung festlegen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10924"/>
-        <location filename="../mainwindow.cpp" line="10946"/>
+        <location filename="../mainwindow.cpp" line="11189"/>
+        <location filename="../mainwindow.cpp" line="11211"/>
         <source>Remove from project</source>
         <translation>Aus dem Projekt entfernen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="8068"/>
+        <location filename="../mainwindow.cpp" line="8187"/>
         <source>No C/C++/assembler source file in the project yet - Makefiles not (re)generated.</source>
         <translation>Noch keine C/C++/Assembler-Quelldatei im Projekt - Makefiles wurden nicht (neu) erzeugt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10966"/>
+        <location filename="../mainwindow.cpp" line="11231"/>
         <source>Rename executable</source>
         <translation>Ausführbare Datei umbenennen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10966"/>
+        <location filename="../mainwindow.cpp" line="11231"/>
         <source>New name:</source>
         <translation>Neuer Name:</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10975"/>
+        <location filename="../mainwindow.cpp" line="11240"/>
         <source>The name can&apos;t contain a path separator.</source>
         <translation>Der Name darf kein Pfadtrennzeichen enthalten.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10982"/>
+        <location filename="../mainwindow.cpp" line="11247"/>
         <source>A file named &quot;%1&quot; already exists.</source>
         <translation>Eine Datei namens &quot;%1&quot; existiert bereits.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10988"/>
+        <location filename="../mainwindow.cpp" line="11253"/>
         <source>Could not rename the file.</source>
         <translation>Die Datei konnte nicht umbenannt werden.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11051"/>
+        <location filename="../mainwindow.cpp" line="11316"/>
         <source>&quot;%1&quot; is not part of the current project &quot;%2&quot;.
 
 Add it to the project?</source>
@@ -3036,42 +3059,42 @@ Add it to the project?</source>
 Zum Projekt hinzufügen?</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11200"/>
+        <location filename="../mainwindow.cpp" line="11466"/>
         <source>Ready</source>
         <translation>Bereit</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11234"/>
+        <location filename="../mainwindow.cpp" line="11500"/>
         <source>Calling printer dialog......</source>
         <translation>Druckerdialog wird aufgerufen......</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11243"/>
+        <location filename="../mainwindow.cpp" line="11509"/>
         <source>Printing started!</source>
         <translation>Druckvorgang gestartet!</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11251"/>
+        <location filename="../mainwindow.cpp" line="11517"/>
         <source>File was send to printer and should be printed soon...</source>
         <translation>Datei wurde an den Drucker gesendet und sollte bald gedruckt werden...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11255"/>
+        <location filename="../mainwindow.cpp" line="11521"/>
         <source>Printing canceled.</source>
         <translation>Druckvorgang abgebrochen.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11261"/>
+        <location filename="../mainwindow.cpp" line="11527"/>
         <source>Printing canceled tue to wasting!</source>
         <translation>Druckvorgang wegen Papierverschwendung abgebrochen!</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11301"/>
+        <location filename="../mainwindow.cpp" line="11567"/>
         <source>Inserts</source>
         <translation>Einfügungen</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11346"/>
+        <location filename="../mainwindow.cpp" line="11612"/>
         <source>What to insert?</source>
         <translation>Was soll eingefügt werden?</translation>
     </message>
@@ -3084,107 +3107,107 @@ Zum Projekt hinzufügen?</translation>
         <translation type="vanished">Compiler-Lauf wurde gestartet.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11429"/>
+        <location filename="../mainwindow.cpp" line="11695"/>
         <source>%1: Compiler run has been started.</source>
         <translation>%1: Compiler-Lauf wurde gestartet.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11472"/>
+        <location filename="../mainwindow.cpp" line="11738"/>
         <source>UAE successfully started.</source>
         <translation>UAE erfolgreich gestartet.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11507"/>
+        <location filename="../mainwindow.cpp" line="11773"/>
         <source>CrashExit - UAE has a problem!!</source>
         <translation>CrashExit - UAE hat ein Problem!!</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11511"/>
+        <location filename="../mainwindow.cpp" line="11777"/>
         <source>UAE terminated regularly.</source>
         <translation>UAE wurde regulär beendet.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11876"/>
-        <location filename="../mainwindow.cpp" line="12092"/>
+        <location filename="../mainwindow.cpp" line="12142"/>
+        <location filename="../mainwindow.cpp" line="12358"/>
         <source>Compilation finished - </source>
         <translation>Compilierung abgeschlossen - </translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12074"/>
+        <location filename="../mainwindow.cpp" line="12340"/>
         <source>Compiler error!</source>
         <translation>Compiler-Fehler!</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11861"/>
-        <location filename="../mainwindow.cpp" line="12078"/>
+        <location filename="../mainwindow.cpp" line="12127"/>
+        <location filename="../mainwindow.cpp" line="12344"/>
         <source>Build error!
 Please check source for errors and recompile.</source>
         <translation>Build-Fehler!
 Bitte den Quelltext auf Fehler prüfen und erneut compilieren.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10083"/>
+        <location filename="../mainwindow.cpp" line="10202"/>
         <source>%1: Building project &quot;%2&quot;...</source>
         <translation>%1: Projekt &quot;%2&quot; wird gebaut...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10140"/>
+        <location filename="../mainwindow.cpp" line="10259"/>
         <source>%1: Cleaning project &quot;%2&quot;...</source>
         <translation>%1: Projekt &quot;%2&quot; wird bereinigt...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10151"/>
+        <location filename="../mainwindow.cpp" line="10270"/>
         <source>Removed: %1</source>
         <translation>Entfernt: %1</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10156"/>
+        <location filename="../mainwindow.cpp" line="10275"/>
         <source>Could not remove: %1</source>
         <translation>Konnte nicht entfernt werden: %1</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10161"/>
+        <location filename="../mainwindow.cpp" line="10280"/>
         <source>Nothing to clean - no build artifacts found.</source>
         <translation>Nichts zu bereinigen - keine Build-Artefakte gefunden.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="10164"/>
+        <location filename="../mainwindow.cpp" line="10283"/>
         <source>%1: Project &quot;%2&quot; cleaned.</source>
         <translation>%1: Projekt &quot;%2&quot; bereinigt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11549"/>
-        <location filename="../mainwindow.cpp" line="11562"/>
+        <location filename="../mainwindow.cpp" line="11815"/>
+        <location filename="../mainwindow.cpp" line="11828"/>
         <source>Emulator is no longer running.</source>
         <translation>Der Emulator läuft nicht mehr.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11786"/>
+        <location filename="../mainwindow.cpp" line="12052"/>
         <source>%1: Project build failed (exit code %2) - see compiler output.</source>
         <translation>%1: Projekt-Build fehlgeschlagen (Exit-Code %2) - siehe Compiler-Ausgabe.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11806"/>
+        <location filename="../mainwindow.cpp" line="12072"/>
         <source>%1: &quot;make&quot; reported success, but no executable was created (expected: %2) - see compiler output.</source>
         <translation>%1: &quot;make&quot; meldete Erfolg, aber es wurde keine ausführbare Datei erstellt (erwartet: %2) - siehe Compiler-Ausgabe.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11812"/>
+        <location filename="../mainwindow.cpp" line="12078"/>
         <source>%1: Project build finished successfully.</source>
         <translation>%1: Projekt-Build erfolgreich abgeschlossen.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11839"/>
+        <location filename="../mainwindow.cpp" line="12105"/>
         <source>%1: File compiled.</source>
         <translation>%1: Datei compiliert.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11843"/>
+        <location filename="../mainwindow.cpp" line="12109"/>
         <source>%1: There where errors...</source>
         <translation>%1: Es gab Fehler...</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11848"/>
+        <location filename="../mainwindow.cpp" line="12114"/>
         <source>%1: Compiler error!</source>
         <translation>%1: Compiler-Fehler!</translation>
     </message>
@@ -3193,8 +3216,8 @@ Bitte den Quelltext auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">Compilierung abgeschlossen - Amiga Cross Editor</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11877"/>
-        <location filename="../mainwindow.cpp" line="12093"/>
+        <location filename="../mainwindow.cpp" line="12143"/>
+        <location filename="../mainwindow.cpp" line="12359"/>
         <source>Successfully compiled.
 Compilation took %1 milliseconds to finish.
 
@@ -3205,62 +3228,62 @@ Die Compilierung dauerte %1 Millisekunden.
 Sie können Ihr Programm jetzt in UAE testen.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11903"/>
+        <location filename="../mainwindow.cpp" line="12169"/>
         <source>Sorry - icon file could not be created!
 </source>
         <translation>Entschuldigung - Icon-Datei konnte nicht erstellt werden!
 </translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11916"/>
-        <location filename="../mainwindow.cpp" line="12103"/>
+        <location filename="../mainwindow.cpp" line="12182"/>
+        <location filename="../mainwindow.cpp" line="12369"/>
         <source>No success in building your executable file!.
 Please check for Errors and recompile.</source>
         <translation>Erstellen der ausführbaren Datei nicht erfolgreich!.
 Bitte auf Fehler prüfen und erneut compilieren.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11936"/>
+        <location filename="../mainwindow.cpp" line="12202"/>
         <source>The emulator could not be started. The most likely cause is that the path to the emulator executable (UAE path, Prefs &gt; Emulator tab) is wrong, missing, or the file is not executable.&lt;br&gt;&lt;br&gt;Path currently configured:&lt;br&gt;&lt;b&gt;%1&lt;/b&gt;</source>
         <translation>Der Emulator konnte nicht gestartet werden. Die wahrscheinlichste Ursache ist, dass der Pfad zur Emulator-Programmdatei (UAE-Pfad, Einstellungen &gt; Reiter Emulator) falsch, nicht gesetzt oder die Datei nicht ausführbar ist.&lt;br&gt;&lt;br&gt;Aktuell konfigurierter Pfad:&lt;br&gt;&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11943"/>
+        <location filename="../mainwindow.cpp" line="12209"/>
         <source>The emulator crashed after starting.</source>
         <translation>Der Emulator ist nach dem Start abgestürzt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11946"/>
+        <location filename="../mainwindow.cpp" line="12212"/>
         <source>The emulator could not be started or crashed (QProcess error code: %1).</source>
         <translation>Der Emulator konnte nicht gestartet werden oder ist abgestürzt (QProcess-Fehlercode: %1).</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11978"/>
+        <location filename="../mainwindow.cpp" line="12244"/>
         <source>&quot;make&quot; could not be started for the project build/clean.&lt;br&gt;&lt;br&gt;Path tried:&lt;br&gt;&lt;b&gt;%1&lt;/b&gt;&lt;br&gt;&lt;br&gt;Both the amiga-gcc and vbcc toolchains normally ship their own make(.exe) right next to the compiler binary - check that the compiler path in Prefs &gt; GCC/VBCC actually points there.</source>
         <translation>&quot;make&quot; konnte für den Projekt-Build/Clean nicht gestartet werden.&lt;br&gt;&lt;br&gt;Versuchter Pfad:&lt;br&gt;&lt;b&gt;%1&lt;/b&gt;&lt;br&gt;&lt;br&gt;Sowohl die amiga-gcc- als auch die vbcc-Toolchain liefern normalerweise ihr eigenes make(.exe) direkt neben der Compiler-Programmdatei mit - prüfen Sie, ob der Compiler-Pfad in Einstellungen &gt; GCC/VBCC tatsächlich dorthin zeigt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11986"/>
+        <location filename="../mainwindow.cpp" line="12252"/>
         <source>The compiler could not be started. The most likely cause is that the path to the compiler executable (Prefs &gt; GCC or VBCC tab, depending on your selected compiler) is wrong, missing, or the file is not executable.&lt;br&gt;&lt;br&gt;Path currently configured:&lt;br&gt;&lt;b&gt;%1&lt;/b&gt;</source>
         <translation>Der Compiler konnte nicht gestartet werden. Die wahrscheinlichste Ursache ist, dass der Pfad zur Compiler-Programmdatei (Einstellungen &gt; Reiter GCC oder VBCC, je nach gewähltem Compiler) falsch, nicht gesetzt oder die Datei nicht ausführbar ist.&lt;br&gt;&lt;br&gt;Aktuell konfigurierter Pfad:&lt;br&gt;&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11995"/>
+        <location filename="../mainwindow.cpp" line="12261"/>
         <source>The compiler crashed while running.</source>
         <translation>Der Compiler ist während der Ausführung abgestürzt.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="11998"/>
+        <location filename="../mainwindow.cpp" line="12264"/>
         <source>The compiler could not be started or crashed (QProcess error code: %1).</source>
         <translation>Der Compiler konnte nicht gestartet werden oder ist abgestürzt (QProcess-Fehlercode: %1).</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12107"/>
+        <location filename="../mainwindow.cpp" line="12373"/>
         <source>Compiler run finished unsuccessfully.</source>
         <translation>Compiler-Lauf ohne Erfolg beendet.</translation>
     </message>
     <message>
-        <location filename="../mainwindow.cpp" line="12567"/>
+        <location filename="../mainwindow.cpp" line="12833"/>
         <source>Could not locate file &apos;%1&apos; reported by the compiler.</source>
         <translation>Die vom Compiler gemeldete Datei &apos;%1&apos; konnte nicht gefunden werden.</translation>
     </message>
@@ -3283,7 +3306,7 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation>GNU as:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="159"/>
+        <location filename="../prefsdialog.cpp" line="198"/>
         <source>Path to GNU as</source>
         <translation>Pfad zu GNU as</translation>
     </message>
@@ -3293,7 +3316,7 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation>GNU ld:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="173"/>
+        <location filename="../prefsdialog.cpp" line="212"/>
         <source>Path to GNU ld</source>
         <translation>Pfad zu GNU ld</translation>
     </message>
@@ -3302,12 +3325,12 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">Einstellungen - Amiga Cross Editor </translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1498"/>
+        <location filename="../prefsdialog.ui" line="1829"/>
         <source>Save Prefs</source>
         <translation>Einstellungen speichern</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1487"/>
+        <location filename="../prefsdialog.ui" line="1818"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
@@ -3719,27 +3742,27 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation type="vanished">AmigaOS 3.x</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1222"/>
+        <location filename="../prefsdialog.ui" line="1553"/>
         <source>Misc</source>
         <translation>Verschiedenes</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1225"/>
+        <location filename="../prefsdialog.ui" line="1556"/>
         <source>Misc settings for GUI look and feel, compiler to use, compiler behaviour...</source>
         <translation>Verschiedene Einstellungen für Oberflächen-Erscheinungsbild, zu verwendenden Compiler, Compiler-Verhalten...</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1231"/>
+        <location filename="../prefsdialog.ui" line="1562"/>
         <source>Application Look and Feel</source>
         <translation>Erscheinungsbild der Anwendung</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1239"/>
+        <location filename="../prefsdialog.ui" line="1570"/>
         <source>Default application style:</source>
         <translation>Standard-Anwendungsstil:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1246"/>
+        <location filename="../prefsdialog.ui" line="1577"/>
         <source>Select default Application style (only styles that are available on your system will be shown!). &quot;Dark&quot; gives the whole application - including the editor - a dark theme.</source>
         <translation>Standard-Anwendungsstil auswählen (nur auf Ihrem System verfügbare Stile werden angezeigt!). &quot;Dark&quot; gibt der gesamten Anwendung - einschließlich des Editors - ein dunkles Erscheinungsbild.</translation>
     </message>
@@ -3779,127 +3802,186 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation>NDK-AutoDocs-Ordner, z.B. der „Autodocs“-Ordner von Include_I - wird von Build &gt; AutoDoc Reader... verwendet</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1253"/>
+        <location filename="../prefsdialog.ui" line="1222"/>
+        <source>Tools</source>
+        <translation>Werkzeuge</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1225"/>
+        <source>External GUI builder tools, launchable from the Tools menu</source>
+        <translation>Externe GUI-Builder-Werkzeuge, aufrufbar über das Werkzeuge-Menü</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1231"/>
+        <location filename="../prefsdialog.cpp" line="83"/>
+        <location filename="../prefsdialog.cpp" line="651"/>
+        <source>MUI GUI Designer</source>
+        <translation>MUI GUI Designer</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1237"/>
+        <location filename="../prefsdialog.ui" line="1314"/>
+        <location filename="../prefsdialog.ui" line="1391"/>
+        <location filename="../prefsdialog.ui" line="1468"/>
+        <source>Path:</source>
+        <translation>Pfad:</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1271"/>
+        <location filename="../prefsdialog.ui" line="1348"/>
+        <location filename="../prefsdialog.ui" line="1425"/>
+        <location filename="../prefsdialog.ui" line="1502"/>
+        <source>Parameters:</source>
+        <translation>Parameter:</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1288"/>
+        <location filename="../prefsdialog.ui" line="1365"/>
+        <location filename="../prefsdialog.ui" line="1442"/>
+        <location filename="../prefsdialog.ui" line="1519"/>
+        <source>Name:</source>
+        <translation>Name:</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1308"/>
+        <location filename="../prefsdialog.cpp" line="84"/>
+        <source>GadTools GUI Designer</source>
+        <translation>GadTools GUI Designer</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1385"/>
+        <location filename="../prefsdialog.cpp" line="85"/>
+        <source>ReAction GUI Designer</source>
+        <translation>ReAction GUI Designer</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1462"/>
+        <location filename="../prefsdialog.cpp" line="86"/>
+        <source>User Tool</source>
+        <translation>Eigenes Werkzeug</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.ui" line="1584"/>
         <source>Use standard text widgets for cursor position</source>
         <translation>Standard-Textfelder für die Cursorposition verwenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1259"/>
+        <location filename="../prefsdialog.ui" line="1590"/>
         <source>Don&apos;t use LCD for cursor position</source>
         <translation>Keine LCD-Anzeige für die Cursorposition verwenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1269"/>
+        <location filename="../prefsdialog.ui" line="1600"/>
         <source>Show indentation guides by default?</source>
         <translation>Einrückungslinien standardmäßig anzeigen?</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1275"/>
+        <location filename="../prefsdialog.ui" line="1606"/>
         <source>Show indentation lines:</source>
         <translation>Einrückungslinien anzeigen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1285"/>
+        <location filename="../prefsdialog.ui" line="1616"/>
         <source>Hide compiler selection and compile buttons from statusbar</source>
         <translation>Compiler-Auswahl und Compilieren-Schaltfläche aus der Statusleiste ausblenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1291"/>
+        <location filename="../prefsdialog.ui" line="1622"/>
         <source>Don&apos;t show compiler buttons in statusbar</source>
         <translation>Keine Compiler-Schaltflächen in der Statusleiste anzeigen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1301"/>
+        <location filename="../prefsdialog.ui" line="1632"/>
         <source>Show debug output (only usefull for developers in order to enhange Amiga Cross Editor!)</source>
         <translation>Debug-Ausgabe anzeigen (nur für Entwickler nützlich, die Amiga Cross Editor weiterentwickeln!)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1307"/>
+        <location filename="../prefsdialog.ui" line="1638"/>
         <source>Show debug output:</source>
         <translation>Debug-Ausgabe anzeigen:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1317"/>
+        <location filename="../prefsdialog.ui" line="1648"/>
         <source>use a simple statusbar without any gimmicks</source>
         <translation>Eine einfache Statusleiste ohne Extras verwenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1323"/>
+        <location filename="../prefsdialog.ui" line="1654"/>
         <source>Use simple statusbar</source>
         <translation>Einfache Statusleiste verwenden</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1333"/>
+        <location filename="../prefsdialog.ui" line="1664"/>
         <source>Default GUI Language:</source>
         <translation>Standard-Oberflächensprache:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1340"/>
+        <location filename="../prefsdialog.ui" line="1671"/>
         <source>Select the GUI language to use the next time the program starts (can also be switched at runtime via View -&gt; GUI Language)</source>
         <translation>Oberflächensprache für den nächsten Programmstart auswählen (kann auch zur Laufzeit über Ansicht -&gt; Oberflächensprache umgeschaltet werden)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1347"/>
+        <location filename="../prefsdialog.ui" line="1678"/>
         <source>When using Goto matching bracket, highlight the text between the matched bracket pair with a readability-preserving background</source>
         <translation>Hebt beim Springen zur passenden Klammer (Goto matching bracket) den Text zwischen dem Klammernpaar mit einem die Lesbarkeit nicht beeinträchtigenden Hintergrund hervor</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1353"/>
+        <location filename="../prefsdialog.ui" line="1684"/>
         <source>Highlight block between braces</source>
         <translation>Block zwischen Klammern hervorheben</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1363"/>
+        <location filename="../prefsdialog.ui" line="1694"/>
         <source>Skip the AmigaED logo/progress splash window normally shown while the program starts up</source>
         <translation>Das beim Programmstart normalerweise angezeigte AmigaED-Logo-/Fortschrittsfenster überspringen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1369"/>
+        <location filename="../prefsdialog.ui" line="1700"/>
         <source>Don&apos;t show Splash Screen at Startup</source>
         <translation>Splash Screen beim Start nicht anzeigen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1384"/>
+        <location filename="../prefsdialog.ui" line="1715"/>
         <source>Build System</source>
         <translation>Build-System</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1429"/>
+        <location filename="../prefsdialog.ui" line="1760"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Dont&apos; show messageboxes on compilation finished or failed&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Keine Meldungsfenster bei abgeschlossener oder fehlgeschlagener Compilierung anzeigen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1432"/>
+        <location filename="../prefsdialog.ui" line="1763"/>
         <source>Don&apos;t use warn requesters</source>
         <translation>Keine Warnmeldungen anzeigen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1392"/>
+        <location filename="../prefsdialog.ui" line="1723"/>
         <source>Default Cross Compiler:</source>
         <translation>Standard-Cross-Compiler:</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1419"/>
+        <location filename="../prefsdialog.ui" line="1750"/>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open output console on compiler failure only&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
         <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Ausgabekonsole nur bei Compiler-Fehler öffnen&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1422"/>
+        <location filename="../prefsdialog.ui" line="1753"/>
         <source>Open panel on failure only</source>
         <translation>Bereich nur bei Fehler öffnen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1399"/>
+        <location filename="../prefsdialog.ui" line="1730"/>
         <source>Select default cross compiler to use</source>
         <translation>Standardmäßig zu verwendenden Cross-Compiler auswählen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1409"/>
+        <location filename="../prefsdialog.ui" line="1740"/>
         <source>Create an icon for your successfully compiled Amiga program</source>
         <translation>Icon für Ihr erfolgreich compiliertes Amiga-Programm erstellen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.ui" line="1412"/>
+        <location filename="../prefsdialog.ui" line="1743"/>
         <source>create icon</source>
         <translation>Icon erstellen</translation>
     </message>
@@ -3913,7 +3995,25 @@ Bitte auf Fehler prüfen und erneut compilieren.</translation>
         <translation>Einstellungen - %1</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="70"/>
+        <location filename="../prefsdialog.cpp" line="93"/>
+        <source>%1: %2</source>
+        <translation>%1: %2</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.cpp" line="98"/>
+        <source>The following Tools path(s) do not currently exist on this machine:
+
+%1
+
+Prefs will still be saved as entered, but the Tools menu will only show an entry for a tool once its path actually exists.</source>
+        <translation>Die folgenden Tools-Pfade existieren auf diesem Rechner derzeit nicht:
+
+%1
+
+Die Einstellungen werden trotzdem wie eingegeben gespeichert, aber im Werkzeuge-Menü erscheint ein Eintrag für ein Werkzeug erst, sobald sein Pfad tatsächlich existiert.</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.cpp" line="109"/>
         <source>Prefs saved.
 Changes will be activated after restarting the application!
 
@@ -3924,101 +4024,125 @@ You might consider saving all your work and restart now.</source>
 Sie sollten Ihre Arbeit speichern und jetzt neu starten.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="79"/>
+        <location filename="../prefsdialog.cpp" line="118"/>
         <source>Open Directory</source>
         <translation>Verzeichnis öffnen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="98"/>
+        <location filename="../prefsdialog.cpp" line="137"/>
         <source>Path to gcc</source>
         <translation>Pfad zu gcc</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="99"/>
-        <location filename="../prefsdialog.cpp" line="115"/>
-        <location filename="../prefsdialog.cpp" line="130"/>
-        <location filename="../prefsdialog.cpp" line="145"/>
-        <location filename="../prefsdialog.cpp" line="160"/>
-        <location filename="../prefsdialog.cpp" line="174"/>
+        <location filename="../prefsdialog.cpp" line="138"/>
+        <location filename="../prefsdialog.cpp" line="154"/>
+        <location filename="../prefsdialog.cpp" line="169"/>
+        <location filename="../prefsdialog.cpp" line="184"/>
         <location filename="../prefsdialog.cpp" line="199"/>
-        <location filename="../prefsdialog.cpp" line="214"/>
-        <location filename="../prefsdialog.cpp" line="248"/>
-        <location filename="../prefsdialog.cpp" line="264"/>
-        <location filename="../prefsdialog.cpp" line="279"/>
+        <location filename="../prefsdialog.cpp" line="213"/>
+        <location filename="../prefsdialog.cpp" line="238"/>
+        <location filename="../prefsdialog.cpp" line="253"/>
+        <location filename="../prefsdialog.cpp" line="287"/>
+        <location filename="../prefsdialog.cpp" line="303"/>
+        <location filename="../prefsdialog.cpp" line="318"/>
+        <location filename="../prefsdialog.cpp" line="427"/>
+        <location filename="../prefsdialog.cpp" line="436"/>
+        <location filename="../prefsdialog.cpp" line="445"/>
+        <location filename="../prefsdialog.cpp" line="454"/>
         <source>All Files (*);;Executable (*.exe)</source>
         <translation>All Files (*);;Executable (*.exe)</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="114"/>
+        <location filename="../prefsdialog.cpp" line="153"/>
         <source>Path to g++</source>
         <translation>Pfad zu g++</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="129"/>
+        <location filename="../prefsdialog.cpp" line="168"/>
         <source>Path to make</source>
         <translation>Pfad zu make</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="144"/>
+        <location filename="../prefsdialog.cpp" line="183"/>
         <source>Path to strip</source>
         <translation>Pfad zu strip</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="180"/>
+        <location filename="../prefsdialog.cpp" line="219"/>
         <source>Open GNU as Include Directory</source>
         <translation>GNU-as-Include-Verzeichnis öffnen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="198"/>
+        <location filename="../prefsdialog.cpp" line="237"/>
         <source>Path to vc</source>
         <translation>Pfad zu vc</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="213"/>
+        <location filename="../prefsdialog.cpp" line="252"/>
         <source>Path to vasm</source>
         <translation>Pfad zu vasm</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="220"/>
+        <location filename="../prefsdialog.cpp" line="259"/>
         <source>Open VBCC config Directory</source>
         <translation>VBCC-Konfigurationsverzeichnis öffnen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="229"/>
+        <location filename="../prefsdialog.cpp" line="268"/>
         <source>Open vasm Include Directory</source>
         <translation>vasm-Include-Verzeichnis öffnen</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="247"/>
+        <location filename="../prefsdialog.cpp" line="286"/>
         <source>Path to Amiga emulator</source>
         <translation>Pfad zum Amiga-Emulator</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="263"/>
+        <location filename="../prefsdialog.cpp" line="302"/>
         <source>Path to AmigaOS 1.3 config file</source>
         <translation>Pfad zur AmigaOS-1.3-Konfigurationsdatei</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="278"/>
+        <location filename="../prefsdialog.cpp" line="317"/>
         <source>Path to AmigaOS 3.x config file</source>
         <translation>Pfad zur AmigaOS-3.x-Konfigurationsdatei</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="303"/>
+        <location filename="../prefsdialog.cpp" line="342"/>
         <source>Please select a config file first.</source>
         <translation>Bitte zuerst eine Konfigurationsdatei auswählen.</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="347"/>
+        <location filename="../prefsdialog.cpp" line="386"/>
         <source>Could not open a text editor for:
 %1</source>
         <translation>Es konnte kein Texteditor geöffnet werden für:
 %1</translation>
     </message>
     <message>
-        <location filename="../prefsdialog.cpp" line="367"/>
+        <location filename="../prefsdialog.cpp" line="406"/>
         <source>Open NDK AutoDocs Folder</source>
         <translation>NDK-AutoDocs-Ordner öffnen</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.cpp" line="426"/>
+        <source>Path to MUI GUI Designer</source>
+        <translation>Pfad zu MUI GUI Designer</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.cpp" line="435"/>
+        <source>Path to GadTools GUI Designer</source>
+        <translation>Pfad zu GadTools GUI Designer</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.cpp" line="444"/>
+        <source>Path to ReAction GUI Designer</source>
+        <translation>Pfad zu ReAction GUI Designer</translation>
+    </message>
+    <message>
+        <location filename="../prefsdialog.cpp" line="453"/>
+        <source>Path to User Tool</source>
+        <translation>Pfad zum eigenen Werkzeug</translation>
     </message>
     <message>
         <source>Path Amiga icon file</source>

@@ -1163,7 +1163,7 @@
          <item row="3" column="2">
           <widget class="QLineEdit" name="lineEdit_getAutodocsDir">
            <property name="toolTip">
-            <string>NDK AutoDocs folder, e.g. Include_I's &quot;Autodocs&quot; drawer - used by Build &gt; AutoDoc Reader...</string>
+            <string>NDK AutoDocs folder, e.g. Include_I's "Autodocs" drawer - used by Build &gt; AutoDoc Reader...</string>
            </property>
            <property name="text">
             <string/>
@@ -1211,6 +1211,337 @@
           <size>
            <width>20</width>
            <height>294</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabTools">
+      <attribute name="title">
+       <string>Tools</string>
+      </attribute>
+      <attribute name="toolTip">
+       <string>External GUI builder tools, launchable from the Tools menu</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_Tools">
+       <item>
+        <widget class="QGroupBox" name="groupBox_ToolMui">
+         <property name="title">
+          <string>MUI GUI Designer</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_ToolMui">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_ToolMuiPath">
+            <property name="text">
+             <string>Path:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool1Path</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="3">
+           <widget class="QLineEdit" name="lineEdit_Tool1Path">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="btn_getTool1Path">
+            <property name="maximumSize">
+             <size>
+              <width>31</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="application.qrc">
+              <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_ToolMuiParams">
+            <property name="text">
+             <string>Parameters:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool1Params</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="lineEdit_Tool1Params">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_ToolMuiName">
+            <property name="text">
+             <string>Name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool1Name</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3" colspan="2">
+           <widget class="QLineEdit" name="lineEdit_Tool1Name">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_ToolGadtools">
+         <property name="title">
+          <string>GadTools GUI Designer</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_ToolGadtools">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_ToolGadtoolsPath">
+            <property name="text">
+             <string>Path:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool2Path</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="3">
+           <widget class="QLineEdit" name="lineEdit_Tool2Path">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="btn_getTool2Path">
+            <property name="maximumSize">
+             <size>
+              <width>31</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="application.qrc">
+              <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_ToolGadtoolsParams">
+            <property name="text">
+             <string>Parameters:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool2Params</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="lineEdit_Tool2Params">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_ToolGadtoolsName">
+            <property name="text">
+             <string>Name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool2Name</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3" colspan="2">
+           <widget class="QLineEdit" name="lineEdit_Tool2Name">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_ToolReaction">
+         <property name="title">
+          <string>ReAction GUI Designer</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_ToolReaction">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_ToolReactionPath">
+            <property name="text">
+             <string>Path:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool3Path</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="3">
+           <widget class="QLineEdit" name="lineEdit_Tool3Path">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="btn_getTool3Path">
+            <property name="maximumSize">
+             <size>
+              <width>31</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="application.qrc">
+              <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_ToolReactionParams">
+            <property name="text">
+             <string>Parameters:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool3Params</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="lineEdit_Tool3Params">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_ToolReactionName">
+            <property name="text">
+             <string>Name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool3Name</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3" colspan="2">
+           <widget class="QLineEdit" name="lineEdit_Tool3Name">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_ToolUser">
+         <property name="title">
+          <string>User Tool</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_ToolUser">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_ToolUserPath">
+            <property name="text">
+             <string>Path:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool4Path</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="3">
+           <widget class="QLineEdit" name="lineEdit_Tool4Path">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="btn_getTool4Path">
+            <property name="maximumSize">
+             <size>
+              <width>31</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="application.qrc">
+              <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_ToolUserParams">
+            <property name="text">
+             <string>Parameters:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool4Params</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="lineEdit_Tool4Params">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_ToolUserName">
+            <property name="text">
+             <string>Name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_Tool4Name</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3" colspan="2">
+           <widget class="QLineEdit" name="lineEdit_Tool4Name">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_Tools">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
           </size>
          </property>
         </spacer>

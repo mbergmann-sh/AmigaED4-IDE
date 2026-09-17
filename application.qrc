@@ -47,6 +47,7 @@
         <file>images/filetype_asm.png</file>
         <file>images/filetype_pas.png</file>
         <file>images/filetype_exe.png</file>
+        <file>images/muibuilderqt.png</file>
     </qresource>
     <qresource prefix="/help">
         <file alias="manual_en.html">help/manual_en.html</file>
@@ -56,3 +57,4 @@
         <file alias="amigaed_tool.info">resources/amigaed_tool.info</file>
     </qresource>
 </RCC>
+

@@ -70,6 +70,38 @@ PrefsDialog::~PrefsDialog()
 
 void PrefsDialog::on_btn_SavePrefs_clicked()
 {
+   // Prefs > Tools: warn (but don't block saving - same non-blocking
+   // spirit as every other path field in this dialog, e.g. the GCC/VBCC/
+   // Emulator paths above are never checked either) about any non-empty
+   // tool path that doesn't actually exist on THIS machine. This mirrors
+   // exactly the existence check MainWindow::rebuildToolsMenu() performs
+   // itself before adding a Tools-menu entry for that tool, so the user
+   // understands up front why a configured tool's menu entry might not
+   // show up.
+   struct ToolPathCheck { QLineEdit *pathField; QString label; };
+   const QList<ToolPathCheck> toolPathChecks = {
+       { ui->lineEdit_Tool1Path, tr("MUI GUI Designer") },
+       { ui->lineEdit_Tool2Path, tr("GadTools GUI Designer") },
+       { ui->lineEdit_Tool3Path, tr("ReAction GUI Designer") },
+       { ui->lineEdit_Tool4Path, tr("User Tool") },
+   };
+   QStringList missingToolPaths;
+   for (const ToolPathCheck &check : toolPathChecks)
+   {
+       const QString path = check.pathField->text().trimmed();
+       if (!path.isEmpty() && !QFileInfo::exists(path))
+           missingToolPaths << tr("%1: %2").arg(check.label, path);
+   }
+   if (!missingToolPaths.isEmpty())
+   {
+       QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+           tr("The following Tools path(s) do not currently exist on this "
+              "machine:\n\n%1\n\n"
+              "Prefs will still be saved as entered, but the Tools menu "
+              "will only show an entry for a tool once its path actually "
+              "exists.").arg(missingToolPaths.join(QStringLiteral("\n"))));
+   }
+
    save_mySettings();
    this->close();  // quit PrefsDialog
 
@@ -379,6 +411,51 @@ void PrefsDialog::on_btn_getAutodocsDir_clicked()
         ui->lineEdit_getAutodocsDir->setText(dir);
 }
 
+//
+// Prefs > Tools: the 4 file-selection buttons, one per GUI-builder/user
+// tool slot - each just opens a file requester (starting at whatever the
+// slot's own Path field already holds, same convention as the AutoDocs
+// folder picker above) and writes the result back into that field. The
+// actual "does this exist" check happens once, centrally, in
+// on_btn_SavePrefs_clicked() below - not here, since the user may well be
+// typing/pasting a path by hand instead of using this button at all.
+//
+void PrefsDialog::on_btn_getTool1Path_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Path to MUI GUI Designer"), ui->lineEdit_Tool1Path->text(),
+            tr("All Files (*);;Executable (*.exe)"));
+    if (!fileName.isEmpty())
+        ui->lineEdit_Tool1Path->setText(fileName);
+}
+
+void PrefsDialog::on_btn_getTool2Path_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Path to GadTools GUI Designer"), ui->lineEdit_Tool2Path->text(),
+            tr("All Files (*);;Executable (*.exe)"));
+    if (!fileName.isEmpty())
+        ui->lineEdit_Tool2Path->setText(fileName);
+}
+
+void PrefsDialog::on_btn_getTool3Path_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Path to ReAction GUI Designer"), ui->lineEdit_Tool3Path->text(),
+            tr("All Files (*);;Executable (*.exe)"));
+    if (!fileName.isEmpty())
+        ui->lineEdit_Tool3Path->setText(fileName);
+}
+
+void PrefsDialog::on_btn_getTool4Path_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Path to User Tool"), ui->lineEdit_Tool4Path->text(),
+            tr("All Files (*);;Executable (*.exe)"));
+    if (!fileName.isEmpty())
+        ui->lineEdit_Tool4Path->setText(fileName);
+}
+
 
 void PrefsDialog::on_btn_CancelSave_clicked()
 {
@@ -437,6 +514,23 @@ void PrefsDialog::save_mySettings()
      // Not a UAE setting itself (kept in its own "NDK" group), just placed
      // on this same tab - see AutodocReader for what consumes it.
      mySettings.setValue("NDK/AutodocsPath", ui->lineEdit_getAutodocsDir->text());
+
+     // TAB: Tools - the 4 external GUI-builder/user tool slots. See
+     // MainWindow::rebuildToolsMenu() for how these become the dynamic
+     // Tools > GUI Builders / Tools > <User Tool name> menu entries (only
+     // once BOTH Path and Name are non-empty AND Path exists on disk).
+     mySettings.setValue("Tools/Tool1Path", ui->lineEdit_Tool1Path->text());
+     mySettings.setValue("Tools/Tool1Params", ui->lineEdit_Tool1Params->text());
+     mySettings.setValue("Tools/Tool1Name", ui->lineEdit_Tool1Name->text());
+     mySettings.setValue("Tools/Tool2Path", ui->lineEdit_Tool2Path->text());
+     mySettings.setValue("Tools/Tool2Params", ui->lineEdit_Tool2Params->text());
+     mySettings.setValue("Tools/Tool2Name", ui->lineEdit_Tool2Name->text());
+     mySettings.setValue("Tools/Tool3Path", ui->lineEdit_Tool3Path->text());
+     mySettings.setValue("Tools/Tool3Params", ui->lineEdit_Tool3Params->text());
+     mySettings.setValue("Tools/Tool3Name", ui->lineEdit_Tool3Name->text());
+     mySettings.setValue("Tools/Tool4Path", ui->lineEdit_Tool4Path->text());
+     mySettings.setValue("Tools/Tool4Params", ui->lineEdit_Tool4Params->text());
+     mySettings.setValue("Tools/Tool4Name", ui->lineEdit_Tool4Name->text());
 
      // TAB: Misc
      mySettings.setValue("MISC/DefaultStyle", ui->comboBoxDefaultStyle->currentText());
@@ -524,6 +618,46 @@ void PrefsDialog::load_mySettings()
     // MainWindow's usual p_xxx readSettings() mirror) since it has to
     // decide whether to show the splash BEFORE MainWindow even exists.
     ui->checkBoxNoSplashScreen->setChecked(mySettings.value("MISC/NoSplashScreen", false).toBool());
+
+    // TAB: Tools - deliberately loaded AFTER the Misc tab above, since
+    // Tool 1's own first-run default Parameters value (built below) reuses
+    // whatever GUI language/theme the Misc tab just loaded, so a freshly
+    // installed AmigaED launches MuiBuilderQt session-matched to AmigaED's
+    // own current View > GUI Language / View > Theme choice right out of
+    // the box. QSettings::value(key, default) only substitutes "default"
+    // when the key is entirely absent (never for a key the user
+    // deliberately saved as empty), so this only ever applies on a truly
+    // unconfigured slot - once the user has saved Prefs once (even leaving
+    // a field blank), that saved value always wins from then on.
+    QString defaultTool1Path;
+#if defined(Q_OS_WIN)
+    defaultTool1Path = QStringLiteral("C:\\MuiBuilderQt\\MUIBuilderQt.exe");
+#else
+    defaultTool1Path = QStringLiteral("/usr/bin/MUIBuilderQt");
+#endif
+    // Reuses MuiBuilderQt's own --GUI_Language/--GUI_Theme CLI options
+    // (see MuiBuilderQt/gui/main.cpp) - quoted defensively since a
+    // synthetic theme name can contain spaces (e.g. "Visual Studio Code
+    // Dark"), same as any hand-typed value would need to be once this
+    // string is split back into arguments by QProcess::splitCommand() in
+    // MainWindow::launchToolAction().
+    const QString defaultGuiLanguage = ui->comboBoxDefaultGuiLanguage->currentData().toString();
+    const QString defaultTheme = ui->comboBoxDefaultStyle->currentText();
+    const QString defaultTool1Params = QStringLiteral("--GUI_Language=\"%1\" --GUI_Theme=\"%2\"")
+        .arg(defaultGuiLanguage, defaultTheme);
+
+    ui->lineEdit_Tool1Path->setText(mySettings.value("Tools/Tool1Path", defaultTool1Path).toString());
+    ui->lineEdit_Tool1Params->setText(mySettings.value("Tools/Tool1Params", defaultTool1Params).toString());
+    ui->lineEdit_Tool1Name->setText(mySettings.value("Tools/Tool1Name", tr("MUI GUI Designer")).toString());
+    ui->lineEdit_Tool2Path->setText(mySettings.value("Tools/Tool2Path").toString());
+    ui->lineEdit_Tool2Params->setText(mySettings.value("Tools/Tool2Params").toString());
+    ui->lineEdit_Tool2Name->setText(mySettings.value("Tools/Tool2Name").toString());
+    ui->lineEdit_Tool3Path->setText(mySettings.value("Tools/Tool3Path").toString());
+    ui->lineEdit_Tool3Params->setText(mySettings.value("Tools/Tool3Params").toString());
+    ui->lineEdit_Tool3Name->setText(mySettings.value("Tools/Tool3Name").toString());
+    ui->lineEdit_Tool4Path->setText(mySettings.value("Tools/Tool4Path").toString());
+    ui->lineEdit_Tool4Params->setText(mySettings.value("Tools/Tool4Params").toString());
+    ui->lineEdit_Tool4Name->setText(mySettings.value("Tools/Tool4Name").toString());
 }
 
 void PrefsDialog::on_checkBoxSimpleStatusbar_clicked()

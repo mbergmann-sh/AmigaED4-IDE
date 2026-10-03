@@ -9818,6 +9818,12 @@ void MainWindow::createNewProject(int templateKind)
     p_projectModified = false;   // freshly created and already saved (see above) - nothing unsaved yet
     if (saveProjectAct)
         saveProjectAct->setEnabled(false);
+    // A previous project's build log has no business surviving into a
+    // brand-new project - without this, output still showed whatever the
+    // last build of the OLD project printed until the user built the new
+    // one (which is the only other place that clears it, right before
+    // starting the compiler process - see runCommand()). Reported bug.
+    output->clear();
     regenerateProjectMakefiles();   // must run BEFORE refreshProjectTree() - it scans disk for which Makefiles exist
     refreshProjectTree();
     refreshFunctionsList();
@@ -9860,24 +9866,84 @@ void MainWindow::actionNewProjectMUI()       { createNewProject(5); }
 void MainWindow::actionNewProjectAssembler() { createNewProject(6); }
 
 //
+// True if the file at path is a compiled binary executable/shared object,
+// judged by its leading magic bytes - NOT by the host's "+x" permission
+// bit. Recognizes Amiga hunk executables (0x000003F3), ELF, Windows PE
+// ("MZ") and Mach-O (32/64 bit, both byte orders, plus fat binaries).
+//
+static bool hasBinaryExecutableMagic(const QString &path)
+{
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly))
+        return false;
+
+    unsigned char m[4] = { 0, 0, 0, 0 };
+    const qint64 n = f.read(reinterpret_cast<char *>(m), 4);
+
+    if (n >= 2 && m[0] == 'M' && m[1] == 'Z')
+        return true;                                                    // Windows PE / DOS
+    if (n < 4)
+        return false;
+
+    const quint32 be = (quint32(m[0]) << 24) | (quint32(m[1]) << 16) | (quint32(m[2]) << 8) | quint32(m[3]);
+    switch (be)
+    {
+    case 0x000003F3u:                                                   // Amiga hunk executable (HUNK_HEADER)
+    case 0x7F454C46u:                                                   // ELF ("\x7fELF")
+    case 0xFEEDFACEu: case 0xCEFAEDFEu:                                 // Mach-O 32 bit
+    case 0xFEEDFACFu: case 0xCFFAEDFEu:                                 // Mach-O 64 bit
+    case 0xCAFEBABEu:                                                   // Mach-O fat/universal binary
+        return true;
+    default:
+        return false;
+    }
+}
+
+//
 // True for a file an "Import existing Project..." scan should leave out:
-// build artifacts (object files, Amiga linker files) and any executable -
-// none of these are human-authored project sources worth tracking, and
-// an executable in particular could just as easily be some unrelated
-// program that happens to sit in the chosen folder.
+// build artifacts (object files, Amiga linker files) and any compiled
+// executable - none of these are human-authored project sources worth
+// tracking, and an executable in particular could just as easily be some
+// unrelated program that happens to sit in the chosen folder.
+//
+// rev.158 fix: this used to rely on QFileInfo::isExecutable(). On Linux
+// (and macOS) that only reflects the "+x" permission bit, which is set on
+// EVERY file of a project that was copied from a FAT/NTFS/exFAT volume, a
+// Samba/CIFS or WSL (/mnt/c) share, an Amiga/UAE directory or extracted
+// from many archives - so every .c/.h/Makefile was classified as an
+// executable and the import aborted with "No importable files were
+// found". On Windows, isExecutable() only looks at the extension, which
+// is why the bug never showed up there. The check is now content-based
+// and identical on every host OS; files with a recognized source/text
+// extension are never treated as executables at all.
 //
 bool MainWindow::isImportSkippableFile(const QString &path) const
 {
     QFileInfo info(path);
-    QString suffix = info.suffix().toLower();
+    const QString suffix = info.suffix().toLower();
 
-    if (suffix == "o" || suffix == "lnk")
+    // Build artifacts / host binaries, recognized by name alone.
+    static const QStringList artifactSuffixes = {
+        "o", "obj", "lnk", "exe", "dll", "so", "dylib"
+    };
+    if (artifactSuffixes.contains(suffix))
         return true;
 
-    if (info.isExecutable())
-        return true;
+    // Anything AmigaED knows as a source/text type (C/C++, headers,
+    // assembler, AmigaGuide, Installer scripts by extension, ...) is
+    // always imported, whatever its permission bits say.
+    if (!suffix.isEmpty())
+    {
+        const ProjectFileType type = Project::typeForFile(path);
+        if (type == ProjectFileType::CSource || type == ProjectFileType::Header
+            || type == ProjectFileType::Assembly || type == ProjectFileType::AmigaGuide)
+            return false;
+    }
 
-    return false;
+    // Everything else (notably extension-less files, which may be an
+    // Amiga executable just as well as a Makefile or Installer script):
+    // look at the actual file content.
+    return hasBinaryExecutableMagic(path);
 }
 
 void MainWindow::actionImportExistingProject() { importExistingProject(); }
@@ -10070,6 +10136,9 @@ void MainWindow::loadProjectFile(const QString &fileName)
     p_projectModified = false;   // just loaded from disk - nothing unsaved yet
     if (saveProjectAct)
         saveProjectAct->setEnabled(false);
+    // Same reasoning as createNewProject(): don't leave the previous
+    // project's build log sitting there once a different project is loaded.
+    output->clear();
 
     // A loaded project might never have gone through createNewProject()
     // (e.g. a hand-assembled .aep, or one from an older AmigaED version
@@ -11121,6 +11190,9 @@ void MainWindow::actionCloseProject()
     currentProject = nullptr;
     p_projectModified = false;
     saveProjectAct->setEnabled(false);
+    // Same reasoning as createNewProject()/loadProjectFile(): don't leave
+    // this project's build log sitting there once it's closed.
+    output->clear();
 
     refreshProjectTree();
     refreshFunctionsList();

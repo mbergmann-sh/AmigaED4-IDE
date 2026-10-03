@@ -8,6 +8,32 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.158
+
+- **Fixed**: File &rarr; New Project &rarr; "Import existing Project..."
+  refused to import foreign projects on Linux (and macOS) with "No
+  importable files were found in: ...", although the folder was full of
+  C sources, headers and Makefiles. `isImportSkippableFile()` used
+  `QFileInfo::isExecutable()` to leave out executables - on Unix hosts
+  that only reports the `+x` permission bit, which is set on *every*
+  file of a project copied from a FAT/NTFS/exFAT volume, a Samba/CIFS or
+  WSL share, an Amiga/UAE directory, or extracted from many archives. So
+  every file was treated as an executable and skipped. On Windows
+  `isExecutable()` only checks the file extension, which is why the bug
+  never showed up there. Executables are now detected by their content
+  (magic bytes: Amiga hunk `0x000003F3`, ELF, Windows PE, Mach-O),
+  identically on every host OS; files with a recognized source extension
+  (C/C++, headers, assembler, AmigaGuide) are always imported, and the
+  name-based artifact list was extended to `.o`, `.obj`, `.lnk`, `.exe`,
+  `.dll`, `.so` and `.dylib`. The same fix applies to the fallback folder
+  scan used when importing a GUI Builder project.
+- Bundles the patches delivered after rev.157 that were not yet part of
+  a numbered revision: the "Visual Studio Code Dark" theme, the new
+  Prefs &rarr; Tools tab with the dynamic Tools &rarr; GUI Builders menu
+  (incl. the start-up crash fix for the uninitialized `toolsMenue`
+  pointer and the MuiBuilderQt menu icon), and File &rarr; New Project
+  &rarr; GUI Builder Projects.
+
 ## rev.157
 
 - **Fixed**: Makefiles could not be removed from a project. The "Remove"

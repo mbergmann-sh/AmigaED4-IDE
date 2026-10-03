@@ -711,7 +711,7 @@ private:
     bool promptCompilerLinkerOptions(QString &compilerOpts, QString &linkerOpts, int templateKind); // asks before Makefiles are (re)created; pre-fills known-good defaults for certain template/compiler combinations
     void createNewProject(int templateKind);         // shared implementation for all "New Project" menu entries
     void importExistingProject();                     // shared implementation for "Import existing Project..." - scans a chosen folder, builds a Project from what it finds and saves it as a new .aep
-    bool isImportSkippableFile(const QString &path) const;  // true for a file an import scan should leave out: .o, .lnk, or an executable
+    bool isImportSkippableFile(const QString &path) const;  // true for a file an import scan should leave out: .o/.lnk/.obj/.exe/.dll/.so/.dylib, or a binary executable (detected by content, not by the +x bit)
     void applyProjectTargetOSIfNeeded(int forcedTarget = -1);   // switches the status bar's target-OS gadget to match the project's template ("OS 1.3" vs "OS 3.x") - applies to VBCC, GCC and G++ alike; pass 0/1 to force it instead of inferring from the template (see importExistingProject())
     void getCompilerAndLinkerOptsForTarget(int compiler, int targetOS, QString &compilerOpts, QString &linkerOpts) const;   // central (compiler, target OS) -> (compiler opts, linker opts) lookup
     QString compilerDisplayLabel(int compiler) const;   // short status-bar-friendly compiler name: "gcc"/"g++"/"vbcc"

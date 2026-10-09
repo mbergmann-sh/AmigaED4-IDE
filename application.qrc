@@ -48,6 +48,7 @@
         <file>images/filetype_pas.png</file>
         <file>images/filetype_exe.png</file>
         <file>images/muibuilderqt.png</file>
+        <file>images/import_project.png</file>
     </qresource>
     <qresource prefix="/help">
         <file alias="manual_en.html">help/manual_en.html</file>

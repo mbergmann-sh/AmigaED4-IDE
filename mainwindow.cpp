@@ -501,6 +501,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     if (maybeSaveAll())
     {
+        stopVamosProgram();   // rev.159: never leave a vamos child process behind
         // Only ask about (and possibly touch) the emulator once the app is
         // actually committed to closing - asking earlier, or unconditionally
         // killing it beforehand (the previous behaviour here), meant a
@@ -1084,6 +1085,10 @@ void MainWindow::createActions()
     newProjectEmptyCAct = new QAction(tr("Empty Amiga C Project"), this);
     connect(newProjectEmptyCAct, SIGNAL(triggered()), this, SLOT(actionNewProjectEmptyC()));
 
+    newProjectMultilingualAct = new QAction(tr("New multilingual Amiga C Project"), this);   // rev.159
+    newProjectMultilingualAct->setStatusTip(tr("A C project whose texts come from a FlexCat catalog (locale.library): built-in English, German translation included"));
+    connect(newProjectMultilingualAct, &QAction::triggered, this, [this]() { createNewProject(10); });
+
     newProjectShellAct = new QAction(tr("Shell Project"), this);
     connect(newProjectShellAct, SIGNAL(triggered()), this, SLOT(actionNewProjectShell()));
 
@@ -1120,7 +1125,12 @@ void MainWindow::createActions()
     newProjectAssemblerAct = new QAction(tr("New Assembler Project"), this);
     connect(newProjectAssemblerAct, SIGNAL(triggered()), this, SLOT(actionNewProjectAssembler()));
 
-    importExistingProjectAct = new QAction(tr("Import existing Project..."), this);
+    // rev.159: frequently used - gets its own toolbar button (see
+    // createToolBars()) and an instant shortcut. Ctrl+Shift+I ("Import")
+    // is free: Ctrl+I is Insert > #include, and QScintilla's own default
+    // key map doesn't bind Ctrl+Shift+I either.
+    importExistingProjectAct = new QAction(QIcon(":/images/import_project.png"), tr("Import existing Project..."), this);
+    importExistingProjectAct->setShortcut(tr("Ctrl+Shift+I"));
     importExistingProjectAct->setStatusTip(tr("Import an existing C/C++ project folder that AmigaED doesn't know yet"));
     connect(importExistingProjectAct, SIGNAL(triggered()), this, SLOT(actionImportExistingProject()));
 
@@ -1149,6 +1159,12 @@ void MainWindow::createActions()
     cleanProjectAct = new QAction(QIcon(":/images/clean_project.png"), tr("Clean Project"), this);
     cleanProjectAct->setStatusTip(tr("Remove the project's build artifacts (object files, executable, icon)"));
     connect(cleanProjectAct, SIGNAL(triggered()), this, SLOT(actionCleanProject()));
+
+    // rev.159: SAS/C 6.58 under vamos - independent of the compiler selected
+    // in the status bar (which only covers the cross compilers)
+    buildSascVamosAct = new QAction(tr("Build Project with SAS/C (vamos)"), this);
+    buildSascVamosAct->setStatusTip(tr("Compile and link the project's .c files with SAS/C running under vamos (see Prefs > vamos)"));
+    connect(buildSascVamosAct, &QAction::triggered, this, &MainWindow::actionBuildProjectSascVamos);
 
     projectOptionsAct = new QAction(tr("Project Options..."), this);
     projectOptionsAct->setStatusTip(tr("Edit this project's own extra compiler/linker options"));
@@ -1755,6 +1771,7 @@ void MainWindow::createMenus()
     newProjectMenue->addAction(importExistingProjectAct);
     newProjectMenue->addSeparator();
     newProjectMenue->addAction(newProjectEmptyCAct);
+    newProjectMenue->addAction(newProjectMultilingualAct);   // rev.159
     newProjectMenue->addAction(newProjectShellAct);
     newProjectMenue->addAction(newProjectAmigaOS13Act);
     newProjectMenue->addAction(newProjectAmigaOS3xAct);
@@ -1867,6 +1884,7 @@ void MainWindow::createMenus()
     buildMenue->addAction(compileAct);
     buildMenue->addAction(buildProjectAct);
     buildMenue->addAction(cleanProjectAct);
+    buildMenue->addAction(buildSascVamosAct);
     buildMenue->addAction(projectOptionsAct);
     buildMenue->addSeparator();
     buildMenue->addAction(toggleGccDefaultOptsAct);
@@ -1985,6 +2003,7 @@ void MainWindow::createToolBars()
 {
     fileToolBar = addToolBar(tr("File"));   // this is a section, correspondending to main menue "File"
     fileToolBar->addAction(newAct);         // this is a section entry, correspondending to menue entry "File/New"
+    fileToolBar->addAction(importExistingProjectAct);   // mirrors menu entry File/New Project.../Import existing Project... (rev.159)
     fileToolBar->addSeparator();
     fileToolBar->addAction(openAct);
     fileToolBar->addAction(saveAct);
@@ -2038,6 +2057,8 @@ void MainWindow::retranslateUi()
     newAct->setText(tr("&New"));
     openAct->setText(tr("&Open..."));
     newProjectEmptyCAct->setText(tr("Empty Amiga C Project"));
+    newProjectMultilingualAct->setText(tr("New multilingual Amiga C Project"));
+    newProjectMultilingualAct->setStatusTip(tr("A C project whose texts come from a FlexCat catalog (locale.library): built-in English, German translation included"));
     newProjectShellAct->setText(tr("Shell Project"));
     newProjectAmigaOS13Act->setText(tr("AmigaOS 1.3 Project"));
     newProjectAmigaOS3xAct->setText(tr("AmigaOS 3.x Project"));
@@ -2055,6 +2076,7 @@ void MainWindow::retranslateUi()
     addFilesToProjectAct->setText(tr("Add files to Project..."));
     buildProjectAct->setText(tr("Build Project"));
     cleanProjectAct->setText(tr("Clean Project"));
+    buildSascVamosAct->setText(tr("Build Project with SAS/C (vamos)"));
     projectOptionsAct->setText(tr("Project Options..."));
     openShellAct->setText(tr("Open Shell"));
     saveAct->setText(tr("&Save"));
@@ -2163,6 +2185,7 @@ void MainWindow::retranslateUi()
     addFilesToProjectAct->setStatusTip(tr("Add one or more existing files to the current project"));
     buildProjectAct->setStatusTip(tr("Run the project's Makefile (target \"all\") for the currently selected compiler"));
     cleanProjectAct->setStatusTip(tr("Remove the project's build artifacts (object files, executable, icon)"));
+    buildSascVamosAct->setStatusTip(tr("Compile and link the project's .c files with SAS/C running under vamos (see Prefs > vamos)"));
     projectOptionsAct->setStatusTip(tr("Edit this project's own extra compiler/linker options"));
     openShellAct->setStatusTip(tr("Open the system's default command line, starting in the current project's folder (or Prefs > Project > \"Projects root\" if none is loaded)"));
     saveAct->setStatusTip(tr("Save the document to disk"));
@@ -2618,6 +2641,17 @@ void MainWindow::readSettings()
     p_tool4Name = settings.value("Tools/Tool4Name").toString();
     if (toolsMenue)              // not yet created on the very first call (constructor runs
         rebuildToolsMenu();      // readSettings() before createMenus()) - initializeGUI() covers that first build itself
+
+    // TAB: vamos (rev.159) - defaults shared with PrefsDialog::load_mySettings()
+    p_projectsRootAmiga = settings.value("Project/ProjectRootAmiga").toString().trimmed();   // rev.159
+    p_flexcat_path = settings.value("Tools/FlexCatPath").toString().trimmed();   // rev.159, Prefs > Tools > Multilingual Programs
+    p_vamos_command = settings.value("VAMOS/Command", PrefsDialog::vamosDefaultCommand()).toString().trimmed();
+    p_vamos_wsl = settings.value("VAMOS/UseWSL", PrefsDialog::vamosDefaultUseWSL()).toBool();
+    p_vamos_workbench_dir = settings.value("VAMOS/WorkbenchDir").toString().trimmed();
+    p_vamos_work_dir = settings.value("VAMOS/WorkDir").toString().trimmed();
+    p_vamos_opts = settings.value("VAMOS/ExtraOpts", QStringLiteral("-m 8000 -s 256")).toString().trimmed();
+    p_vamos_sasc_dir = settings.value("VAMOS/SascDir", QStringLiteral("workbench:SAS-C")).toString().trimmed();
+    p_vamos_mui_dir = settings.value("VAMOS/MuiDir", QStringLiteral("work:MUI")).toString().trimmed();
     if (newGuiBuilderProjectMuiAct)   // same "not yet created on the very first call" guard as above
         updateGuiBuilderProjectActions();
 
@@ -5913,7 +5947,7 @@ bool MainWindow::actionEmulator(int forcedTarget)
                                      "<br>This helps, ya know?!",
                                      QMessageBox::Ok);
 
-        actionPrefsDialog(3);
+        actionPrefsDialog(4);   // Emulator tab (was 3 = SAS/C since that tab was added - rev.159 fix)
 
         return (false);
     }
@@ -5930,7 +5964,7 @@ bool MainWindow::actionEmulator(int forcedTarget)
                                         "<br>This helps, ya know?!"),
                                      QMessageBox::Ok);
 
-        actionPrefsDialog(3);
+        actionPrefsDialog(4);   // Emulator tab (was 3 = SAS/C since that tab was added - rev.159 fix)
 
         return (false);
     }
@@ -8049,11 +8083,12 @@ bool MainWindow::promptCompilerLinkerOptions(QString &compilerOpts, QString &lin
     // genuinely relevant to add (e.g. extra vlink/ld flags).
     if (templateKind != 6)
     {
-        int effectiveTarget = p_compiler_vc_default_target;
-        if (templateKind == 2)
-            effectiveTarget = 0;   // "AmigaOS 1.3 Project" -> OS 1.3, regardless of the gadget's current state
-        else if (templateKind == 3)
-            effectiveTarget = 1;   // "AmigaOS 3.x Project" -> OS 3.x, regardless of the gadget's current state
+        // The template's own target OS wins over the gadget's current
+        // state (see templateTargetOS()) - e.g. a MUI project is always
+        // OS 3.x, even if the status bar still shows "OS 1.3".
+        int effectiveTarget = templateTargetOS(templateKind);
+        if (effectiveTarget < 0)
+            effectiveTarget = p_compiler_vc_default_target;
 
         getCompilerAndLinkerOptsForTarget(p_defaultCompiler, effectiveTarget, defaultCompilerOpts, defaultLinkerOpts);
         defaultCompilerOpts = dedupTokens(defaultCompilerOpts);
@@ -8111,6 +8146,34 @@ bool MainWindow::promptCompilerLinkerOptions(QString &compilerOpts, QString &lin
 // entirely with a case-sensitive match, silently generating Makefiles
 // with no math library linked in at all.
 //
+//
+// rev.159: the SAS/C options for the current project - used for both
+// Makefile.sc and the SAS/C build via vamos (actionBuildProjectSascVamos()),
+// so the two can never drift apart.
+//
+// Only adds MATH=IEEE if the project doesn't already configure a MATH=
+// mode of its own (SAS/C also supports MATH=68881/MATH=FFP) - never
+// overrides an explicit user choice. MUI projects get the MUI SDK's
+// include directory (MUI: is assigned by MUI's own installer) unless the
+// user already configured an IDIR= of their own (or assigned
+// INCLUDE: ... ADD on the Amiga).
+//
+QString MainWindow::sascOptionsForProject() const
+{
+    QString scOpts = p_compiler_sc_call;
+    if (!currentProject)
+        return scOpts;
+
+    if (projectUsesFloatingPoint() && !scOpts.contains(QStringLiteral("MATH="), Qt::CaseInsensitive))
+        scOpts = scOpts.isEmpty() ? QStringLiteral("MATH=IEEE") : (scOpts + QStringLiteral(" MATH=IEEE"));
+
+    const bool isMuiProject = (currentProject->templateKind == 5 || currentProject->templateKind == 7);
+    if (isMuiProject && !scOpts.contains(QStringLiteral("IDIR="), Qt::CaseInsensitive))
+        scOpts = scOpts.isEmpty() ? QStringLiteral("IDIR=MUI:Developer/C/Include")
+                                  : (scOpts + QStringLiteral(" IDIR=MUI:Developer/C/Include"));
+    return scOpts.trimmed();
+}
+
 bool MainWindow::projectUsesFloatingPoint() const
 {
     if (!currentProject)
@@ -8297,11 +8360,9 @@ void MainWindow::regenerateProjectMakefiles()
     // promptCompilerLinkerOptions(), so what the user confirmed there and
     // what ends up in the Makefile always agree); any other template
     // falls back to the live gadget value.
-    int effectiveTarget = p_compiler_vc_default_target;
-    if (currentProject->templateKind == 2)
-        effectiveTarget = 0;
-    else if (currentProject->templateKind == 3)
-        effectiveTarget = 1;
+    int effectiveTarget = templateTargetOS(currentProject->templateKind);   // rev.159: every template, not just 1.3/3.x
+    if (effectiveTarget < 0)
+        effectiveTarget = p_compiler_vc_default_target;
 
     // vbcc's "vc" frontend requires a '+config' target selection (e.g.
     // '+aos68k') as the very first argument on EVERY invocation - without
@@ -8409,8 +8470,76 @@ void MainWindow::regenerateProjectMakefiles()
     // fine without it). Confirmed: a generated MUI project linked cleanly
     // with vbcc but failed under gcc with "undefined reference to
     // `MUI_NewObject'"/`MUI_Request'/`MUI_MakeObject'" without this.
-    if (currentProject->templateKind == 5)
-        gccLDFlags = dedupTokens(gccLDFlags + QStringLiteral(" -lmui"));
+    //
+    // rev.159: also for MUI GUI Builder Projects (templateKind 7), whose
+    // generated code calls the very same MUI_NewObject()/MUI_MakeObject().
+    //
+    // Plus "-Wl,-u,___stkinit": libnix's stack swap (which honours a
+    // program's "unsigned long __stack = ...;", see the MUI template in
+    // mainFileTemplateContent()) lives in swapstack.o, which the linker only
+    // pulls in when something references ___stkinit - without this the
+    // program silently keeps the 4 KB Shell stack and MUI 5 warns at start-up
+    // ("stack size ... smaller than the recommended minimum of 32000 bytes").
+    // Verified with m68k-amigaos-gcc 16.2 + libnix on AmigaOS 3.2.3.
+    //
+    // No -I for the MUI SDK here on purpose: the MUI headers come with the
+    // toolchain itself ("make sdk=mui", installed to <prefix>/m68k-amigaos/
+    // include, found automatically). The SDK's own MUI:Developer/C/Include
+    // ships old-style gcc inline headers (multi-line asm strings) that
+    // modern gcc rejects - those are for SAS/C only (see Makefile.sc below).
+    const bool isMuiProject = (currentProject->templateKind == 5 || currentProject->templateKind == 7);
+    if (isMuiProject)
+        gccLDFlags = dedupTokens(gccLDFlags + QStringLiteral(" -lmui -Wl,-u,___stkinit"));
+
+    // rev.159: FlexCat catalog rules for multilingual projects - one set per
+    // tracked "<B>.cd": regenerate <B>_strings.h (CatComp_h.sd) when the .cd
+    // changes, make every object depend on it, and build
+    // Catalogs/<lang>/<B>.catalog from each tracked "<B>_<lang>.ct" (target
+    // "catalogs", part of "all"). The Catalogs/<lang> folders are created
+    // here, by AmigaED - a portable mkdir in a Makefile that runs under
+    // both cmd.exe (mingw32-make) and sh isn't possible.
+    QString catalogRules, catalogTargets, stringHeaders;
+    {
+        QStringList ctFiles;
+        for (const ProjectFile &f : currentProject->files)
+            if (QFileInfo(f.path).suffix().compare(QStringLiteral("ct"), Qt::CaseInsensitive) == 0)
+                ctFiles << QFileInfo(f.path).fileName();
+
+        for (const ProjectFile &f : currentProject->files)
+        {
+            QFileInfo cdInfo(f.path);
+            if (cdInfo.suffix().compare(QStringLiteral("cd"), Qt::CaseInsensitive) != 0)
+                continue;
+            const QString B = cdInfo.completeBaseName();
+            const QString header = B + QStringLiteral("_strings.h");
+            stringHeaders += QLatin1Char(' ') + header;
+            catalogRules += header + QStringLiteral(": ") + cdInfo.fileName() + QStringLiteral("\n")
+                          + QStringLiteral("\t$(FLEXCAT) ") + cdInfo.fileName() + QLatin1Char(' ') + header
+                          + QStringLiteral("=$(FLEXCAT_SD)/CatComp_h.sd\n\n");
+            for (const QString &ct : ctFiles)
+            {
+                if (!ct.startsWith(B + QLatin1Char('_')))
+                    continue;
+                const QString lang = QFileInfo(ct).completeBaseName().mid(B.length() + 1);
+                if (lang.isEmpty())
+                    continue;
+                QDir(dir).mkpath(QStringLiteral("Catalogs/") + lang);
+                const QString catalog = QStringLiteral("Catalogs/") + lang + QLatin1Char('/') + B + QStringLiteral(".catalog");
+                catalogTargets += QLatin1Char(' ') + catalog;
+                catalogRules += catalog + QStringLiteral(": ") + cdInfo.fileName() + QLatin1Char(' ') + ct + QStringLiteral("\n")
+                              + QStringLiteral("\t$(FLEXCAT) ") + cdInfo.fileName() + QLatin1Char(' ') + ct
+                              + QStringLiteral(" CATALOG=") + catalog + QStringLiteral("\n\n");
+            }
+        }
+    }
+    const bool hasCatalogs = !stringHeaders.isEmpty();
+    QString flexCatPath = flexCatExecutable();
+    const QString flexCatSd = flexCatPath.isEmpty() ? QStringLiteral("sd")
+                                                    : QDir::fromNativeSeparators(QFileInfo(flexCatPath).absolutePath()) + QStringLiteral("/sd");
+    if (flexCatPath.isEmpty())
+        flexCatPath = QStringLiteral("flexcat");   // not configured: hope for the PATH (Prefs > Tools > Multilingual Programs)
+    else
+        flexCatPath = QDir::fromNativeSeparators(flexCatPath);
 
     auto writeMakefile = [&](const QString &fileBaseName, const QString &toolchainLabel, const QString &ccPath,
                               const QString &alwaysFirstArgs, const QString &cflags, const QString &ldflags,
@@ -8476,8 +8605,19 @@ void MainWindow::regenerateProjectMakefiles()
             out << "CCARGS  = " << alwaysFirstArgs << "  # must stay the first thing after $(CC) - see comment above\n";
         out << "CFLAGS  = " << cflags << "\n";
         out << "LDFLAGS = " << ldflags << "\n\n";
-        out << ".PHONY: all clean\n\n";
-        out << "all: $(TARGET)\n\n";
+        if (hasCatalogs)
+        {
+            out << "FLEXCAT    = " << flexCatPath << "\n";
+            out << "FLEXCAT_SD = " << flexCatSd << "\n\n";
+            out << ".PHONY: all clean catalogs\n\n";
+            out << "all: $(TARGET) catalogs\n\n";
+            out << "catalogs:" << catalogTargets << "\n\n";
+        }
+        else
+        {
+            out << ".PHONY: all clean\n\n";
+            out << "all: $(TARGET)\n\n";
+        }
         out << "$(TARGET): $(OBJS)\n";
         if (asmOnlyProject && toolchainLabel.startsWith("vbcc"))
             out << "\t$(LINK) -bamigahunk -x -R short -s $(OBJS) $(LDFLAGS) -o $(TARGET)\n";
@@ -8497,6 +8637,12 @@ void MainWindow::regenerateProjectMakefiles()
         out << "\n";
         out << "%.o: %.c\n";
         out << "\t$(CC) $(CCARGS) $(CFLAGS) -c $< -o $@\n\n";
+        if (hasCatalogs)
+        {
+            out << "# Multilingual project (FlexCat): string header and catalogs\n";
+            out << "$(OBJS):" << stringHeaders << "\n\n";
+            out << catalogRules;
+        }
         if (!asmSources.isEmpty())
         {
             if (toolchainLabel.startsWith("vbcc"))
@@ -8713,9 +8859,7 @@ void MainWindow::regenerateProjectMakefiles()
         // for a real FPU/Fast Floating Point instead) - never override an
         // explicit user choice, only fill in a sensible default when
         // nothing at all was specified and the project needs one.
-        QString scOpts = p_compiler_sc_call;
-        if (usesFloatingPoint && !scOpts.contains(QStringLiteral("MATH="), Qt::CaseInsensitive))
-            scOpts = scOpts.isEmpty() ? QStringLiteral("MATH=IEEE") : (scOpts + QStringLiteral(" MATH=IEEE"));
+        QString scOpts = sascOptionsForProject();   // rev.159: shared with the SAS/C-via-vamos build, see there
 
         QString scContent;
         {
@@ -9280,11 +9424,16 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             "#include <libraries/gadtools.h>\n"
             "#include <proto/exec.h>\n"
             "#include <proto/dos.h>\n"
-            "#include <proto/muimaster.h>\n\n"
+            "#include <proto/muimaster.h>\n"
+            "#include <clib/alib_protos.h>   /* DoMethod() (amiga.lib) - gcc 14+ rejects implicit declarations */\n\n"
             "#define myDebug TRUE\n\n"
             "#define MENU_ABOUT 1\n"
             "#define MENU_QUIT  2\n\n"
             "struct Library *MUIMasterBase;\n\n"
+            "/* MUI 5 warns at start-up below 32000 bytes of stack. Honoured by\n"
+            " * SAS/C and vbcc directly; with m68k-amigaos-gcc (libnix) only together\n"
+            " * with -Wl,-u,___stkinit, which AmigaED adds to Makefile.gcc for you. */\n"
+            "unsigned long __stack = 36000;\n\n"
             "int main(int argc, char *argv[])\n"
             "{\n"
             "\tAPTR app, win, menustrip;\n"
@@ -9545,6 +9694,79 @@ QString MainWindow::mainFileTemplateContent(int templateKind, const QString &bas
             "msglen\t\t=\tmsgend-msg\n";
     }
 
+    case 10: // Multilingual Amiga C Project (rev.159) - see writeMultilingualProjectFiles()
+    {
+        // The catalog files are named after the C identifier form of the
+        // project's base name (CatComp_h.sd builds macro names from it).
+        QString catBase = multilingualCatalogBase(baseName);
+        QString body =
+            "/* A multilingual Shell program using locale.library.\n"
+            " *\n"
+            " * The texts are NOT written here, but in @BASE@.cd (built-in language:\n"
+            " * English) and translated in @BASE@_deutsch.ct (German). From these,\n"
+            " * FlexCat generates @BASE@_strings.h (IDs + English texts) and\n"
+            " * Catalogs/deutsch/@BASE@.catalog - AmigaED's Makefiles do that on\n"
+            " * every build. Never edit @BASE@_strings.h by hand.\n"
+            " *\n"
+            " * On the Amiga, copy the \"Catalogs\" drawer next to the program (or the\n"
+            " * catalog to LOCALE:Catalogs/deutsch/). With Locale prefs set to\n"
+            " * Deutsch it then speaks German, otherwise English. */\n\n"
+            "#include <exec/types.h>\n"
+            "#include <dos/dos.h>\n"
+            "#include <libraries/locale.h>\n"
+            "#include <proto/exec.h>\n"
+            "#include <proto/dos.h>\n"
+            "#include <proto/locale.h>\n\n"
+            "/* Ask the generated header for the string table (IDs + built-in\n"
+            " * English texts) - in exactly ONE source file of the program. */\n"
+            "#define @BASE@_ARRAY\n"
+            "#include \"@BASE@_strings.h\"\n\n"
+            "const char version[] = \"$VER: @NAME@ 1.0 (@DATE@)\";\n\n"
+            "struct LocaleBase *LocaleBase = NULL;\n"
+            "static struct Catalog *catalog = NULL;\n\n"
+            "/* A text in the user's language: from the catalog if there is one,\n"
+            " * otherwise the built-in English text from @BASE@_strings.h. */\n"
+            "static CONST_STRPTR GetString(LONG id)\n"
+            "{\n"
+            "\tCONST_STRPTR builtIn = (CONST_STRPTR)\"\";\n"
+            "\tULONG i;\n\n"
+            "\tfor (i = 0; i < sizeof(@BASE@_Array) / sizeof(@BASE@_Array[0]); i++)\n"
+            "\t{\n"
+            "\t\tif (@BASE@_Array[i].cca_ID == id)\n"
+            "\t\t{\n"
+            "\t\t\tbuiltIn = @BASE@_Array[i].cca_Str;\n"
+            "\t\t\tbreak;\n"
+            "\t\t}\n"
+            "\t}\n"
+            "\treturn catalog ? GetCatalogStr(catalog, id, builtIn) : builtIn;\n"
+            "}\n\n"
+            "int main(int argc, char *argv[])\n"
+            "{\n"
+            "\t/* locale.library is optional: without it (or without a catalog for\n"
+            "\t * the user's language) the program simply speaks English. */\n"
+            "\tLocaleBase = (struct LocaleBase *)OpenLibrary((CONST_STRPTR)\"locale.library\", 38);\n"
+            "\tif (LocaleBase)\n"
+            "\t\tcatalog = OpenCatalog(NULL, (CONST_STRPTR)\"@BASE@.catalog\",\n"
+            "\t\t                      OC_BuiltInLanguage, (ULONG)\"english\",\n"
+            "\t\t                      OC_Version, 1,\n"
+            "\t\t                      TAG_DONE);\n\n"
+            "\tPrintf((CONST_STRPTR)\"%s\\n\", GetString(MSG_HELLO));\n"
+            "\tPrintf((CONST_STRPTR)\"%s\\n\", GetString(MSG_LANGUAGE));\n"
+            "\tPrintf(GetString(MSG_ARGS), (LONG)(argc > 0 ? argc - 1 : 0));\n"
+            "\tPrintf((CONST_STRPTR)\"\\n%s\\n\", GetString(MSG_BYE));\n\n"
+            "\t/* TODO: Write your code! New texts go into @BASE@.cd first. */\n\n"
+            "\tif (LocaleBase)\n"
+            "\t{\n"
+            "\t\tCloseCatalog(catalog);   /* NULL is fine */\n"
+            "\t\tCloseLibrary((struct Library *)LocaleBase);\n"
+            "\t}\n"
+            "\treturn RETURN_OK;\n"
+            "}\n";
+        body.replace(QStringLiteral("@BASE@"), catBase);
+        body.replace(QStringLiteral("@NAME@"), baseName);
+        body.replace(QStringLiteral("@DATE@"), QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy")));
+        return header + body;
+    }
     case 0: // Empty Amiga C Project
     default:
         return header +
@@ -9689,12 +9911,41 @@ bool MainWindow::closeProjectTabs()
 // whenever one is loaded (loadProjectFile(), via actionLoadProject()/
 // openRecentProject()/"Recent Projects").
 //
+//
+// rev.159: the target OS a project template implies - 0 = "OS 1.3",
+// 1 = "OS 3.x", or -1 if the template doesn't decide it (Assembler,
+// imported/unknown projects), in which case the status bar's live target-OS
+// gadget applies. Single source of truth for promptCompilerLinkerOptions(),
+// regenerateProjectMakefiles() and applyProjectTargetOSIfNeeded(): before,
+// only the first two special-cased the "AmigaOS 1.3/3.x" templates, while
+// the last one switched EVERY template except OS 1.3 to OS 3.x - but only
+// AFTER the project's options had been prompted and its Makefiles written.
+// With the gadget on "OS 1.3", a new MUI/ReAction/Empty C/Shell project
+// thus got "+kick13 -c99"/"-mcrt=nix13" pre-filled and stored as its own
+// extra options (and in its first Makefiles).
+//
+int MainWindow::templateTargetOS(int templateKind)
+{
+    switch (templateKind)
+    {
+    case 2:
+        return 0;                       // AmigaOS 1.3 Project
+    case 0: case 1: case 3: case 4: case 5:
+    case 7: case 8: case 9:
+    case 10:                            // Multilingual (locale.library needs V38 = OS 2.1+)
+        return 1;                       // Empty C, Shell, OS 3.x, ReAction, MUI, GUI Builder projects
+    default:
+        return -1;                      // Assembler (6), imported/unknown (-1)
+    }
+}
+
 void MainWindow::applyProjectTargetOSIfNeeded(int forcedTarget)
 {
     if (!currentProject)
         return;
 
-    int target = (forcedTarget >= 0) ? forcedTarget : ((currentProject->templateKind == 2) ? 0 : 1);   // 0 = "OS 1.3", 1 = "OS 3.x"
+    int templateTarget = templateTargetOS(currentProject->templateKind);
+    int target = (forcedTarget >= 0) ? forcedTarget : ((templateTarget >= 0) ? templateTarget : 1);   // 0 = "OS 1.3", 1 = "OS 3.x" - unchanged behaviour for -1/6: OS 3.x
     p_compiler_vc_default_target = target;
     osCombo->setCurrentIndex(target);   // reflect it in the status bar; also triggers setDefaultTargetOS()
 }
@@ -9792,6 +10043,8 @@ void MainWindow::createNewProject(int templateKind)
         project->asmAssembler = asmAssemblerChoice;   // locked in for this project's lifetime, see the messagebox above
     project->addFile(mainFilePath);
     project->mainFile = mainFilePath;
+    if (templateKind == 10)
+        writeMultilingualProjectFiles(project, dir, mainFileName);   // rev.159: .cd, German .ct, generated header
 
     QString aepPath = dir + QDir::separator() + name + ".aep";
     if (!project->save(aepPath))
@@ -11557,6 +11810,21 @@ void MainWindow::onProjectTreeDoubleClicked(QTreeWidgetItem *item, int column)
     if (path.isEmpty())
         return;
 
+    // rev.159: a built program is a binary - opening it in the text editor
+    // showed garbage and saving it from there would have destroyed it.
+    // A double-click runs it instead - in the emulator for GUI projects,
+    // in vamos otherwise (see isGuiTemplate()).
+    if (item->parent() == projectExecutableGroupItem)
+    {
+        // GUI projects start in the emulator, Shell projects in vamos (which
+        // has no windows) - both are always in the context menu
+        if (isGuiTemplate(currentProject ? currentProject->templateKind : -1))
+            runExecutableInEmulator(path);
+        else
+            runExecutableInVamos(path, false);
+        return;
+    }
+
     openFileInTab(path);
 }
 
@@ -11588,11 +11856,29 @@ void MainWindow::onProjectTreeContextMenu(const QPoint &pos)
     QAction *setMainAction = nullptr;
     QAction *renameAction = nullptr;
     QAction *removeAction = nullptr;
+    QAction *runVamosAction = nullptr;
+    QAction *runVamosArgsAction = nullptr;
+    QAction *stopVamosAction = nullptr;
+    QAction *runEmuAction = nullptr;
     if (isExecutable)
     {
         // A compiled binary - "Open" (into the text editor) and "Set as
         // main file for compilation" simply don't apply to it, unlike
         // every other category.
+        // rev.159: run it right here on the host via vamos (Shell
+        // programs only - vamos has no windows/graphics), see
+        // runExecutableInVamos().
+        const bool vamosBusy = (vamosProcess && vamosProcess->state() != QProcess::NotRunning);
+        runVamosAction = menu.addAction(QIcon(":/images/open_shell.png"), tr("Run in vamos"));
+        runVamosArgsAction = menu.addAction(tr("Run in vamos with arguments..."));
+        runEmuAction = menu.addAction(QIcon(":/images/start-emu.png"), tr("Start in emulator (Workbench)"));
+        if (vamosBusy)
+        {
+            runVamosAction->setEnabled(false);
+            runVamosArgsAction->setEnabled(false);
+            stopVamosAction = menu.addAction(tr("Stop vamos program"));
+        }
+        menu.addSeparator();
         renameAction = menu.addAction(tr("Rename..."));
         if (isTracked)
         {
@@ -11631,6 +11917,18 @@ void MainWindow::onProjectTreeContextMenu(const QPoint &pos)
     {
         openFileInTab(path);
     }
+    else if (chosen == runVamosAction || chosen == runVamosArgsAction)
+    {
+        runExecutableInVamos(path, chosen == runVamosArgsAction);
+    }
+    else if (chosen == stopVamosAction)
+    {
+        stopVamosProgram();
+    }
+    else if (chosen == runEmuAction)
+    {
+        runExecutableInEmulator(path);
+    }
     else if (chosen == setMainAction)
     {
         actionSetAsMainFile();
@@ -11665,19 +11963,37 @@ void MainWindow::onProjectTreeContextMenu(const QPoint &pos)
             return;
         }
 
-        if (isTracked)
+        // Take the program's Workbench icon along (written by
+        // writeProgramIcon() as "<executable>.info") - otherwise the
+        // renamed program would lose its icon on the Amiga and an orphaned
+        // .info would be left behind under the old name. Only if no icon
+        // exists under the new name yet; a failure here is not fatal.
+        const QString oldIconPath = path + QStringLiteral(".info");
+        const QString newIconPath = newPath + QStringLiteral(".info");
+        if (QFileInfo::exists(oldIconPath) && !QFileInfo::exists(newIconPath) &&
+            QFile::rename(oldIconPath, newIconPath) && currentProject->contains(oldIconPath))
         {
-            currentProject->removeFile(path);
-            currentProject->addFile(newPath);
-            markProjectModified();
-            saveCurrentProject();
+            // an imported project may track its .info icons as files of
+            // their own - keep that entry pointing at the renamed icon
+            currentProject->removeFile(oldIconPath);
+            currentProject->addFile(newIconPath);
         }
-        // An untracked, freshly-scanned executable (see refreshProjectTree()'s
-        // "Executable" category scan) needed no Project::files update - it
-        // was never tracked to begin with. Renamed away from the name the
-        // next build expects though, so it simply won't reappear here
-        // until the project is rebuilt - the same way it would on a real
-        // Amiga if you renamed a binary by hand.
+
+        // rev.159 fix: the renamed executable stays in the "Executable"
+        // category under its new name. A freshly built, untracked
+        // executable is only found by refreshProjectTree()'s scan for the
+        // project's own link target name - after renaming it no longer
+        // matched that name and simply vanished from the tree. It is now
+        // tracked in Project::files (and so in the .aep) instead, always
+        // with type Executable: Project::typeForFile() would classify a
+        // new name with an extension (e.g. "Prog.68k") as "Other". This
+        // also covers an already tracked executable (an imported
+        // project's binary, or one renamed before).
+        if (isTracked)
+            currentProject->removeFile(path);
+        currentProject->addFile(newPath, ProjectFileType::Executable);
+        markProjectModified();
+        saveCurrentProject();
         refreshProjectTree();
     }
     else if (chosen == removeAction)
@@ -12496,14 +12812,27 @@ int MainWindow::stopCommand(int exitCode, QProcess::ExitStatus exitStatus)
                 // overhead needs considerably more than a plain console
                 // program or even a ReAction one - see createNewProject()
                 // for what each numeric templateKind means.
+                //
+                // rev.159: MUI, Empty C and imported projects get 36000
+                // bytes. MUI 5 itself warns at start-up below 32000 bytes
+                // (and a Workbench start with WBRun/the default icon
+                // otherwise only gets the icon's stack), an Empty C
+                // project is the usual starting point for a hand-written
+                // GUI program, and an imported foreign project (-1) may
+                // be anything - MUI/ReAction included - so it gets the
+                // safe value too.
                 long stackSize;
                 switch (currentProject->templateKind)
                 {
                 case 2:  stackSize = 4096;  break;   // AmigaOS 1.3
-                case 4:  stackSize = 16000; break;   // ReAction
-                case 5:  stackSize = 34000; break;   // MUI
+                case 4:                              // ReAction
+                case 9:  stackSize = 16000; break;   // ReAction GUI Builder Project - same as the ReAction template (was 8192 before rev.159)
+                case 0:                              // Empty C
+                case 5:                              // MUI
+                case 7:                              // MUI GUI Builder Project
+                case -1: stackSize = 36000; break;   // imported (or unknown) project
                 case 6:  stackSize = 4096;  break;   // Assembler (no C runtime, minimal stack needed)
-                default: stackSize = 8192;  break;   // Empty C / Shell / AmigaOS 3.x
+                default: stackSize = 8192;  break;   // Shell / AmigaOS 3.x / GadTools GUI Builder
                 }
                 writeProgramIcon(expectedTarget, stackSize);
             }
@@ -12813,7 +13142,13 @@ void MainWindow::on_output_cursorPositionChanged()
         text_to_search = block.text();
 
     // Now let's do all the work for jumping to error/warning!
-    if (!(text_to_search.isEmpty()))
+    // rev.159: SAS/C lines (from a build via vamos) are recognised whatever
+    // compiler is selected - see checkSASC()
+    if (!text_to_search.isEmpty() && (checkSASC(text_to_search) || checkFlexCat(text_to_search)))
+    {
+        jumpToError(line_nr, 0);
+    }
+    else if (!(text_to_search.isEmpty()))
     {
         switch(p_defaultCompiler)
         {
@@ -12981,8 +13316,9 @@ void MainWindow::highlightOutputDiagnostics()
         // shape; GNU as (4) shares GCC/G++'s (1/2) "file:line: type:"
         // shape - see on_output_cursorPositionChanged() for the same
         // routing, confirmed against real vasm/GNU-as output.
-        bool matched = (p_defaultCompiler == 0 || p_defaultCompiler == 3)
-                        ? checkVBCC(lineText) : checkGCC(lineText);
+        bool matched = checkSASC(lineText) || checkFlexCat(lineText)   // rev.159: SAS/C via vamos, FlexCat - any selected compiler
+                    || ((p_defaultCompiler == 0 || p_defaultCompiler == 3)
+                        ? checkVBCC(lineText) : checkGCC(lineText));
 
         cursor.setPosition(block.position());
         cursor.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
@@ -13442,4 +13778,736 @@ void MainWindow::clearMarkers()
 {
     int lastLine = textEdit->lines() - 1;
     textEdit->clearIndicatorRange( 0, 0, lastLine, textEdit->text( lastLine ).length() - 1, MY_MARKER_ID );
+}
+
+
+//
+// rev.159: vamos (amitools) integration - run a built AmigaOS Shell program
+// directly on the host, with its output in the compiler-output panel.
+//
+// The command line is:
+//   <vamos command> <extra opts> [-V workbench:<dir>] [-V work:<dir>]
+//       -V amigaed:<program's folder> --cwd amigaed: amigaed:<program> [args]
+// The program's own folder becomes the volume "amigaed:" and the current
+// directory, so it finds files next to itself just like on the Amiga (and
+// Amiga paths never get a '/' right after the colon, which crashes vamos).
+// workbench:/work: are the emulator's own partition folders (Prefs > vamos)
+// so vamos, the emulator and AmigaED all see the same files.
+//
+// On Windows vamos runs inside WSL: wsl.exe hands its arguments to the WSL
+// shell as ONE command line, so every argument AmigaED adds is single-quoted
+// for that shell (vamosArg()) and Windows paths become /mnt/<drive>/...
+// (vamosHostPath()). The user's own command (e.g. "wsl ~/amitools-venv/bin/
+// vamos") and extra options are passed as typed, so "~" etc. still expand.
+//
+QString MainWindow::vamosHostPath(const QString &path) const
+{
+    QString native = QDir::toNativeSeparators(QDir::cleanPath(path));
+    if (!p_vamos_wsl)
+        return QDir::fromNativeSeparators(native);
+
+    // D:\x\y -> /mnt/d/x/y (UNC paths like \\server\share have no WSL
+    // equivalent - passed through unchanged, vamos will report it)
+    static const QRegularExpression drive(QStringLiteral("^([A-Za-z]):[\\\\/]?(.*)$"));
+    QRegularExpressionMatch m = drive.match(native);
+    if (!m.hasMatch())
+        return QDir::fromNativeSeparators(native);
+    QString rest = m.captured(2);
+    rest.replace('\\', '/');
+    return QStringLiteral("/mnt/") + m.captured(1).toLower() + (rest.isEmpty() ? QString() : (QStringLiteral("/") + rest));
+}
+
+QString MainWindow::vamosArg(const QString &arg) const
+{
+    if (!p_vamos_wsl)
+        return arg;
+    QString quoted = arg;
+    quoted.replace(QStringLiteral("'"), QStringLiteral("'\\''"));
+    return QStringLiteral("'") + quoted + QStringLiteral("'");
+}
+
+void MainWindow::stopVamosProgram()
+{
+    if (!vamosProcess || vamosProcess->state() == QProcess::NotRunning)
+        return;
+    vamosProcess->kill();   // vamos has no clean "Ctrl-C" path from outside; the child is a plain host process
+    vamosProcess->waitForFinished(2000);
+}
+
+//
+// rev.159: common vamos launcher for "Run in vamos" and the SAS/C build.
+// <hostDir> becomes volume "amigaed:" and the current directory; <tail> is
+// everything after that (program + its arguments, already Amiga-side),
+// <extraAssigns> are "name:target" assigns (e.g. sc:workbench:SAS-C),
+// <path> an optional Amiga command path ("-p"). All of these are quoted
+// for the WSL shell by vamosArg(). Returns false if vamos isn't configured
+// or still busy (the user has already been told).
+//
+bool MainWindow::startVamos(VamosJob job, const QString &hostDir, const QStringList &extraAssigns,
+                            const QString &path, const QStringList &tail, const QString &header)
+{
+    if (vamosProcess && vamosProcess->state() != QProcess::NotRunning)
+    {
+        QMessageBox::information(this, tr(AMIGAED_VERSION_STRING),
+                                 tr("A program is still running in vamos. Stop it first (right-click it > \"Stop vamos program\")."));
+        return false;
+    }
+
+    QStringList command = QProcess::splitCommand(p_vamos_command);
+    if (command.isEmpty())
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("No vamos command is configured. Please enter it in Prefs > vamos."));
+        actionPrefsDialog(7);   // Prefs > vamos
+        return false;
+    }
+
+    const QString program = command.takeFirst();
+    QStringList args = command;                                  // e.g. "~/amitools-venv/bin/vamos" behind "wsl"
+    args << QProcess::splitCommand(p_vamos_opts);                 // user's own options, as typed
+    if (!p_vamos_workbench_dir.isEmpty())
+        args << vamosArg(QStringLiteral("-V")) << vamosArg(QStringLiteral("workbench:") + vamosHostPath(p_vamos_workbench_dir));
+    if (!p_vamos_work_dir.isEmpty())
+        args << vamosArg(QStringLiteral("-V")) << vamosArg(QStringLiteral("work:") + vamosHostPath(p_vamos_work_dir));
+    for (const QString &a : extraAssigns)
+        args << vamosArg(QStringLiteral("-a")) << vamosArg(a);
+    if (!path.isEmpty())
+        args << vamosArg(QStringLiteral("-p")) << vamosArg(path);
+    args << vamosArg(QStringLiteral("-V")) << vamosArg(QStringLiteral("amigaed:") + vamosHostPath(hostDir))
+         << vamosArg(QStringLiteral("--cwd")) << vamosArg(QStringLiteral("amigaed:"));
+    for (const QString &t : tail)
+        args << vamosArg(t);
+
+    if (!vamosProcess)
+    {
+        vamosProcess = new QProcess(this);
+        vamosProcess->setProcessChannelMode(QProcess::MergedChannels);
+        connect(vamosProcess, &QProcess::readyReadStandardOutput, this, [this]()
+        {
+            // AmigaOS programs write ISO-8859-1; strip CRs (Windows/WSL)
+            // and ANSI/CSI escape sequences (slink underlines its
+            // "Undefined symbols" table with ESC[4m...ESC[0m).
+            static const QRegularExpression csi(QStringLiteral("(\x1b|\x9b)\\[?[0-9;]*[A-Za-z]"));
+            QString text = QString::fromLatin1(vamosProcess->readAllStandardOutput());
+            text.remove('\r');
+            text.remove(csi);
+            // vamos' own housekeeping note when a program (SAS/C!) exits
+            // without freeing all its memory - harmless, pure noise here
+            static const QRegularExpression orphan(QStringLiteral("^[^\n]*mem_alloc:WARNING:\\s+orphan[^\n]*\n?"),
+                                                   QRegularExpression::MultilineOption);
+            text.remove(orphan);
+            output->moveCursor(QTextCursor::End);
+            output->setCurrentCharFormat(QTextCharFormat());   // never inherit a red/yellow diagnostic format
+            output->insertPlainText(text);
+            output->moveCursor(QTextCursor::End);
+        });
+        connect(vamosProcess, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus status)
+        {
+            vamosFinished(exitCode, status);
+        });
+        connect(vamosProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error)
+        {
+            if (error == QProcess::FailedToStart)
+            {
+                output->appendPlainText(tr("--- could not start vamos (\"%1\") - check Prefs > vamos ---").arg(p_vamos_command));
+                createStatusBarMessage(tr("vamos could not be started"), 0);
+            }
+        });
+    }
+
+    p_vamosJob = job;
+    vamosProcess->setWorkingDirectory(hostDir);   // WSL also starts its shell here
+    output->clear();
+    output->setCurrentCharFormat(QTextCharFormat());   // a previous build's diagnostic colouring must not carry over
+    outputGroup->show();
+    output->appendPlainText(header);
+    output->moveCursor(QTextCursor::End);
+    output->insertPlainText(QStringLiteral("\n"));   // tool output starts on its own line
+
+    vamosProcess->start(program, args);
+    if (vamosProcess->waitForStarted(5000))
+        vamosProcess->closeWriteChannel();   // no console input: a program reading stdin gets EOF instead of hanging (slink: BATCH anyway)
+    return true;
+}
+
+void MainWindow::vamosFinished(int exitCode, QProcess::ExitStatus status)
+{
+    auto appendLine = [this](const QString &msg)
+    {
+        // no blank line if the tool's output already ended with one
+        output->moveCursor(QTextCursor::End);
+        output->setCurrentCharFormat(QTextCharFormat());   // see readyRead handler
+        if (output->toPlainText().endsWith('\n'))
+            output->insertPlainText(msg);
+        else
+            output->appendPlainText(msg);
+    };
+
+    if (status == QProcess::CrashExit)
+    {
+        appendLine(tr("--- vamos was stopped ---"));
+        createStatusBarMessage(tr("vamos was stopped"), 0);
+        return;
+    }
+
+    if (p_vamosJob == VamosJob::RunProgram)
+    {
+        appendLine(tr("--- program finished, return code %1 ---").arg(exitCode));
+        createStatusBarMessage(tr("vamos: program finished (return code %1)").arg(exitCode), 0);
+        return;
+    }
+
+    // VamosJob::SascBuild - sc's return code alone isn't enough: with
+    // BATCH (needed so slink never waits for keyboard input that can't
+    // come), an undefined symbol is linked to a stub and slink STILL writes
+    // the program (return code 3 here). Running it would crash, so that
+    // half-built program is removed again.
+    highlightOutputDiagnostics();
+    const bool undefinedSymbols = output->toPlainText().contains(QStringLiteral("Undefined symbols"), Qt::CaseInsensitive);
+    const QString target = currentProject ? (currentProject->projectDir() + QDir::separator() + p_vamosSascTarget) : QString();
+
+    if (exitCode == 0 && !undefinedSymbols)
+    {
+        appendLine(tr("--- SAS/C build finished successfully ---"));
+        createStatusBarMessage(tr("SAS/C (vamos): project build finished successfully."), 0);
+    }
+    else
+    {
+        QString why = undefinedSymbols ? tr("undefined symbols") : tr("return code %1").arg(exitCode);
+        if (!target.isEmpty() && QFileInfo::exists(target) && undefinedSymbols)
+        {
+            QFile::remove(target);
+            QFile::remove(target + QStringLiteral(".info"));
+            why += tr(" - the incomplete program was removed");
+        }
+        appendLine(tr("--- SAS/C build failed (%1) ---").arg(why));
+        createStatusBarMessage(tr("SAS/C (vamos): project build failed - see compiler output."), 0);
+    }
+    if (currentProject)
+        refreshProjectTree();
+}
+
+void MainWindow::runExecutableInVamos(const QString &exePath, bool askForArguments)
+{
+    QFileInfo exe(exePath);
+    if (!exe.exists())
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("The program \"%1\" does not exist (any more). Build the project first.")
+                                 .arg(QDir::toNativeSeparators(exePath)));
+        return;
+    }
+
+    QString userArgs;
+    if (askForArguments)
+    {
+        bool ok = false;
+        userArgs = QInputDialog::getText(this, tr("Run in vamos"),
+                                         tr("Arguments for %1:").arg(exe.fileName()),
+                                         QLineEdit::Normal, p_lastVamosArgs, &ok);
+        if (!ok)
+            return;
+        p_lastVamosArgs = userArgs;
+    }
+
+    QStringList tail;
+    tail << QStringLiteral("amigaed:") + exe.fileName();
+    tail << QProcess::splitCommand(userArgs);
+
+    if (startVamos(VamosJob::RunProgram, exe.absolutePath(), QStringList(), QString(), tail,
+                   tr("--- vamos: %1 ---").arg((exe.fileName() + QLatin1Char(' ') + userArgs).trimmed())))
+        createStatusBarMessage(tr("vamos: running %1...").arg(exe.fileName()), 0);
+}
+
+//
+// rev.159: Build > "Build Project with SAS/C (vamos)" - compiles and links
+// the project's plain .c files with SAS/C 6.58 running under vamos, with the
+// very same options Makefile.sc uses (sascOptionsForProject()) plus BATCH:
+//   sc <options> BATCH a.c b.c LINK TO <target>
+// in the project folder (= amigaed:, so .o files, <target>.lnk and the
+// program all land there). Assigns as in the SAS/C setup guide: sc: (Prefs
+// > vamos, default workbench:SAS-C), lib:sc:lib, include:sc:include,
+// cxxinclude:sc:cxxinclude, command path sc:c - plus MUI: for MUI projects.
+//
+void MainWindow::actionBuildProjectSascVamos()
+{
+    if (!currentProject)
+    {
+        QMessageBox::information(this, tr(AMIGAED_VERSION_STRING), tr("No project is currently loaded."));
+        return;
+    }
+    if (!saveModifiedProjectFiles())
+        return;   // user cancelled, or a save failed
+
+    QStringList scSources;
+    for (const ProjectFile &f : currentProject->files)
+        if (f.type == ProjectFileType::CSource && QFileInfo(f.path).suffix().compare("c", Qt::CaseInsensitive) == 0)
+            scSources << QFileInfo(f.path).fileName();
+    if (scSources.isEmpty())
+    {
+        QMessageBox::information(this, tr(AMIGAED_VERSION_STRING),
+                                 tr("This project has no plain C (.c) source files - SAS/C can't build it."));
+        return;
+    }
+
+    const QString sascDir = p_vamos_sasc_dir.isEmpty() ? QStringLiteral("workbench:SAS-C") : p_vamos_sasc_dir;
+    if (sascDir.startsWith(QStringLiteral("workbench:"), Qt::CaseInsensitive) && p_vamos_workbench_dir.isEmpty())
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("SAS/C is expected in \"%1\", but no Workbench folder is set.\n\n"
+                                "Please enter the host folder of your emulator's Workbench partition in Prefs > vamos.").arg(sascDir));
+        actionPrefsDialog(7);
+        return;
+    }
+
+    QString targetName = currentProject->name;
+    targetName.replace(QRegularExpression("[^A-Za-z0-9_\\-]"), "_");
+    p_vamosSascTarget = targetName;
+
+    QStringList assigns;
+    assigns << QStringLiteral("sc:") + sascDir
+            << QStringLiteral("lib:sc:lib")
+            << QStringLiteral("include:sc:include")
+            << QStringLiteral("cxxinclude:sc:cxxinclude");
+    if (currentProject->templateKind == 5 || currentProject->templateKind == 7)
+        assigns << QStringLiteral("MUI:") + (p_vamos_mui_dir.isEmpty() ? QStringLiteral("work:MUI") : p_vamos_mui_dir);
+
+    QStringList tail;
+    tail << QStringLiteral("sc") << QProcess::splitCommand(sascOptionsForProject()) << QStringLiteral("BATCH")
+         << scSources << QStringLiteral("LINK") << QStringLiteral("TO") << targetName;
+
+    if (startVamos(VamosJob::SascBuild, currentProject->projectDir(), assigns, QStringLiteral("sc:c,c:"), tail,
+                   tr("--- SAS/C (vamos): building project \"%1\" ---").arg(currentProject->name)))
+        createStatusBarMessage(tr("SAS/C (vamos): building project \"%1\"...").arg(currentProject->name), 0);
+}
+
+//
+// rev.159: RegEx parse SAS/C 6.x diagnostics ("file.c 12 Error 34: text",
+// also "Warning"). Distinctive enough to be tried before the
+// compiler-specific parsers no matter which compiler is selected - a
+// GCC/VBCC/vasm line never has this shape.
+//
+bool MainWindow::checkSASC(const QString &str_to_search)
+{
+    static const QRegularExpression rx(QStringLiteral("^(\\S.*?) (\\d+) (Error|Warning) (\\d+): (.*)$"));
+    QRegularExpressionMatch m = rx.match(str_to_search);
+    if (!m.hasMatch())
+        return false;
+    debugfilename = m.captured(1);
+    line_nr = m.captured(2).toInt();
+    column_nr = 0;
+    errortype = m.captured(3);
+    return true;
+}
+
+//
+// rev.159: multilingual projects (templateKind 10) - FlexCat + locale.library
+//
+// File layout (all in the project folder, <B> = multilingualCatalogBase()):
+//   <B>.cd              catalog description: IDs + built-in English texts
+//   <B>_deutsch.ct      German translation (one <B>_<language>.ct per language)
+//   <B>_strings.h       generated by FlexCat from <B>.cd via CatComp_h.sd
+//   Catalogs/deutsch/<B>.catalog   generated from <B>.cd + <B>_deutsch.ct
+// The .cd/.ct files are ISO-8859-1 with "## codeset 0", exactly like every
+// file AmigaED reads and writes - FlexCat copies the bytes into the catalog
+// unchanged, so umlauts arrive correctly on the Amiga without needing
+// FlexCat's iconv conversion (which a minimal Windows build may lack).
+//
+
+// The C identifier form of a project's base name: CatComp_h.sd builds macro
+// names (<B>_ARRAY, <B>_Array, ...) from the .cd file's name, so it must not
+// contain '-' or start with a digit.
+QString MainWindow::multilingualCatalogBase(const QString &baseName)
+{
+    QString b = baseName;
+    b.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9_]")), QStringLiteral("_"));
+    if (b.isEmpty() || b.at(0).isDigit())
+        b.prepend(QStringLiteral("Cat_"));
+    return b;
+}
+
+// FlexCat as configured in Prefs > Tools > "Multilingual Programs" - or, if
+// that's empty, a FlexCat sitting next to m68k-amigaos-gcc (where the
+// amiga-gcc setup puts it, together with its "sd" folder). Empty if none.
+QString MainWindow::flexCatExecutable() const
+{
+    if (!p_flexcat_path.isEmpty())
+        return QFileInfo(p_flexcat_path).isFile() ? p_flexcat_path : QString();
+
+    QString gccDir = p_compiler_gcc.isEmpty() ? QString() : QFileInfo(p_compiler_gcc).absolutePath();
+    if (gccDir.isEmpty())
+        return QString();
+    for (const char *n : { "FlexCat.exe", "flexcat.exe", "FlexCat", "flexcat" })
+    {
+        QString candidate = gccDir + QLatin1Char('/') + QLatin1String(n);
+        if (QFileInfo(candidate).isFile())
+            return candidate;
+    }
+    return QString();
+}
+
+// Runs FlexCat synchronously in <dir>; on failure returns false and puts
+// FlexCat's own output into *errorText.
+bool MainWindow::runFlexCat(const QString &dir, const QStringList &args, QString *errorText)
+{
+    const QString exe = flexCatExecutable();
+    if (exe.isEmpty())
+    {
+        if (errorText)
+            *errorText = tr("FlexCat was not found. Please set its path in Prefs > Tools > \"Multilingual Programs\".");
+        return false;
+    }
+    QProcess p;
+    p.setWorkingDirectory(dir);
+    p.setProcessChannelMode(QProcess::MergedChannels);
+    p.start(exe, args);
+    if (!p.waitForStarted(5000) || !p.waitForFinished(30000) || p.exitStatus() != QProcess::NormalExit || p.exitCode() != 0)
+    {
+        if (errorText)
+            *errorText = QString::fromLatin1(p.readAll()).trimmed();
+        return false;
+    }
+    return true;
+}
+
+void MainWindow::writeMultilingualProjectFiles(Project *project, const QString &dir, const QString &baseName)
+{
+    const QString B = multilingualCatalogBase(baseName);
+    const QString date = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
+
+    auto writeLatin1 = [](const QString &path, const QString &text) -> bool
+    {
+        QFile f(path);
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Text))
+            return false;
+        QTextStream out(&f);
+        out.setEncoding(QStringConverter::Latin1);
+        out << text;
+        return true;
+    };
+
+    // Built-in language: English. ID numbers stay fixed once released -
+    // catalogs refer to texts by them.
+    QString cd =
+        "; " + B + ".cd - catalog description (built-in language: English)\n"
+        ";\n"
+        "; Every text of the program lives here: NAME (ID//), then the text.\n"
+        "; Translations go into " + B + "_<language>.ct. AmigaED's Makefiles turn\n"
+        "; this file into " + B + "_strings.h and build Catalogs/<language>/" + B + ".catalog\n"
+        "; from each .ct file. Keep this file ISO-8859-1 (AmigaED does that).\n"
+        ";\n"
+        "#version 1\n"
+        "#language english\n"
+        ";\n"
+        "MSG_HELLO (1//)\n"
+        "Hello, World!\n"
+        ";\n"
+        "MSG_LANGUAGE (2//)\n"
+        "This text is built into the program (English).\n"
+        ";\n"
+        "MSG_ARGS (3//)\n"
+        "Number of arguments: %ld\n"
+        ";\n"
+        "MSG_BYE (4//)\n"
+        "Goodbye!\n"
+        ";\n";
+
+    // German translation - the original text follows each translation as a
+    // comment, the layout FlexCat itself uses for NEWCTFILE.
+    QString ct = QString::fromUtf8(
+        "## version $VER: @B@.catalog 1.0 (@DATE@)\n"
+        "## codeset 0\n"
+        "## language deutsch\n"
+        ";\n"
+        "; @B@_deutsch.ct - German translation of @B@.cd (ISO-8859-1)\n"
+        ";\n"
+        "MSG_HELLO\n"
+        "Hallo, Welt!\n"
+        "; Hello, World!\n"
+        ";\n"
+        "MSG_LANGUAGE\n"
+        "Dieser Text stammt aus dem deutschen Katalog.\n"
+        "; This text is built into the program (English).\n"
+        ";\n"
+        "MSG_ARGS\n"
+        "Anzahl der Argumente: %ld\n"
+        "; Number of arguments: %ld\n"
+        ";\n"
+        "MSG_BYE\n"
+        "Tschüss!\n"
+        "; Goodbye!\n"
+        ";\n");
+    ct.replace(QStringLiteral("@B@"), B);
+    ct.replace(QStringLiteral("@DATE@"), date);
+
+    const QString cdPath = dir + QDir::separator() + B + QStringLiteral(".cd");
+    const QString ctPath = dir + QDir::separator() + B + QStringLiteral("_deutsch.ct");
+    const QString hPath  = dir + QDir::separator() + B + QStringLiteral("_strings.h");
+    writeLatin1(cdPath, cd);
+    writeLatin1(ctPath, ct);
+    QDir(dir).mkpath(QStringLiteral("Catalogs/deutsch"));   // the Makefiles only write the catalog - no mkdir there (cmd.exe vs sh)
+
+    project->addFile(cdPath);
+    project->addFile(ctPath);
+    project->addFile(hPath, ProjectFileType::Header);
+
+    // Generate the header right away, so the project is complete even
+    // before the first build (and for SAS/C, whose Makefile.sc has no
+    // FlexCat step). The Makefiles regenerate it whenever the .cd changes.
+    QString err;
+    const QString sd = QFileInfo(flexCatExecutable()).absolutePath() + QStringLiteral("/sd/CatComp_h.sd");
+    if (!runFlexCat(dir, { B + QStringLiteral(".cd"), B + QStringLiteral("_strings.h=") + sd }, &err))
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("The project was created, but its string header could not be generated yet:\n\n%1\n\n"
+                                "The next build generates it, once FlexCat is set up.").arg(err));
+}
+
+
+//
+// rev.159: FlexCat diagnostics ("Hallo_deutsch.ct, line 6 - warning: ...",
+// "Hallo.cd, line 4 - ERROR: ...") - like checkSASC(), recognised whatever
+// compiler is selected. FlexCat ends with return code 5 on warnings, so make
+// stops there too: a "mismatching placeholders" warning means a format
+// string that may crash at runtime.
+//
+bool MainWindow::checkFlexCat(const QString &str_to_search)
+{
+    static const QRegularExpression rx(QStringLiteral("^(.+?), line (\\d+) - (ERROR|[Ww]arning): (.*)$"));
+    QRegularExpressionMatch m = rx.match(str_to_search);
+    if (!m.hasMatch())
+        return false;
+    debugfilename = m.captured(1);
+    line_nr = m.captured(2).toInt();
+    column_nr = 0;
+    errortype = m.captured(3).toLower();   // "error" / "warning" for the colouring
+    return true;
+}
+
+bool MainWindow::isGuiTemplate(int templateKind) const
+{
+    switch (templateKind)
+    {
+    case 3: case 4: case 5:            // AmigaOS 3.x, ReAction, MUI
+    case 7: case 8: case 9:            // GUI Builder projects (MUI, GadTools, ReAction)
+        return true;
+    default:                           // Empty C, Shell, OS 1.3, Assembler, multilingual, imported
+        return false;
+    }
+}
+
+QString MainWindow::amigaPathFor(const QString &hostPath) const
+{
+    return PrefsDialog::amigaPathForHostPath(hostPath, p_projectsRootDir, p_projectsRootAmiga, p_os30_config,
+                                             p_vamos_workbench_dir, p_vamos_work_dir);
+}
+
+//
+// rev.159: start a built program in the emulator as if its icon had been
+// double-clicked. AmigaED's job runner (<projects root>/AmigaED-Jobs/autorun,
+// started from S:User-Startup - Prefs > Emulator > "Set up start script")
+// polls for a file "job" there and executes it. The job waits for RexxMast
+// and the Workbench, then asks the Workbench via ARexx to open the program's
+// drawer and its icon (ICON ... OPEN: a real WBStartup message, ToolTypes and
+// stack from the icon). Without an icon: WBRun instead.
+// If the emulator isn't running, the user is asked before it is started
+// (OS 3.x config) - a "no" cancels everything.
+//
+void MainWindow::runExecutableInEmulator(const QString &exePath)
+{
+    QFileInfo exe(exePath);
+    if (!exe.exists())
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("The program \"%1\" does not exist (any more). Build the project first.")
+                                 .arg(QDir::toNativeSeparators(exePath)));
+        return;
+    }
+    if (p_projectsRootDir.trimmed().isEmpty())
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING), tr("Please set the projects root in Prefs > Project first."));
+        actionPrefsDialog(0);
+        return;
+    }
+
+    const QString amigaDrawer = amigaPathFor(exe.absolutePath());
+    const QString jobDirHost = QDir(p_projectsRootDir).filePath(QStringLiteral("AmigaED-Jobs"));
+    const QString J = amigaPathFor(jobDirHost);
+    if (!PrefsDialog::looksLikeAmigaPath(amigaDrawer) || !PrefsDialog::looksLikeAmigaPath(J))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("The emulated Amiga can't see this program:\n%1\n\n"
+                                "It has to lie inside the projects root, and the projects root inside a folder hard drive "
+                                "of your emulator configuration (Prefs > Emulator, OS 3.x). If the projects root isn't in "
+                                "one of its drives yet, add it to the emulator as a folder hard drive.")
+                                 .arg(QDir::toNativeSeparators(exe.absoluteFilePath())));
+        actionPrefsDialog(0);
+        return;
+    }
+
+    // Also an emulator AmigaED didn't start itself (by hand, or left open by
+    // a previous session) counts as running - the job runner inside it
+    // picks the job up just the same.
+    const bool running = (myEmulator && myEmulator->state() != QProcess::NotRunning) || p_externalEmulatorTracked
+                         || isEmulatorProcessRunningExternally();
+
+
+    if (!running)
+    {
+        if (QMessageBox::question(this, tr(AMIGAED_VERSION_STRING),
+                                  tr("The emulator isn't running.\n\nStart it now (OS 3.x configuration) and then %1?")
+                                      .arg(exe.fileName()),
+                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
+        {
+            createStatusBarMessage(tr("Start in emulator cancelled."), 5000);
+            return;
+        }
+    }
+
+    // Is AmigaED's block in the Amiga's S:User-Startup (found via the boot
+    // drive of the emulator configuration)? Without it nobody on the Amiga
+    // picks the job up - offer to add it right now.
+    bool needsReboot = false;
+    const QString userStartup = PrefsDialog::bootUserStartup(p_os30_config, p_vamos_workbench_dir);
+    if (!userStartup.isEmpty() && !PrefsDialog::hasStartScriptBlock(userStartup, J))
+    {
+        if (QMessageBox::question(this, tr(AMIGAED_VERSION_STRING),
+                                  tr("AmigaED's start script in the Amiga's S:User-Startup is missing or out of date:\n%1\n\n"
+                                     "Add/update it now? (A backup is kept in User-Startup.bak.)")
+                                      .arg(QDir::toNativeSeparators(userStartup)),
+                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes)
+        {
+            createStatusBarMessage(tr("Start in emulator cancelled."), 5000);
+            return;
+        }
+        QString msg;
+        if (!PrefsDialog::installStartScript(userStartup, J, &msg))
+        {
+            QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING), msg);
+            return;
+        }
+        needsReboot = running;   // a running Amiga only reads User-Startup at its next boot
+    }
+
+    QDir().mkpath(jobDirHost);
+    auto writeLatin1 = [](const QString &path, const QString &text) -> bool
+    {
+        QFile f(path);
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate))
+            return false;
+        return f.write(text.toLatin1()) >= 0;   // Amiga text: ISO-8859-1, LF only
+    };
+
+    // The job runner itself - rewritten every time, so it always matches
+    // this AmigaED version and the current Amiga path (shared with the
+    // "Set up start script" button, see PrefsDialog::writeJobRunner()).
+    PrefsDialog::writeJobRunner(jobDirHost, J);
+
+    const bool hasIcon = QFileInfo::exists(exe.absoluteFilePath() + QStringLiteral(".info"));
+    QString job = QStringLiteral(
+        "FailAt 21\n"
+        "; wait until RexxMast and the Workbench are up (right after booting)\n"
+        "Lab rexx\n"
+        "WaitForPort REXX\n"
+        "If WARN\n"
+        "  Skip rexx BACK\n"
+        "EndIf\n"
+        "Lab wb\n"
+        "WaitForPort WORKBENCH\n"
+        "If WARN\n"
+        "  Skip wb BACK\n"
+        "EndIf\n");
+    if (hasIcon)
+    {
+        writeLatin1(QDir(jobDirHost).filePath(QStringLiteral("start.rexx")), QStringLiteral(
+            "/* AmigaED: start a program like a double-click on its icon */\n"
+            "ADDRESS WORKBENCH\n"
+            "'WINDOW \"%1\" OPEN'\n"
+            "'ICON WINDOW \"%1\" NAMES \"%2\" OPEN'\n"
+            "EXIT rc\n").arg(amigaDrawer, exe.fileName()));
+        // NOT RX "<path>": a quoted argument is taken as ARexx program TEXT,
+        // not a file name - and unquoted, a path with spaces would break.
+        // An assign gives the script a short, space-free name.
+        job += QStringLiteral("Assign AMIGAED_JOBS: \"%1\"\n"
+                              "RX AMIGAED_JOBS:start.rexx\n").arg(J);
+    }
+    else
+    {
+        const QString amigaExe = amigaDrawer.endsWith(QLatin1Char(':')) ? amigaDrawer + exe.fileName()
+                                                                        : amigaDrawer + QLatin1Char('/') + exe.fileName();
+        job += QStringLiteral("WBRun \"%1\"\n").arg(amigaExe);
+    }
+
+    // hand the job over atomically (the runner must never see half a file)
+    const QString jobTmp = QDir(jobDirHost).filePath(QStringLiteral("job.tmp"));
+    const QString jobFile = QDir(jobDirHost).filePath(QStringLiteral("job"));
+    QFile::remove(QDir(jobDirHost).filePath(QStringLiteral("job.done")));
+    QFile::remove(QDir(jobDirHost).filePath(QStringLiteral("job.log")));
+    QFile::remove(jobFile);
+    if (!writeLatin1(jobTmp, job) || !QFile::rename(jobTmp, jobFile))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING), tr("Could not write the job file in:\n%1").arg(QDir::toNativeSeparators(jobDirHost)));
+        return;
+    }
+
+    output->clear();
+    output->setCurrentCharFormat(QTextCharFormat());
+    outputGroup->show();
+    output->appendPlainText(tr("--- Emulator: starting %1 (%2) ---")
+                                .arg(exe.fileName(), hasIcon ? tr("like a double-click on its icon") : tr("WBRun - the program has no icon")));
+
+    if (needsReboot)
+        output->appendPlainText(tr("The start script was just added - please reboot the Amiga once (Ctrl + both Amiga keys). "
+                                   "The program then starts by itself."));
+
+    if (!running && !actionEmulator(1))   // OS 3.x configuration
+    {
+        QFile::remove(jobFile);
+        output->appendPlainText(tr("--- the emulator could not be started ---"));
+        return;
+    }
+
+    // wait for the runner's answer
+    p_emuJobDir = jobDirHost;
+    p_emuJobWaited = 0;
+    if (!emuJobTimer)
+    {
+        emuJobTimer = new QTimer(this);
+        emuJobTimer->setInterval(1000);
+        connect(emuJobTimer, &QTimer::timeout, this, [this]()
+        {
+            const QString done = QDir(p_emuJobDir).filePath(QStringLiteral("job.done"));
+            // The Amiga creates job.done first and writes "rc=N" into it a
+            // moment later - only an answer with content counts.
+            if (QFileInfo(done).size() > 0)
+            {
+                emuJobTimer->stop();
+                QFile log(QDir(p_emuJobDir).filePath(QStringLiteral("job.log")));
+                if (log.open(QIODevice::ReadOnly))
+                {
+                    const QString text = QString::fromLatin1(log.readAll()).trimmed();
+                    if (!text.isEmpty())
+                        output->appendPlainText(text);
+                }
+                QFile d(done);
+                QString rc;
+                if (d.open(QIODevice::ReadOnly))
+                    rc = QString::fromLatin1(d.readAll()).trimmed();
+                const bool ok = (rc == QStringLiteral("rc=0"));
+                output->appendPlainText(ok ? tr("--- started in the emulator ---")
+                                           : tr("--- the Amiga reported a problem (%1) ---").arg(rc));
+                createStatusBarMessage(ok ? tr("Program started in the emulator.") : tr("Start in emulator failed - see output."), 0);
+                return;
+            }
+            if (++p_emuJobWaited == 120)   // a cold boot alone takes about a minute
+                output->appendPlainText(tr("Still waiting for the Amiga... (if nothing happens: is AmigaED's start script set up? Prefs > Emulator)"));
+            if (p_emuJobWaited >= 300)
+            {
+                emuJobTimer->stop();
+                output->appendPlainText(tr("--- no answer from the Amiga after 5 minutes - the job is still waiting in %1 ---")
+                                            .arg(QDir::toNativeSeparators(p_emuJobDir)));
+            }
+        });
+    }
+    emuJobTimer->start();
+    createStatusBarMessage(tr("Emulator: starting %1...").arg(exe.fileName()), 0);
 }

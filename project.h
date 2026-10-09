@@ -120,6 +120,7 @@ public:
     QString projectDir() const;
 
     void addFile(const QString &filePath);          // no-op if already present
+    void addFile(const QString &filePath, ProjectFileType type);   // same, but with an explicit type instead of typeForFile()'s guess; updates the type if already present
     void removeFile(const QString &filePath);
     bool contains(const QString &filePath) const;
 

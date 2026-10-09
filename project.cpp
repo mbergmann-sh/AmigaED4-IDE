@@ -82,11 +82,35 @@ ProjectFileType Project::typeForFile(const QString &filePath)
     return ProjectFileType::Other;
 }
 
+//
+// True if a and b name the same file. QFileInfo::operator== alone is not
+// enough: in Qt 6 it compares canonical paths, and the canonical path of a
+// file that does not exist (any more) is empty - so two DIFFERENT missing
+// files compare equal. That happens right after a rename (the old path is
+// gone) or for a project file deleted outside AmigaED, and made contains()/
+// removeFile() hit the wrong entry (rev.159 fix). For missing files the
+// cleaned absolute paths are compared instead (case-insensitive on
+// Windows, like its file systems).
+//
+static bool isSameFile(const QString &a, const QString &b)
+{
+    QFileInfo ia(a), ib(b);
+    if (ia.exists() && ib.exists())
+        return ia == ib;
+
+    const QString pa = QDir::cleanPath(ia.absoluteFilePath());
+    const QString pb = QDir::cleanPath(ib.absoluteFilePath());
+#ifdef Q_OS_WIN
+    return pa.compare(pb, Qt::CaseInsensitive) == 0;
+#else
+    return pa == pb;
+#endif
+}
+
 bool Project::contains(const QString &filePath) const
 {
-    QFileInfo target(filePath);
     for (const ProjectFile &f : files) {
-        if (QFileInfo(f.path) == target)
+        if (isSameFile(f.path, filePath))
             return true;
     }
     return false;
@@ -103,13 +127,34 @@ void Project::addFile(const QString &filePath)
     files.append(f);
 }
 
+//
+// Same as addFile(path), but with an explicitly given type instead of the
+// one typeForFile() would guess from the name/content - e.g. for a renamed
+// executable whose new name has an extension (see MainWindow::
+// onProjectTreeContextMenu()'s "Rename..."). If the file is already part
+// of the project, only its type is updated.
+//
+void Project::addFile(const QString &filePath, ProjectFileType type)
+{
+    for (ProjectFile &f : files) {
+        if (isSameFile(f.path, filePath)) {
+            f.type = type;
+            return;
+        }
+    }
+
+    ProjectFile f;
+    f.path = filePath;
+    f.type = type;
+    files.append(f);
+}
+
 void Project::removeFile(const QString &filePath)
 {
-    QFileInfo target(filePath);
     for (int i = 0; i < files.count(); ++i) {
-        if (QFileInfo(files.at(i).path) == target) {
+        if (isSameFile(files.at(i).path, filePath)) {
             files.removeAt(i);
-            if (QFileInfo(mainFile) == target)
+            if (!mainFile.isEmpty() && isSameFile(mainFile, filePath))
                 mainFile.clear(); // the main file was just removed from the project
             return;
         }

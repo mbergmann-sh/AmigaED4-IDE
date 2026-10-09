@@ -347,6 +347,7 @@ public slots:
     void openRecentProject();
     void actionBuildProject();
     void actionCleanProject();
+    void actionBuildProjectSascVamos();   // rev.159: Build > Build Project with SAS/C (vamos)
     void actionProjectOptions();     // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
     void actionOpenShell();          // "Open Shell" - opens the system's default command line in the current project's folder (or Prefs "Projects root" if none loaded)
     void closeAllOpenShells();       // terminates every shell/terminal actionOpenShell() launched and is still tracking - called from closeEvent()
@@ -712,6 +713,7 @@ private:
     void createNewProject(int templateKind);         // shared implementation for all "New Project" menu entries
     void importExistingProject();                     // shared implementation for "Import existing Project..." - scans a chosen folder, builds a Project from what it finds and saves it as a new .aep
     bool isImportSkippableFile(const QString &path) const;  // true for a file an import scan should leave out: .o/.lnk/.obj/.exe/.dll/.so/.dylib, or a binary executable (detected by content, not by the +x bit)
+    static int templateTargetOS(int templateKind);      // rev.159: 0 = OS 1.3, 1 = OS 3.x, -1 = not decided by the template (Assembler/imported) - see mainwindow.cpp
     void applyProjectTargetOSIfNeeded(int forcedTarget = -1);   // switches the status bar's target-OS gadget to match the project's template ("OS 1.3" vs "OS 3.x") - applies to VBCC, GCC and G++ alike; pass 0/1 to force it instead of inferring from the template (see importExistingProject())
     void getCompilerAndLinkerOptsForTarget(int compiler, int targetOS, QString &compilerOpts, QString &linkerOpts) const;   // central (compiler, target OS) -> (compiler opts, linker opts) lookup
     QString compilerDisplayLabel(int compiler) const;   // short status-bar-friendly compiler name: "gcc"/"g++"/"vbcc"
@@ -874,6 +876,7 @@ private:
     // --- Project management (AmigaED v3.3) ---
     QMenu *newProjectMenue;
     QAction *newProjectEmptyCAct;
+    QAction *newProjectMultilingualAct = nullptr;   // rev.159: File > New Project > New multilingual Amiga C Project (templateKind 10)
     QAction *newProjectShellAct;
     QAction *newProjectAmigaOS13Act;
     QAction *newProjectAmigaOS3xAct;
@@ -911,6 +914,7 @@ private:
     QAction *addFilesToProjectAct;    // "Add files to Project..." menu entry - same slot as the project panel's "Add..." button (actionAddFileToProject())
     QAction *buildProjectAct;
     QAction *cleanProjectAct;
+    QAction *buildSascVamosAct = nullptr;   // rev.159
     QAction *projectOptionsAct;      // "Project Options..." - edit a loaded project's own extra compiler/linker options after creation
     QAction *openShellAct;           // "Open Shell" - opens the system's default command line in the current project's folder (or Prefs "Projects root" if none loaded)
     QList<QProcess *> p_openShellProcesses;   // every shell/terminal actionOpenShell() has launched and is still tracking - closed automatically on exit, see closeAllOpenShells()
@@ -1013,6 +1017,45 @@ private:
     // meaningful while guiBuilderProcess is non-null - see the .cpp for the
     // exact launch arguments and result-file format.
     QProcess *guiBuilderProcess = nullptr;
+
+    // rev.159: vamos (amitools) - runs a built AmigaOS Shell program
+    // directly on the host, output in the compiler-output panel. One at a
+    // time; started from the project tree's context menu on an executable.
+    // See runExecutableInVamos() and Prefs > vamos.
+    QProcess *vamosProcess = nullptr;
+    QString p_vamos_command, p_vamos_workbench_dir, p_vamos_work_dir, p_vamos_opts;
+    bool p_vamos_wsl = false;
+    QString p_lastVamosArgs;   // remembered for the next "Run in vamos with arguments..."
+    enum class VamosJob { RunProgram, SascBuild };
+    VamosJob p_vamosJob = VamosJob::RunProgram;
+    QString p_vamos_sasc_dir, p_vamos_mui_dir;   // Prefs > vamos: Amiga paths assigned as sc: / MUI: for SAS/C builds
+    QString p_vamosSascTarget;                   // program name of the SAS/C build in progress (see vamosFinished())
+    bool startVamos(VamosJob job, const QString &hostDir, const QStringList &extraAssigns,
+                    const QString &path, const QStringList &tail, const QString &header);
+    void vamosFinished(int exitCode, QProcess::ExitStatus status);
+    QString sascOptionsForProject() const;       // SAS/C options for Makefile.sc AND the vamos build
+    bool checkSASC(const QString &str_to_search);  // RegEx SAS/C messages ("file.c 12 Error 34: ...")
+    void runExecutableInVamos(const QString &exePath, bool askForArguments);
+    // rev.159: start a program in the emulator "as if double-clicked" (ARexx
+    // Workbench port, WBRun if it has no icon) via AmigaED's job runner in
+    // <projects root>/AmigaED-Jobs - see runExecutableInEmulator()
+    QString p_projectsRootAmiga;                              // Prefs > Project > "Projects root on the Amiga"
+    QString amigaPathFor(const QString &hostPath) const;      // host path -> Amiga path, empty if the Amiga can't see it
+    void runExecutableInEmulator(const QString &exePath);
+    bool isGuiTemplate(int templateKind) const;               // double-click: GUI projects -> emulator, Shell projects -> vamos
+    QTimer *emuJobTimer = nullptr;
+    QString p_emuJobDir;                                      // host folder of the job being waited for
+    int p_emuJobWaited = 0;
+    bool checkFlexCat(const QString &str_to_search);          // RegEx FlexCat messages ("x.ct, line 5 - ERROR: ...")
+    // rev.159: multilingual projects (FlexCat + locale.library)
+    QString p_flexcat_path;                                   // Prefs > Tools > Multilingual Programs
+    QString flexCatExecutable() const;                        // configured path, or found next to m68k-amigaos-gcc; empty if none
+    static QString multilingualCatalogBase(const QString &baseName);   // C identifier form used for .cd/.ct/catalog/_strings.h names
+    void writeMultilingualProjectFiles(Project *project, const QString &dir, const QString &baseName);
+    bool runFlexCat(const QString &dir, const QStringList &args, QString *errorText);
+    void stopVamosProgram();
+    QString vamosHostPath(const QString &path) const;   // host path as vamos sees it (WSL: D:\x -> /mnt/d/x)
+    QString vamosArg(const QString &arg) const;         // WSL: single-quoted for the WSL shell, else unchanged
     int guiBuilderKind = -1;
     QString guiBuilderTargetDir;
     QString guiBuilderProjectName;

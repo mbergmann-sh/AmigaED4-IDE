@@ -12,6 +12,8 @@
 #include <QSettings>
 #include <QCoreApplication>
 #include <QProcess>
+#include <QMessageBox>
+#include <QRegularExpression>
 
 class MainWindow;
 
@@ -32,6 +34,24 @@ public:
     QStringList p_style_items;
 
     QSettings mySettings;
+
+    // Prefs > vamos (rev.159): platform-dependent defaults, also used by
+    // MainWindow::readSettings() - see prefsdialog.cpp
+    static QString vamosDefaultCommand();
+    static bool vamosDefaultUseWSL();
+
+    // rev.159: start programs in the emulator - see prefsdialog.cpp
+    struct EmuMount { QString volume; QString hostPath; int bootPri = 0; };
+    static QList<EmuMount> emulatorMounts(const QString &configPath);   // folder drives of a WinUAE/FS-UAE config
+    static QString amigaPathForHostPath(const QString &hostPath, const QString &projectsRootHost,
+                                        const QString &projectsRootAmiga, const QString &emuConfig,
+                                        const QString &workbenchHost, const QString &workHost);
+    static bool looksLikeAmigaPath(const QString &path);                // "Work:x" yes, "D:/x", "/x" no
+    static QString bootUserStartup(const QString &emuConfig, const QString &workbenchHost);   // host path of S:User-Startup
+    static QString startScriptBlock(const QString &amigaJobDir);
+    static bool hasStartScriptBlock(const QString &userStartupPath, const QString &amigaJobDir);
+    static bool installStartScript(const QString &userStartupPath, const QString &amigaJobDir, QString *message);
+    static bool writeJobRunner(const QString &hostJobDir, const QString &amigaJobDir);   // <job dir>/autorun, see prefsdialog.cpp
 
 public slots:
     void save_mySettings();
@@ -67,6 +87,12 @@ private slots:
     void on_btn_getTool2Path_clicked();   // GadTools GUI Designer
     void on_btn_getTool3Path_clicked();   // ReAction GUI Designer
     void on_btn_getTool4Path_clicked();   // User Tool
+
+    void on_btn_setupStartScript_clicked();
+    void on_btn_getProjectsRootAmiga_clicked();    // Prefs > Project: Amiga path of the projects root via folder dialog (rev.159)        // Prefs > Emulator: AmigaED block in S:User-Startup (rev.159)
+    void on_btn_getFlexCatPath_clicked();          // Prefs > Tools > "Multilingual Programs": FlexCat executable (rev.159)
+    void on_btn_getVamosWorkbenchDir_clicked();   // Prefs > vamos: host folder of the "Workbench" partition (rev.159)
+    void on_btn_getVamosWorkDir_clicked();        // Prefs > vamos: host folder of the "Work" partition (rev.159)
 
     void on_btn_CancelSave_clicked();
 

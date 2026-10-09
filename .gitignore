@@ -12,3 +12,18 @@
 # Debian / AppImage packaging output
 /Debian/*.deb
 /AppImage/*.AppImage
+*.pro.user
+
+# Python bytecode (docbuild scripts)
+__pycache__/
+*.pyc
+
+# Qt Creator per-user settings
+.qtcreator/
+
+# Amiga build artifacts in examples/projects
+*.o
+*.lnk
+
+# AmigaED job folder (start in emulator) - per machine, never versioned
+AmigaED-Jobs/

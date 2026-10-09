@@ -2,6 +2,7 @@
 #include "version.h"
 #include "ui_prefsdialog.h"
 #include "mainwindow.h"
+#include <QMap>
 
 PrefsDialog::PrefsDialog(QWidget *parent, int tabindex) :
     QDialog(parent),
@@ -469,6 +470,7 @@ void PrefsDialog::save_mySettings()
     mySettings.setValue("Project/Email", ui->lineEdit_email->text());
     mySettings.setValue("Project/Website", ui->lineEdit_website->text());
     mySettings.setValue("Project/ProjectRootDir", ui->lineEdit_projectsRootDir->text());
+    mySettings.setValue("Project/ProjectRootAmiga", ui->lineEdit_projectsRootAmiga->text().trimmed());   // rev.159
     mySettings.setValue("Project/SaveFilesAutomatically", ui->checkBox_saveProjectFilesAutomatically->isChecked());
     // Formerly two separate, independently-driftable UI fields (VBCC
     // tab's "Default Target OS" and Emulator tab's "Default config") for
@@ -531,6 +533,17 @@ void PrefsDialog::save_mySettings()
      mySettings.setValue("Tools/Tool4Path", ui->lineEdit_Tool4Path->text());
      mySettings.setValue("Tools/Tool4Params", ui->lineEdit_Tool4Params->text());
      mySettings.setValue("Tools/Tool4Name", ui->lineEdit_Tool4Name->text());
+     mySettings.setValue("Tools/FlexCatPath", ui->lineEdit_FlexCatPath->text().trimmed());   // rev.159
+
+     // TAB: vamos (rev.159) - see MainWindow::runExecutableInVamos() for
+     // how these build the vamos command line.
+     mySettings.setValue("VAMOS/Command", ui->lineEdit_vamosCommand->text().trimmed());
+     mySettings.setValue("VAMOS/UseWSL", ui->checkBox_vamosWSL->isChecked());
+     mySettings.setValue("VAMOS/WorkbenchDir", ui->lineEdit_vamosWorkbenchDir->text().trimmed());
+     mySettings.setValue("VAMOS/WorkDir", ui->lineEdit_vamosWorkDir->text().trimmed());
+     mySettings.setValue("VAMOS/ExtraOpts", ui->lineEdit_vamosOpts->text().trimmed());
+     mySettings.setValue("VAMOS/SascDir", ui->lineEdit_vamosSascDir->text().trimmed());
+     mySettings.setValue("VAMOS/MuiDir", ui->lineEdit_vamosMuiDir->text().trimmed());
 
      // TAB: Misc
      mySettings.setValue("MISC/DefaultStyle", ui->comboBoxDefaultStyle->currentText());
@@ -555,6 +568,7 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_email->setText(mySettings.value("Project/Email").toString());
     ui->lineEdit_website->setText(mySettings.value("Project/Website").toString());
     ui->lineEdit_projectsRootDir->setText(mySettings.value("Project/ProjectRootDir").toString());
+    ui->lineEdit_projectsRootAmiga->setText(mySettings.value("Project/ProjectRootAmiga").toString());   // rev.159
     ui->checkBox_saveProjectFilesAutomatically->setChecked(mySettings.value("Project/SaveFilesAutomatically", false).toBool());
     // Formerly two separate, independently-driftable UI fields (VBCC
     // tab's "Default Target OS" and Emulator tab's "Default config") for
@@ -658,6 +672,16 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_Tool4Path->setText(mySettings.value("Tools/Tool4Path").toString());
     ui->lineEdit_Tool4Params->setText(mySettings.value("Tools/Tool4Params").toString());
     ui->lineEdit_Tool4Name->setText(mySettings.value("Tools/Tool4Name").toString());
+    ui->lineEdit_FlexCatPath->setText(mySettings.value("Tools/FlexCatPath").toString());   // rev.159
+
+    // TAB: vamos (rev.159) - defaults must match MainWindow::readSettings()
+    ui->lineEdit_vamosCommand->setText(mySettings.value("VAMOS/Command", vamosDefaultCommand()).toString());
+    ui->checkBox_vamosWSL->setChecked(mySettings.value("VAMOS/UseWSL", vamosDefaultUseWSL()).toBool());
+    ui->lineEdit_vamosWorkbenchDir->setText(mySettings.value("VAMOS/WorkbenchDir").toString());
+    ui->lineEdit_vamosWorkDir->setText(mySettings.value("VAMOS/WorkDir").toString());
+    ui->lineEdit_vamosOpts->setText(mySettings.value("VAMOS/ExtraOpts", QStringLiteral("-m 8000 -s 256")).toString());
+    ui->lineEdit_vamosSascDir->setText(mySettings.value("VAMOS/SascDir", QStringLiteral("workbench:SAS-C")).toString());
+    ui->lineEdit_vamosMuiDir->setText(mySettings.value("VAMOS/MuiDir", QStringLiteral("work:MUI")).toString());
 }
 
 void PrefsDialog::on_checkBoxSimpleStatusbar_clicked()
@@ -704,3 +728,416 @@ void PrefsDialog::on_checkBoxNoCompileButton_clicked()
     simpleStatusbar();
 }
 
+
+//
+// Prefs > vamos (rev.159): platform defaults, shared with MainWindow::
+// readSettings() so both sides agree on what "not configured yet" means.
+// On Windows vamos only runs inside WSL (Python + machine68k), so the
+// default calls it through wsl.exe from the amitools venv the setup guide
+// creates; everywhere else it's simply "vamos" from the PATH.
+//
+QString PrefsDialog::vamosDefaultCommand()
+{
+#ifdef Q_OS_WIN
+    return QStringLiteral("wsl ~/amitools-venv/bin/vamos");
+#else
+    return QStringLiteral("vamos");
+#endif
+}
+
+bool PrefsDialog::vamosDefaultUseWSL()
+{
+#ifdef Q_OS_WIN
+    return true;
+#else
+    return false;
+#endif
+}
+
+//
+// Prefs > vamos: folder pickers for the emulator's partitions. Plain host
+// folders (FS-UAE/WinUAE "directory" hard drives) - vamos mounts them as
+// volumes workbench:/work:, see MainWindow::runExecutableInVamos().
+//
+void PrefsDialog::on_btn_getVamosWorkbenchDir_clicked()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Host folder of the \"Workbench\" partition"),
+                                                    ui->lineEdit_vamosWorkbenchDir->text());
+    if (!dir.isEmpty())
+        ui->lineEdit_vamosWorkbenchDir->setText(QDir::toNativeSeparators(dir));
+}
+
+void PrefsDialog::on_btn_getVamosWorkDir_clicked()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Host folder of the \"Work\" partition"),
+                                                    ui->lineEdit_vamosWorkDir->text());
+    if (!dir.isEmpty())
+        ui->lineEdit_vamosWorkDir->setText(QDir::toNativeSeparators(dir));
+}
+
+//
+// Prefs > Tools > "Multilingual Programs" (rev.159): FlexCat executable,
+// with its "sd" folder next to it - see MainWindow::flexCatExecutable().
+//
+void PrefsDialog::on_btn_getFlexCatPath_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Path to FlexCat"), ui->lineEdit_FlexCatPath->text(),
+            tr("All Files (*);;Executable (*.exe)"));
+    if (!fileName.isEmpty())
+        ui->lineEdit_FlexCatPath->setText(QDir::toNativeSeparators(fileName));
+}
+
+//
+// rev.159: the folder drives ("directory hard drives") of an emulator
+// configuration - which host folder appears under which Amiga volume name.
+//   WinUAE (.uae):  filesystem2=rw,DH1:Work:D:\WinUAE\Harddisks\Work,0
+//                   (access,device:volume:path,bootpri; path may contain ':')
+//   FS-UAE:         hard_drive_1 = /path/Work
+//                   hard_drive_1_label = Work      (default: folder name)
+//                   hard_drive_1_priority = -128
+// Hardfiles (.hdf) are skipped - AmigaED can't write into those.
+//
+QList<PrefsDialog::EmuMount> PrefsDialog::emulatorMounts(const QString &configPath)
+{
+    QList<EmuMount> mounts;
+    QFile f(configPath);
+    if (configPath.trimmed().isEmpty() || !f.open(QIODevice::ReadOnly | QIODevice::Text))
+        return mounts;
+    const QString cfgDir = QFileInfo(configPath).absolutePath();
+    QMap<int, EmuMount> fsuae;
+
+    const QStringList lines = QString::fromUtf8(f.readAll()).split(QLatin1Char('\n'));
+    static const QRegularExpression fsKey(QStringLiteral("^hard_drive_(\\d+)(_label|_priority)?$"));
+    for (QString line : lines)
+    {
+        line = line.trimmed();
+        const int eq = line.indexOf(QLatin1Char('='));
+        if (eq <= 0 || line.startsWith(QLatin1Char('#')) || line.startsWith(QLatin1Char(';')))
+            continue;
+        const QString key = line.left(eq).trimmed();
+        QString val = line.mid(eq + 1).trimmed();
+
+        if (key == QLatin1String("filesystem2"))
+        {
+            // access , device:volume:path , bootpri
+            const int c1 = val.indexOf(QLatin1Char(','));
+            const int cl = val.lastIndexOf(QLatin1Char(','));
+            if (c1 < 0 || cl <= c1)
+                continue;
+            const QString mid = val.mid(c1 + 1, cl - c1 - 1);
+            const int d1 = mid.indexOf(QLatin1Char(':'));
+            const int d2 = mid.indexOf(QLatin1Char(':'), d1 + 1);
+            if (d1 < 0 || d2 < 0)
+                continue;
+            EmuMount m;
+            m.volume = mid.mid(d1 + 1, d2 - d1 - 1);
+            m.hostPath = mid.mid(d2 + 1);
+            if (m.hostPath.startsWith(QLatin1Char('"')) && m.hostPath.endsWith(QLatin1Char('"')))
+                m.hostPath = m.hostPath.mid(1, m.hostPath.length() - 2);
+            m.bootPri = val.mid(cl + 1).trimmed().toInt();
+            if (!m.volume.isEmpty() && QFileInfo(m.hostPath).isDir())
+                mounts << m;
+            continue;
+        }
+
+        QRegularExpressionMatch fm = fsKey.match(key);
+        if (fm.hasMatch())
+        {
+            EmuMount &m = fsuae[fm.captured(1).toInt()];
+            if (fm.captured(2) == QLatin1String("_label"))
+                m.volume = val;
+            else if (fm.captured(2) == QLatin1String("_priority"))
+                m.bootPri = val.toInt();
+            else
+                m.hostPath = QDir::isRelativePath(val) ? QDir(cfgDir).filePath(val) : val;
+        }
+    }
+    for (auto it = fsuae.begin(); it != fsuae.end(); ++it)
+    {
+        EmuMount m = it.value();
+        if (m.hostPath.isEmpty() || !QFileInfo(m.hostPath).isDir())
+            continue;
+        if (m.volume.isEmpty())
+            m.volume = QFileInfo(m.hostPath).fileName();
+        mounts << m;
+    }
+    return mounts;
+}
+
+// "Work:Projekte" / "Projekte:" yes - "D:/x" (a Windows drive letter),
+// "/home/x" or "x/y" no
+bool PrefsDialog::looksLikeAmigaPath(const QString &path)
+{
+    const QString p = path.trimmed();
+    const int colon = p.indexOf(QLatin1Char(':'));
+    return colon >= 2 && !p.contains(QLatin1Char('\\')) && !p.startsWith(QLatin1Char('/'));
+}
+
+//
+// rev.159: where the emulated Amiga sees a host path - shared by the
+// "Set up start script" button and MainWindow's "Start in emulator".
+//   1. inside the projects root and its Amiga path is set: <amigaRoot>/<rest>
+//   2. inside a folder drive of the emulator configuration: <Volume>:<rest>
+//      (the deepest matching drive wins)
+//   3. inside the Work / Workbench folder of Prefs > vamos: Work:<rest> ...
+// Returns an empty string if none applies.
+//
+QString PrefsDialog::amigaPathForHostPath(const QString &hostPath, const QString &projectsRootHost,
+                                          const QString &projectsRootAmiga, const QString &emuConfig,
+                                          const QString &workbenchHost, const QString &workHost)
+{
+    auto rel = [](const QString &path, const QString &root, QString *out) -> bool
+    {
+        if (root.trimmed().isEmpty())
+            return false;
+        const QString p = QDir::cleanPath(QDir::fromNativeSeparators(QFileInfo(path).absoluteFilePath()));
+        const QString r = QDir::cleanPath(QDir::fromNativeSeparators(QFileInfo(root.trimmed()).absoluteFilePath()));
+#ifdef Q_OS_WIN
+        const Qt::CaseSensitivity cs = Qt::CaseInsensitive;
+#else
+        const Qt::CaseSensitivity cs = Qt::CaseSensitive;
+#endif
+        if (p.compare(r, cs) == 0) { *out = QString(); return true; }
+        if (!p.startsWith(r.endsWith(QLatin1Char('/')) ? r : r + QLatin1Char('/'), cs))
+            return false;
+        *out = p.mid(r.length() + (r.endsWith(QLatin1Char('/')) ? 0 : 1));
+        return true;
+    };
+    auto join = [](QString base, const QString &rest) -> QString
+    {
+        if (rest.isEmpty())
+            return base;
+        if (!base.endsWith(QLatin1Char(':')) && !base.endsWith(QLatin1Char('/')))
+            base += QLatin1Char('/');
+        return base + rest;   // never "Vol:/x" - a '/' right after the colon means "parent" on the Amiga
+    };
+
+    QString r;
+    if (looksLikeAmigaPath(projectsRootAmiga) && rel(hostPath, projectsRootHost, &r))
+        return join(projectsRootAmiga.trimmed(), r);
+
+    QString best, bestRel;
+    int bestLen = -1;
+    for (const EmuMount &m : emulatorMounts(emuConfig))
+    {
+        QString mr;
+        if (rel(hostPath, m.hostPath, &mr) && m.hostPath.length() > bestLen)
+        {
+            bestLen = m.hostPath.length();
+            best = m.volume + QLatin1Char(':');
+            bestRel = mr;
+        }
+    }
+    if (bestLen >= 0)
+        return join(best, bestRel);
+
+    if (rel(hostPath, workHost, &r))
+        return join(QStringLiteral("Work:"), r);
+    if (rel(hostPath, workbenchHost, &r))
+        return join(QStringLiteral("Workbench:"), r);
+    return QString();
+}
+
+// The host path of the Amiga's S:User-Startup: in the bootable folder drive
+// (highest boot priority) of the emulator configuration, else in the
+// Workbench folder of Prefs > vamos. Empty if unknown or not there.
+QString PrefsDialog::bootUserStartup(const QString &emuConfig, const QString &workbenchHost)
+{
+    QString bootDir;
+    int pri = -129;
+    for (const EmuMount &m : emulatorMounts(emuConfig))
+        if (m.bootPri > -128 && m.bootPri > pri)
+        {
+            pri = m.bootPri;
+            bootDir = m.hostPath;
+        }
+    if (bootDir.isEmpty())
+        bootDir = workbenchHost.trimmed();
+    if (bootDir.isEmpty())
+        return QString();
+    // the drawer may be "S" or "s" on a case-sensitive host file system
+    for (const char *s : { "S/User-Startup", "s/User-Startup", "S/user-startup", "s/user-startup" })
+    {
+        const QString p = QDir(bootDir).filePath(QLatin1String(s));
+        if (QFileInfo(p).isFile())
+            return p;
+    }
+    return QString();
+}
+
+QString PrefsDialog::startScriptBlock(const QString &amigaJobDir)
+{
+    // The runner is COPIED to T: (RAM) and executed from there: AmigaDOS
+    // reads a running script line by line from its file (and "Skip BACK"
+    // seeks in it), so AmigaED rewriting <job dir>/autorun on the host while
+    // the Amiga executes it would derail the runner - it then hangs right
+    // after taking a job. A changed runner takes effect at the next boot.
+    return QStringLiteral(";BEGIN AmigaED - starts AmigaED's job runner (see AmigaED manual)\n"
+                          "If EXISTS \"%1/autorun\"\n"
+                          "  Copy \"%1/autorun\" T:AmigaED-autorun QUIET\n"
+                          "  Run >NIL: Execute T:AmigaED-autorun\n"
+                          "EndIf\n"
+                          ";END AmigaED\n").arg(amigaJobDir);
+}
+
+//
+// rev.159: AmigaED's job runner <job dir>/autorun - polls for "job" files
+// and executes them. Written by the "Set up start script" button AND before
+// every "Start in emulator", so it always matches the current Amiga path.
+// Refuses anything but an Amiga path: a host path like "D:/Projekte/..."
+// would make the Amiga ask for a volume "D" at every boot.
+//
+bool PrefsDialog::writeJobRunner(const QString &hostJobDir, const QString &J)
+{
+    if (!looksLikeAmigaPath(J))
+        return false;
+    QDir().mkpath(hostJobDir);
+    QFile f(QDir(hostJobDir).filePath(QStringLiteral("autorun")));
+    const QString text = QStringLiteral(
+        "; AmigaED job runner - started from S:User-Startup, do not edit\n"
+        "; (written by AmigaED; executes \"job\" files AmigaED drops here)\n"
+        "Lab loop\n"
+        "If EXISTS \"%1/job\"\n"
+        "  Delete >NIL: \"%1/job.done\" \"%1/job.log\" \"%1/job.run\" QUIET\n"
+        "  Rename \"%1/job\" \"%1/job.run\"\n"
+        "  Execute \"%1/job.run\" >\"%1/job.log\"\n"
+        "  Echo >\"%1/job.done\" \"rc=$RC\"\n"
+        "  Delete >NIL: \"%1/job.run\" QUIET\n"
+        "EndIf\n"
+        "Wait 1\n"
+        "Skip loop BACK\n").arg(J);
+    if (f.open(QIODevice::ReadOnly) && f.readAll() == text.toLatin1())
+        return true;   // unchanged - leave the file alone
+    f.close();
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        return false;
+    return f.write(text.toLatin1()) >= 0;   // Amiga text: ISO-8859-1, LF only
+}
+
+bool PrefsDialog::hasStartScriptBlock(const QString &userStartupPath, const QString &amigaJobDir)
+{
+    QFile f(userStartupPath);
+    if (!f.open(QIODevice::ReadOnly))
+        return false;
+    return QString::fromLatin1(f.readAll()).contains(startScriptBlock(amigaJobDir));
+}
+
+// Adds AmigaED's block to the Amiga's S:User-Startup, or replaces an older
+// one (e.g. for another job folder). Keeps a backup in User-Startup.bak.
+bool PrefsDialog::installStartScript(const QString &file, const QString &amigaJobDir, QString *message)
+{
+    if (!looksLikeAmigaPath(amigaJobDir))
+    {
+        if (message) *message = tr("\"%1\" is not an Amiga path - nothing was changed.").arg(amigaJobDir);
+        return false;
+    }
+    QString text;
+    {
+        QFile f(file);
+        if (!f.open(QIODevice::ReadOnly))
+        {
+            if (message) *message = tr("Could not read:\n%1").arg(QDir::toNativeSeparators(file));
+            return false;
+        }
+        text = QString::fromLatin1(f.readAll());   // Amiga text: ISO-8859-1
+    }
+    QFile::remove(file + QStringLiteral(".bak"));
+    QFile::copy(file, file + QStringLiteral(".bak"));
+
+    static const QRegularExpression oldBlock(QStringLiteral(";BEGIN AmigaED[^\\n]*\\n.*?;END AmigaED\\n?"),
+                                             QRegularExpression::DotMatchesEverythingOption);
+    const QString block = startScriptBlock(amigaJobDir);
+    const bool existed = text.contains(oldBlock);
+    if (existed)
+        text.replace(oldBlock, block);
+    else
+    {
+        if (!text.isEmpty() && !text.endsWith(QLatin1Char('\n')))
+            text += QLatin1Char('\n');
+        text += QStringLiteral("\n") + block;
+    }
+
+    QFile f(file);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate) || f.write(text.toLatin1()) < 0)
+    {
+        if (message) *message = tr("Could not write:\n%1\n\n%2").arg(QDir::toNativeSeparators(file), f.errorString());
+        return false;
+    }
+    if (message)
+        *message = (existed ? tr("The AmigaED block in %1 was updated:") : tr("This block was added to %1:"))
+                       .arg(QDir::toNativeSeparators(file))
+                   + QStringLiteral("\n\n") + block
+                   + QStringLiteral("\n") + tr("A backup is in User-Startup.bak. It takes effect at the Amiga's next boot.");
+    return true;
+}
+
+//
+// Prefs > Emulator > "Set up start script in S:User-Startup..." (rev.159)
+//
+void PrefsDialog::on_btn_setupStartScript_clicked()
+{
+    const QString root = ui->lineEdit_projectsRootDir->text().trimmed();
+    if (root.isEmpty())
+    {
+        QMessageBox::warning(this, tr("Set up start script"), tr("Please set the projects root on the Project tab first."));
+        return;
+    }
+    const QString jobDir = amigaPathForHostPath(root + QStringLiteral("/AmigaED-Jobs"), root,
+                                                ui->lineEdit_projectsRootAmiga->text(), ui->lineEdit_getOS3Configfile->text(),
+                                                ui->lineEdit_vamosWorkbenchDir->text(), ui->lineEdit_vamosWorkDir->text());
+    if (jobDir.isEmpty())
+    {
+        QMessageBox::warning(this, tr("Set up start script"),
+                             tr("Your projects root isn't inside any folder drive of the emulator configuration:\n%1\n\n"
+                                "Add the projects root (or a folder containing it) to your emulator as a folder "
+                                "hard drive, or enter its Amiga path on the Project tab.")
+                                 .arg(QDir::toNativeSeparators(root)));
+        return;
+    }
+
+    QString file = bootUserStartup(ui->lineEdit_getOS3Configfile->text(), ui->lineEdit_vamosWorkbenchDir->text());
+    if (file.isEmpty())
+    {
+        file = QFileDialog::getOpenFileName(this, tr("Select the Amiga's S:User-Startup"), root);
+        if (file.isEmpty())
+            return;
+    }
+
+    QString msg;
+    if (installStartScript(file, jobDir, &msg))
+    {
+        writeJobRunner(root + QStringLiteral("/AmigaED-Jobs"), jobDir);   // block and runner always match
+        QMessageBox::information(this, tr("Set up start script"), msg);
+    }
+    else
+        QMessageBox::warning(this, tr("Set up start script"), msg);
+}
+
+//
+// Prefs > Project > "Projects root on the Amiga" - folder dialog (rev.159):
+// pick the projects root (or any folder) as it lies inside one of the
+// emulator's folder drives; AmigaED turns it into the Amiga path.
+//
+void PrefsDialog::on_btn_getProjectsRootAmiga_clicked()
+{
+    const QString start = ui->lineEdit_projectsRootDir->text().trimmed();
+    const QString dir = QFileDialog::getExistingDirectory(this, tr("Projects root on the Amiga"), start);
+    if (dir.isEmpty())
+        return;
+    const QString amiga = amigaPathForHostPath(dir, QString(), QString(), ui->lineEdit_getOS3Configfile->text(),
+                                               ui->lineEdit_vamosWorkbenchDir->text(), ui->lineEdit_vamosWorkDir->text());
+    if (amiga.isEmpty())
+    {
+        QString drives;
+        for (const EmuMount &m : emulatorMounts(ui->lineEdit_getOS3Configfile->text()))
+            drives += QStringLiteral("\n  %1:  =  %2").arg(m.volume, QDir::toNativeSeparators(m.hostPath));
+        QMessageBox::warning(this, tr("Projects root on the Amiga"),
+                             tr("This folder isn't inside any folder drive of your emulator configuration (Emulator tab, OS 3.x):\n%1\n\n"
+                                "Drives in that configuration:%2\n\n"
+                                "Add the folder (or one containing it) to the emulator as a folder hard drive first.")
+                                 .arg(QDir::toNativeSeparators(dir), drives.isEmpty() ? tr("\n  (none found)") : drives));
+        return;
+    }
+    ui->lineEdit_projectsRootAmiga->setText(amiga);
+}

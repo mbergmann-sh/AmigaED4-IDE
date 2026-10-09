@@ -8,6 +8,139 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.159
+
+- **New**: File &rarr; New Project &rarr; "Import existing Project..." now
+  has the shortcut **Ctrl+Shift+I** and its own button (with a new icon,
+  `images/import_project.png`) in the File toolbar, right next to "New".
+- **Changed**: the stack size AmigaED writes into its built-in program
+  icon is now **36000 bytes** for MUI projects (template and MUI GUI
+  Builder projects), Empty C projects and imported projects (previously
+  34000 for MUI and 8192 for the others). MUI 5 warns at start-up below
+  32000 bytes, and a Workbench start only gets the stack from the icon.
+  ReAction GUI Builder projects now get the same 16000 bytes as the
+  ReAction template (previously 8192); ReAction template projects keep
+  16000.
+- **Fixed**: renaming a built program in the project tree (right-click
+  &rarr; "Rename...") made it disappear from the "Executable" category.
+  The tree only scans for the project's own link target name, so the
+  renamed file no longer matched. A renamed executable is now tracked in
+  the project (and its .aep) under its new name, always as type
+  "Executable" - also when the new name has an extension. Its `.info`
+  icon is renamed along with it.
+- **Fixed**: `Project::contains()`/`removeFile()` could match the wrong
+  project file when the path in question no longer existed on disk (right
+  after a rename, or for a file deleted outside AmigaED). Qt 6's
+  `QFileInfo::operator==` compares canonical paths, which are empty for
+  missing files, so any two missing files compared equal. Missing files
+  are now compared by their cleaned absolute paths (case-insensitive on
+  Windows).
+
+- **Changed**: MUI project templates (MUI and MUI GUI Builder projects):
+  `Makefile.gcc` now links with `-lmui -Wl,-u,___stkinit` (libnix only
+  pulls in its stack-swap code when `___stkinit` is referenced), and the
+  generated main file declares `unsigned long __stack = 36000;`, so a MUI
+  program gets enough stack also when started from the Shell. No `-I` to
+  `MUI:Developer/C/Include` for gcc: its old-style gcc inline headers don't
+  compile with gcc 16 - use the toolchain's own MUI headers
+  (`make sdk=mui`). `Makefile.sc` gets `IDIR=MUI:Developer/C/Include`
+  unless the SAS/C options already contain an `IDIR=`.
+- **Fixed**: the MUI template's main file didn't compile with gcc 14+:
+  `DoMethod()` was called without a prototype (implicit declarations are
+  errors now). It now includes `<clib/alib_protos.h>`.
+- **Fixed**: a new project from any template except "AmigaOS 1.3/3.x"
+  (Empty C, Shell, ReAction, MUI, GUI Builder) used the status bar's
+  target-OS setting when its options were pre-filled and its first
+  Makefiles were written - only afterwards was the target switched to
+  OS 3.x. With the status bar on "OS 1.3", a MUI project stored
+  `+kick13 -c99` as its own vbcc options and got `-mcrt=nix13` in
+  `Makefile.gcc`. All three places now use one function,
+  `templateTargetOS()`.
+
+- **New**: vamos (amitools) integration. Right-click a built program under
+  "Executable" in the project tree: "Run in vamos" / "Run in vamos with
+  arguments..." runs it directly on the host, output and return code in
+  the Compiler Output pane; "Stop vamos program" while it runs. The
+  program's folder becomes volume `amigaed:` and the current directory.
+  New Prefs tab "vamos": vamos command (Windows default
+  `wsl ~/amitools-venv/bin/vamos`), "runs inside WSL" (translates
+  `D:\x` to `/mnt/d/x` and quotes every argument for the WSL shell),
+  optional Workbench/Work host folders (mounted as `workbench:`/`work:`),
+  extra options (default `-m 8000 -s 256`).
+- **New**: Build > "Build Project with SAS/C (vamos)" - compiles and links
+  the project's .c files with SAS/C 6.58 under vamos, in the project
+  folder, with the same options as Makefile.sc plus `BATCH` (slink would
+  otherwise wait for keyboard input on undefined symbols). Assigns sc:
+  (Prefs > vamos, default `workbench:SAS-C`), lib:/include:/cxxinclude:
+  inside it, and MUI: (default `work:MUI`) for MUI projects. A build with
+  undefined symbols counts as failed and its stub-linked program is
+  removed. SAS/C diagnostics ("file.c 6 Error 34: ...") are coloured and
+  clickable whatever compiler is selected. The SAS/C option logic is now
+  one function shared with Makefile.sc (`sascOptionsForProject()`).
+- **New**: start a built program in the emulator "as if double-clicked":
+  context menu "Start in emulator (Workbench)". AmigaED writes a job to
+  `<projects root>/AmigaED-Jobs`; a job runner started from S:User-Startup
+  waits for RexxMast and the Workbench and asks the Workbench via ARexx to
+  open the program's drawer and icon (`ICON ... OPEN`: real WBStartup
+  message, ToolTypes and stack from the icon) - `WBRun` if the program has
+  no icon. If no emulator runs (neither started by AmigaED nor found as a
+  process), AmigaED asks before starting it (OS 3.x config); "no" cancels.
+  Result ("started" or the Amiga's error) appears in the output pane.
+  AmigaED reads the folder hard drives of the emulator configuration
+  (Prefs > Emulator, OS 3.x; WinUAE `filesystem2=` and FS-UAE
+  `hard_drive_N`) and works out every Amiga path from them - and finds
+  the Amiga's S:User-Startup on the boot drive. On the first start it
+  offers to add its block there (also Prefs > Emulator > "Set up start
+  script in S:User-Startup...", keeps User-Startup.bak). Prefs > Project >
+  "Projects root on the Amiga" only overrides that (a Windows path typed
+  there is ignored); its folder button turns a picked folder into the
+  Amiga path. The button also writes the job runner (`autorun`) right
+  away, so block and runner always match; AmigaED never writes a host
+  path such as `D:/Projekte/...` into Amiga files (the Amiga would ask
+  for a volume "D" at every boot). The User-Startup block copies the
+  runner to `T:AmigaED-autorun` and executes that copy: AmigaDOS reads a
+  running script from its file, so rewriting `autorun` on the host while
+  the Amiga executed it derailed the runner (it hung right after taking a
+  job). The runner also removes a stale `job.run` before taking a job, and
+  AmigaED asks "start the emulator?" before offering to update the block. Tested on AmigaOS 3.2.3:
+  cold boot and running emulator, with and without icon. Note: `RX
+  "<file>"` runs the quoted text as ARexx code, so the script is started
+  via an assign (`AMIGAED_JOBS:`).
+- **Changed**: double-clicking a program in the project tree runs it - in
+  the emulator for GUI projects (OS 3.x, ReAction, MUI, GUI Builder), in
+  vamos for all others. Before, it opened the binary in the text editor
+  (saving it from there would have destroyed it).
+- **New**: FlexCat messages ("x.ct, line 16 - warning: ...") are coloured
+  and clickable in the output pane, whatever compiler is selected.
+- **New**: File > New Project > "New multilingual Amiga C Project"
+  (templateKind 10, OS 3.x): a Shell program whose texts come from a
+  FlexCat catalog via locale.library. Creates `<Name>.cd` (built-in
+  English), `<Name>_deutsch.ct` (German), the generated `<Name>_strings.h`
+  (FlexCat, CatComp_h.sd) and `Catalogs/deutsch/`. The main file opens
+  locale.library and the catalog itself and looks texts up via
+  `GetString()` - same code for gcc, vbcc and SAS/C (all three tested,
+  English under vamos, German in the emulator). Makefile.gcc/.vbcc get
+  generic FlexCat rules for every tracked `.cd` and its
+  `<Name>_<language>.ct` files (target `catalogs`, part of `all`).
+  .cd/.ct are ISO-8859-1 with `## codeset 0`, so no iconv is needed.
+- **New**: Prefs > Tools > "Multilingual Programs": path to FlexCat (its
+  `sd` folder next to it). If empty, a FlexCat next to m68k-amigaos-gcc
+  is used.
+- **Fixed**: "no emulator config" opened Prefs on the SAS/C tab instead
+  of the Emulator tab (tab index off by one since the SAS/C tab exists).
+- **Translations**: German texts for all new strings, plus five rev.158
+  strings of the GUI Builder menu that were still untranslated.
+
+- **Docs**: all rev.159 manual sections (vamos, SAS/C via vamos, start in
+  the emulator, multilingual programs, new stack sizes, Ctrl+Shift+I) are
+  now in the generator `docbuild/gen_html_manual2.py`; `help/manual_*.html`
+  and the PDF manuals in `DOC/` were regenerated from it
+  (`render_pdf.py`, PySide6 6.12).
+- **Repository**: removed tracked build/user artifacts
+  (`AmigaED-Examples/.../Window1.o`, `docbuild/__pycache__/`,
+  `.qtcreator/AmigaED.pro.user`); `.gitignore` now also covers
+  `__pycache__/`, `*.pyc`, `.qtcreator/`, `*.o`, `*.lnk`, `AmigaED-Jobs/`.
+
 ## rev.158
 
 - **Fixed**: File &rarr; New Project &rarr; "Import existing Project..."

@@ -1,0 +1,6 @@
+rev.160: searchable manual window (F1)
+
+Search bar with highlighted matches, "n of m" counter, next/previous
+(Enter/Shift+Enter, F3/Shift+F3, arrow buttons, wrapping), case
+sensitivity, Ctrl+F/Esc. Manual EN/DE, translations, Revisions.md.
+

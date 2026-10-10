@@ -64,6 +64,11 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   after the application font's FontChange events (QScintilla otherwise
   falls back to the application font), also when only the GUI font
   changed.
+- **New**: the manual window (F1) is searchable - search bar at the top
+  (focused on open), all matches highlighted (yellow, current one orange
+  and centred), "n of m" counter, next/previous via Enter/Shift+Enter,
+  F3/Shift+F3 or arrow buttons (wrapping around), "Case sensitive"
+  checkbox, Ctrl+F back into the field, Esc clears it.
 - **Fixed**: the built-in Linux editor font check ("Source Code Pro"
   missing &rarr; Fontconfig "monospace") tested the font *with* the
   monospace style hint already set, so Qt reported a fixed-pitch

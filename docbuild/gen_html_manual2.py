@@ -165,6 +165,9 @@ REV160_EN = r'''
 
     <h2>Fonts</h2>
     <p>Prefs &rarr; Misc &rarr; <b>Fonts</b> sets two fonts independently: <b>GUI font</b> for menus, dialogs, the project tree and the compiler output, and <b>Editor font</b> for the source editor (every tab and every syntax style). <b>Choose...</b> opens the font requester; with <b>Fixed font</b> checked (the default) the editor's requester only lists fonts with a fixed character width - uncheck it to pick any font. Each field shows the chosen font in its own typeface; <b>Default</b> goes back to the system font (GUI) or AmigaED's built-in monospaced font (editor). Both take effect as soon as the Prefs are saved - no restart needed; the editor's zoom level is kept.</p>
+
+    <h2>Searching the manual</h2>
+    <p>The manual window (F1) has a search bar at the top; the cursor is already in it when the window opens, so you can type right away. Every match is highlighted in yellow, the current one in orange and moved to the middle of the window; the counter shows e.g. &ldquo;3 of 17&rdquo;. <b>Enter</b>, <b>F3</b> or the down arrow jumps to the next match, <b>Shift+Enter</b>, <b>Shift+F3</b> or the up arrow to the previous one - both wrap around at the end. <b>Case sensitive</b> restricts the search to the exact spelling, <b>Ctrl+F</b> jumps back into the search field, <b>Esc</b> clears it.</p>
 '''
 REV160_DE = r'''
     <h2>SAS/C (vamos) als gewählter Compiler</h2>
@@ -176,6 +179,9 @@ REV160_DE = r'''
 
     <h2>Zeichensätze (Fonts)</h2>
     <p>Prefs &rarr; Verschiedenes &rarr; <b>Fonts</b> stellt zwei Zeichensätze unabhängig voneinander ein: <b>GUI Zeichensatz</b> für Menüs, Dialoge, Projektbaum und Compiler-Ausgabe und <b>Editor Zeichensatz</b> für den Quelltext-Editor (alle Tabs und alle Syntax-Stile). <b>Auswählen...</b> öffnet den Zeichensatz-Requester; ist <b>Fixed Font</b> angehakt (Standard), bietet der Requester für den Editor nur Zeichensätze mit fester Zeichenbreite an - ohne Haken jeden Zeichensatz. Jedes Feld zeigt den gewählten Zeichensatz in seiner eigenen Schrift; <b>Standard</b> kehrt zum System-Zeichensatz (GUI) bzw. zum eingebauten Zeichensatz mit fester Breite (Editor) zurück. Beide wirken sofort nach dem Speichern der Prefs, ohne Neustart; die Zoomstufe des Editors bleibt erhalten.</p>
+
+    <h2>Im Handbuch suchen</h2>
+    <p>Das Handbuchfenster (F1) hat oben eine Suchleiste; der Cursor steht beim Öffnen schon darin, du kannst also sofort lostippen. Alle Treffer werden gelb markiert, der aktuelle orange und in die Fenstermitte gerückt; der Zähler zeigt z. B. &bdquo;3 von 17&ldquo;. <b>Eingabe</b>, <b>F3</b> oder der Pfeil nach unten springt zum nächsten Treffer, <b>Umschalt+Eingabe</b>, <b>Umschalt+F3</b> oder der Pfeil nach oben zum vorherigen - am Ende geht es jeweils von vorn weiter. <b>Groß-/Kleinschreibung beachten</b> sucht nur die exakte Schreibweise, <b>Strg+F</b> springt zurück ins Suchfeld, <b>Esc</b> leert es.</p>
 '''
 
 

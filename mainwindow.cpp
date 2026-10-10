@@ -56,6 +56,9 @@
 #include <QStyleFactory>
 #include <QStandardItemModel>
 #include <QStandardPaths>
+#include <QToolButton>
+#include <QScrollBar>
+#include <memory>
 
 #include <Qsci/qsciscintilla.h>
 #include <Qsci/qsciscintillabase.h>
@@ -707,8 +710,133 @@ void MainWindow::actionShowManual()
                 : QStringLiteral("qrc:/help/manual_en.html");
         browser->setSource(QUrl(resourcePath));
 
+        // rev.160: search bar - every match is highlighted (yellow), the
+        // current one in orange and scrolled into view. Enter / F3 = next,
+        // Shift+Enter / Shift+F3 = previous (both wrap around), Ctrl+F
+        // jumps into the field, Esc clears it. The bar keeps the normal
+        // application palette; only the page itself is forced light.
+        QWidget *searchBar = new QWidget(p_manualWindow);
+        searchBar->setPalette(QApplication::palette());
+        searchBar->setAutoFillBackground(true);
+        QHBoxLayout *searchLayout = new QHBoxLayout(searchBar);
+        searchLayout->setContentsMargins(6, 4, 6, 4);
+        QLabel *searchLabel = new QLabel(tr("Search:"), searchBar);
+        QLineEdit *searchField = new QLineEdit(searchBar);
+        searchField->setPlaceholderText(tr("Search the manual..."));
+        searchField->setClearButtonEnabled(true);
+        searchLabel->setBuddy(searchField);
+        QToolButton *prevButton = new QToolButton(searchBar);
+        prevButton->setArrowType(Qt::UpArrow);
+        prevButton->setToolTip(tr("Previous match (Shift+Enter, Shift+F3)"));
+        QToolButton *nextButton = new QToolButton(searchBar);
+        nextButton->setArrowType(Qt::DownArrow);
+        nextButton->setToolTip(tr("Next match (Enter, F3)"));
+        QCheckBox *caseBox = new QCheckBox(tr("Case sensitive"), searchBar);
+        QLabel *hitLabel = new QLabel(searchBar);
+        hitLabel->setMinimumWidth(110);
+        searchLayout->addWidget(searchLabel);
+        searchLayout->addWidget(searchField, 1);
+        searchLayout->addWidget(prevButton);
+        searchLayout->addWidget(nextButton);
+        searchLayout->addWidget(caseBox);
+        searchLayout->addWidget(hitLabel);
+
+        struct ManualSearch { QList<QTextCursor> hits; int current = -1; };
+        auto state = std::make_shared<ManualSearch>();
+
+        // shows all hits, the current one emphasised, and scrolls to it
+        auto showHits = [browser, hitLabel, searchField, state, this]()
+        {
+            QList<QTextEdit::ExtraSelection> selections;
+            for (int i = 0; i < state->hits.size(); ++i)
+            {
+                QTextEdit::ExtraSelection sel;
+                sel.cursor = state->hits.at(i);
+                sel.format.setBackground(i == state->current ? QColor(0xff, 0x8c, 0x00) : QColor(0xff, 0xee, 0x58));
+                sel.format.setForeground(Qt::black);
+                selections << sel;
+            }
+            browser->setExtraSelections(selections);
+            if (state->current >= 0)
+            {
+                QTextCursor c = state->hits.at(state->current);
+                c.clearSelection();   // no real selection: it would hide the orange marker behind the selection colour
+                browser->setTextCursor(c);
+                browser->ensureCursorVisible();
+                // centre the match vertically instead of leaving it at the edge
+                QScrollBar *sb = browser->verticalScrollBar();
+                sb->setValue(sb->value() + browser->cursorRect(c).center().y() - browser->viewport()->height() / 2);
+                hitLabel->setText(tr("%1 of %2").arg(state->current + 1).arg(state->hits.size()));
+            }
+            else
+                hitLabel->setText(searchField->text().isEmpty() ? QString() : tr("No matches"));
+        };
+
+        // collects every match of the search text in the whole manual
+        auto runSearch = [browser, searchField, caseBox, state, showHits]()
+        {
+            state->hits.clear();
+            state->current = -1;
+            const QString text = searchField->text();
+            if (!text.isEmpty())
+            {
+                QTextDocument::FindFlags flags;
+                if (caseBox->isChecked())
+                    flags |= QTextDocument::FindCaseSensitively;
+                QTextCursor c(browser->document());
+                while (true)
+                {
+                    c = browser->document()->find(text, c, flags);
+                    if (c.isNull())
+                        break;
+                    state->hits << c;
+                }
+                // first match at/after the current reading position
+                const int from = browser->cursorForPosition(QPoint(0, 0)).position();
+                for (int i = 0; i < state->hits.size(); ++i)
+                    if (state->hits.at(i).selectionStart() >= from) { state->current = i; break; }
+                if (state->current < 0 && !state->hits.isEmpty())
+                    state->current = 0;
+            }
+            showHits();
+        };
+
+        auto step = [state, showHits, runSearch](int direction)
+        {
+            if (state->hits.isEmpty())
+            {
+                runSearch();
+                return;
+            }
+            const int n = state->hits.size();
+            state->current = (state->current + direction + n) % n;   // wrap around
+            showHits();
+        };
+
+        connect(searchField, &QLineEdit::textChanged, p_manualWindow, runSearch);
+        connect(caseBox, &QCheckBox::toggled, p_manualWindow, runSearch);
+        connect(nextButton, &QToolButton::clicked, p_manualWindow, [step]() { step(+1); });
+        connect(prevButton, &QToolButton::clicked, p_manualWindow, [step]() { step(-1); });
+        connect(searchField, &QLineEdit::returnPressed, p_manualWindow, [step]()
+        {
+            step((QApplication::keyboardModifiers() & Qt::ShiftModifier) ? -1 : +1);
+        });
+        QShortcut *findKey = new QShortcut(QKeySequence::Find, p_manualWindow);
+        connect(findKey, &QShortcut::activated, p_manualWindow, [searchField]() { searchField->setFocus(); searchField->selectAll(); });
+        QShortcut *nextKey = new QShortcut(QKeySequence(Qt::Key_F3), p_manualWindow);
+        connect(nextKey, &QShortcut::activated, p_manualWindow, [step]() { step(+1); });
+        QShortcut *prevKey = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3), p_manualWindow);
+        connect(prevKey, &QShortcut::activated, p_manualWindow, [step]() { step(-1); });
+        QShortcut *clearKey = new QShortcut(QKeySequence(Qt::Key_Escape), searchField, nullptr, nullptr, Qt::WidgetShortcut);
+        connect(clearKey, &QShortcut::activated, searchField, &QLineEdit::clear);
+        // the document changes when a link to another page is followed -
+        // stale cursors would point into the old one
+        connect(browser, &QTextBrowser::sourceChanged, p_manualWindow, runSearch);
+
         QVBoxLayout *layout = new QVBoxLayout(p_manualWindow);
         layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+        layout->addWidget(searchBar);
         layout->addWidget(browser);
         p_manualWindow->setLayout(layout);
 
@@ -723,6 +851,8 @@ void MainWindow::actionShowManual()
     p_manualWindow->show();
     p_manualWindow->raise();
     p_manualWindow->activateWindow();
+    if (QLineEdit *searchField = p_manualWindow->findChild<QLineEdit *>())
+        searchField->setFocus();   // rev.160: type to search right away
 }
 
 //

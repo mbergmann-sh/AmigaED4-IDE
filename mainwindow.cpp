@@ -54,6 +54,8 @@
 #include <QSplitter>
 #include <QListView>
 #include <QStyleFactory>
+#include <QStandardItemModel>
+#include <QStandardPaths>
 
 #include <Qsci/qsciscintilla.h>
 #include <Qsci/qsciscintillabase.h>
@@ -1401,6 +1403,17 @@ void MainWindow::createActions()
     selectCompilerGnuAsAct->setChecked(false);
     connect(selectCompilerGnuAsAct, SIGNAL(triggered()), this, SLOT(actionSelectCompilerGnuAs()));
 
+    // rev.160: SAS/C 6.58 running under vamos - the dice button compiles
+    // and links the current tab, "Build Project" runs Makefile.sc with
+    // smake. Greyed out unless vamos and SAS/C are both found, see
+    // updateSascVamosAvailability().
+    selectCompilerSascVamosAct = new QAction(QIcon(":/images/c-logo.png"), tr("SAS/C (vamos)..."), this);
+    selectCompilerSascVamosAct->setStatusTip(tr("Set Compiler to SAS/C, running under vamos (see Prefs > vamos)..."));
+    selectCompilerSascVamosAct->setCheckable(true);
+    selectCompilerSascVamosAct->setChecked(false);
+    selectCompilerSascVamosAct->setEnabled(false);
+    connect(selectCompilerSascVamosAct, SIGNAL(triggered()), this, SLOT(actionSelectCompilerSascVamos()));
+
     toggleGccDefaultOptsAct = new QAction(tr("Show gcc/g++ options dialog..."), this);
     toggleGccDefaultOptsAct->setCheckable(true);
     toggleGccDefaultOptsAct->setChecked(p_show_gcc_opts);
@@ -1425,6 +1438,7 @@ void MainWindow::createActions()
     compilerGroup->addAction(selectCompilerGPPAct);
     compilerGroup->addAction(selectCompilerVasmAct);
     compilerGroup->addAction(selectCompilerGnuAsAct);
+    compilerGroup->addAction(selectCompilerSascVamosAct);
 
     // GUI Language (I18n) - "English" is the source language (no QTranslator
     // needed), "Deutsch" installs amigaed_de.qm. p_guiLanguage was already
@@ -1880,6 +1894,8 @@ void MainWindow::createMenus()
     compilerMenue->addSeparator();
     compilerMenue->addAction(selectCompilerVasmAct);
     compilerMenue->addAction(selectCompilerGnuAsAct);
+    compilerMenue->addSeparator();
+    compilerMenue->addAction(selectCompilerSascVamosAct);
     buildMenue->addSeparator();
     buildMenue->addAction(compileAct);
     buildMenue->addAction(buildProjectAct);
@@ -2114,6 +2130,7 @@ void MainWindow::retranslateUi()
     selectCompilerGPPAct->setText(tr("GNU g++ (C++ mode)..."));
     selectCompilerVasmAct->setText(tr("vasm (Assembler mode)..."));
     selectCompilerGnuAsAct->setText(tr("GNU as (Assembler mode)..."));
+    selectCompilerSascVamosAct->setText(tr("SAS/C (vamos)..."));
     toggleGccDefaultOptsAct->setText(tr("Show gcc/g++ options dialog..."));
     toggleVbccDefaultOptsAct->setText(tr("Show vbcc options dialog..."));
     autodocReaderAct->setText(tr("AutoDoc Reader..."));
@@ -2218,6 +2235,7 @@ void MainWindow::retranslateUi()
     selectCompilerGPPAct->setStatusTip(tr("Set Compiler to GNU g++ (C++ mode)..."));
     selectCompilerVasmAct->setStatusTip(tr("Set Compiler to vasm (Assembler mode)..."));
     selectCompilerGnuAsAct->setStatusTip(tr("Set Compiler to GNU as (Assembler mode)..."));
+    selectCompilerSascVamosAct->setStatusTip(tr("Set Compiler to SAS/C, running under vamos (see Prefs > vamos)..."));
     toggleGccDefaultOptsAct->setStatusTip(tr("Show or hide gcc/g++ options dialog"));
     toggleVbccDefaultOptsAct->setStatusTip(tr("Show or hide vbcc options dialog"));
     autodocReaderAct->setStatusTip(tr("Browse and filter the NDK AutoDocs (see Prefs > Emulator > \"AutoDocs folder:\")"));
@@ -2699,6 +2717,10 @@ void MainWindow::readSettings()
     p_recentProjects = (settings.value("RecentProjects/List").toStringList());
     if (recentProjectsMenue)
         updateRecentProjectsMenu();
+
+    // rev.160: Prefs > vamos may have changed - re-check "SAS/C (vamos)"
+    if (selectCompilerSascVamosAct)   // not yet created on the very first call
+        updateSascVamosAvailability();
 }
 
 //
@@ -4253,6 +4275,20 @@ void MainWindow::actionSelectCompilerGnuAs()
 }
 
 //
+// rev.160: select a compiler to use: SAS/C 6.58 under vamos
+//
+void MainWindow::actionSelectCompilerSascVamos()
+{
+    qDebug() << "SAS/C (vamos) selection called.";
+    if(!(p_no_compilerbuttons))    // react on user prefs: show or hide compiler combo and -button
+    {
+        compilerCombo->setCurrentIndex(5);
+    }
+    p_defaultCompiler = 5;
+    SelectCompiler(5);
+}
+
+//
 // Remove duplicate whitespace-separated tokens from 'args', keeping the
 // first occurrence of each. Several sources of compiler/linker options
 // can legitimately overlap (a toolchain's Prefs-driven baseline, its
@@ -4343,6 +4379,7 @@ QString MainWindow::compilerDisplayLabel(int compiler) const
     case 2: return QStringLiteral("g++");
     case 3: return QStringLiteral("vasm");
     case 4: return QStringLiteral("gnu as");
+    case 5: return QStringLiteral("SAS/C");
     default: return QString();
     }
 }
@@ -4364,6 +4401,18 @@ void MainWindow::SelectCompiler(int index)
     // through this same function. Falls back to vasm - the same entry
     // createNewProject() itself selects right after generating a new
     // Assembler project.
+    // rev.160: "SAS/C (vamos)" only while vamos and SAS/C are both there -
+    // the menu entry and combo item are greyed out otherwise, but a stale
+    // index (e.g. Prefs > vamos changed meanwhile) can still arrive here
+    if (index == 5 && !p_sascVamosAvailable)
+    {
+        QString why;
+        sascVamosAvailable(&why);
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("SAS/C (vamos) is not available:\n%1\n\nPlease check Prefs > vamos. The compiler was set to VBCC - C.").arg(why));
+        index = 0;
+    }
+
     if (currentProject && currentProject->templateKind == 6 && index != 3 && index != 4)
     {
         QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
@@ -4443,6 +4492,10 @@ void MainWindow::SelectCompiler(int index)
             osCombo->setEnabled(false);   // no OS 1.3/3.x distinction for a pure assembler
             p_defaultCompiler = 4;
             break;
+        case 5: // SAS/C (vamos)
+            osCombo->setEnabled(false);   // SAS/C makes no OS 1.3/3.x distinction (see Makefile.sc)
+            p_defaultCompiler = 5;
+            break;
         }
     }
 
@@ -4509,6 +4562,17 @@ void MainWindow::SelectCompiler(int index)
         selectCompilerGnuAsAct->setChecked(true);
         break;
     }
+    // rev.160: SAS/C under vamos - actionCompile() hands over to
+    // actionCompileSascVamos(), actionBuildProject() to
+    // actionBuildProjectSascMakefile(); the options come from Prefs > SAS/C
+    case 5:
+    {
+        p_selected_compiler = QStringLiteral("sc");
+        p_selected_compiler_args = p_compiler_sc_call;
+        p_compiledFileSuffix = "_sc";
+        selectCompilerSascVamosAct->setChecked(true);
+        break;
+    }
     }
 
     if(p_mydebug)
@@ -4546,6 +4610,13 @@ void MainWindow::actionShowOutputConsole()
 int MainWindow::actionCompile()
 {
     QString new_compiler_args;
+
+    // rev.160: SAS/C runs under vamos, not as a host compiler process
+    if (selectCompilerSascVamosAct && selectCompilerSascVamosAct->isChecked())
+    {
+        actionCompileSascVamos();
+        return 0;
+    }
 
     // check if we have a valid compiler to call:
     if(p_selected_compiler.isEmpty())
@@ -4618,9 +4689,10 @@ int MainWindow::actionCompile()
 
                 // give a user warning
                 (void)QMessageBox::warning(this,
-                                            AMIGAED_VERSION_STRING, "VBCC does <i><b>NOT</b> permit</i> to compile <b><i>C++ sources!</i></b><br> "
-                                            "Compiler was set to <b>GNU g++</b> instead.<br>"
-                                            "<br>This usually makes more sense, ya know?!",
+                                            tr(AMIGAED_VERSION_STRING),
+                                            tr("VBCC does <i><b>NOT</b> allow</i> compiling <b><i>C++ sources!</i></b><br> "
+                                               "The compiler was set to <b>GNU g++</b> instead.<br>"
+                                               "<br>This usually makes more sense, ya know?!"),
                                             QMessageBox::Ok);
 
             } else {mbox_title = "vbcc";}
@@ -4648,9 +4720,10 @@ int MainWindow::actionCompile()
 
                 // give a user warning
                 (void)QMessageBox::warning(this,
-                                            AMIGAED_VERSION_STRING, "GCC does <i><b>NOT</b> permit</i> to compile <b><i>C++ sources!</i></b><br> "
-                                            "Compiler was set to <b>GNU g++</b> instead.<br>"
-                                            "<br>This usually makes more sense, ya know?!",
+                                            tr(AMIGAED_VERSION_STRING),
+                                            tr("GCC does <i><b>NOT</b> allow</i> compiling <b><i>C++ sources!</i></b><br> "
+                                               "The compiler was set to <b>GNU g++</b> instead.<br>"
+                                               "<br>This usually makes more sense, ya know?!"),
                                             QMessageBox::Ok);
 
             }
@@ -4775,9 +4848,10 @@ int MainWindow::actionCompile()
     {
         // give a user warning
         (void)QMessageBox::critical(this,
-                                     AMIGAED_VERSION_STRING, "It makes <i><b>no sense</b></i> to compile <b><i>empty source files!</i></b><br> "
-                                     "Compilation was <b>terminated</b> instead.<br>"
-                                     "<br>This usually makes more sense, ya know?!",
+                                     tr(AMIGAED_VERSION_STRING),
+                                     tr("It makes <i><b>no sense</b></i> to compile <b><i>empty source files!</i></b><br> "
+                                        "Compilation was <b>terminated</b> instead.<br>"
+                                        "<br>This usually makes more sense, ya know?!"),
                                      QMessageBox::Ok);
     }
 
@@ -5468,9 +5542,10 @@ void MainWindow::actionInsertMain()
     else
     {
         (void)QMessageBox::information(this,
-                                        AMIGAED_VERSION_STRING, "It seems there is allready a <i><b>main() </b>function</i> in this document!<br> "
-                                        "It makes absolutely <b>no sense</b> to add another one."
-                                        "<br>Insertion will be cancelled, ya know?!",
+                                        tr(AMIGAED_VERSION_STRING),
+                                        tr("It seems there is already a <i><b>main() </b>function</i> in this document!<br> "
+                                           "It makes absolutely <b>no sense</b> to add another one."
+                                           "<br>Insertion will be cancelled, ya know?!"),
                                         QMessageBox::Ok);
 
     }
@@ -5788,9 +5863,10 @@ void MainWindow::actionInsertAmigaVersionString()
     else
     {
         (void)QMessageBox::information(this,
-                                        AMIGAED_VERSION_STRING, "It seems there is allready a <i><b>version string</b></i> in this document!"
-                                        "How many of them do you want?"
-                                        "<br>Insertion will be cancelled, ya know?!",
+                                        tr(AMIGAED_VERSION_STRING),
+                                        tr("It seems there is already a <i><b>version string</b></i> in this document!<br>"
+                                           "How many of them do you want?"
+                                           "<br>Insertion will be cancelled, ya know?!"),
                                         QMessageBox::Ok);
 
     }
@@ -5942,9 +6018,10 @@ bool MainWindow::actionEmulator(int forcedTarget)
     {
         // give a user warning
         (void)QMessageBox::critical(this,
-                                     AMIGAED_VERSION_STRING, "There seems to be <i><b>NO config file</b></i> for your requested <b><i>Emulation startup!</i></b><br> "
-                                     "Please revisit the Prefs editor and name a configuration.<br>"
-                                     "<br>This helps, ya know?!",
+                                     tr(AMIGAED_VERSION_STRING),
+                                     tr("There seems to be <i><b>NO config file</b></i> for your requested <b><i>emulator start!</i></b><br> "
+                                        "Please revisit the Prefs editor and name a configuration.<br>"
+                                        "<br>This helps, ya know?!"),
                                      QMessageBox::Ok);
 
         actionPrefsDialog(4);   // Emulator tab (was 3 = SAS/C since that tab was added - rev.159 fix)
@@ -8117,9 +8194,9 @@ bool MainWindow::promptCompilerLinkerOptions(QString &compilerOpts, QString &lin
 // automatically whenever a file is added to or removed from the project.
 // Makefile.gcc/Makefile.vbcc build ".c" and ".asm"/".s" sources (a C++
 // project's '.cpp' files still need their own pattern rule added here,
-// which isn't done yet). Makefile.sc is never invoked by AmigaED itself -
-// SAS/C only runs on a real Amiga/emulator, so it's purely generated for
-// manual use there later.
+// which isn't done yet). Makefile.sc is run by smake under vamos when the
+// compiler "SAS/C (vamos)" is selected (rev.160, see
+// actionBuildProjectSascMakefile()) - and works unchanged on a real Amiga.
 //
 // Only CSource/Assembly-typed project files (see Project::typeForFile())
 // ever end up in a Makefile's SRCS/OBJS - anything else tracked in the
@@ -8849,9 +8926,8 @@ void MainWindow::regenerateProjectMakefiles()
     // C++ project). No CFLAGS/LDFLAGS split and no OS 1.3/3.x distinction
     // is made, since "sc" compiles and links in a single invocation and
     // SAS/C targets are source/binary compatible across OS 1.3 and 3.x
-    // for typical use. SAS/C only runs on a real Amiga/emulator, so
-    // AmigaED never invokes this Makefile itself - it's purely a hint for
-    // whoever builds it by hand later (e.g. via smake).
+    // for typical use. Built by smake under vamos when "SAS/C (vamos)" is
+    // the selected compiler (rev.160) - or by hand on a real Amiga.
     if (!scSources.isEmpty() && !currentProject->excludeScMakefile)
     {
         // Only add MATH=IEEE if the project doesn't already configure a
@@ -8871,9 +8947,9 @@ void MainWindow::regenerateProjectMakefiles()
             out << "# delete it to let AmigaED generate and manage it again.\n";
             out << "# Toolchain: SAS/C (sc)\n";
             out << "#\n";
-            out << "# SAS/C only runs on a real Amiga (or emulator) - AmigaED never runs\n";
-            out << "# this Makefile itself. Copy the project over and build it by hand\n";
-            out << "# (e.g. via smake) once you want to cross-check the build with SAS/C.\n";
+            out << "# Build with SAS/C's smake:  smake -f Makefile.sc\n";
+            out << "# AmigaED does exactly that under vamos when \"SAS/C (vamos)\" is the\n";
+            out << "# selected compiler; on a real Amiga (or emulator) run it in a Shell.\n";
             out << "\n";
             out << "SCOPTS = " << scOpts << "\n";
             out << "TARGET = " << targetName << "\n";
@@ -10518,6 +10594,13 @@ void MainWindow::actionBuildProject()
     // last time the file list itself changed.
     regenerateProjectMakefiles();
 
+    // rev.160: SAS/C (vamos) builds Makefile.sc with smake under vamos
+    if (selectCompilerSascVamosAct && selectCompilerSascVamosAct->isChecked())
+    {
+        actionBuildProjectSascMakefile();
+        return;
+    }
+
     // 0 (VBCC-C) and 3 (vasm) both build via Makefile.vbcc; 1/2 (GCC/G++)
     // and 4 (GNU as) both build via Makefile.gcc - see SelectCompiler()
     // for what each index means and regenerateProjectMakefiles() for how
@@ -10607,6 +10690,7 @@ void MainWindow::actionCleanProject()
     }
     toDelete << dir + QDir::separator() + targetName;
     toDelete << dir + QDir::separator() + targetName + ".info";   // the icon, if Prefs > Misc > "create icon" wrote one
+    toDelete << dir + QDir::separator() + targetName + ".lnk";    // rev.160: slink's "WITH" file from a SAS/C build
 
     if(!(p_console_on_fail))
         actionShowOutputConsole();
@@ -12134,6 +12218,8 @@ void MainWindow::initializeGUI()
         compilerCombo->setItemIcon(2, QIcon(":/images/cpp-logo.png"));
         compilerCombo->setItemIcon(3, QIcon(":/images/filetype_asm.png"));
         compilerCombo->setItemIcon(4, QIcon(":/images/filetype_asm.png"));
+        compilerCombo->setItemIcon(5, QIcon(":/images/c-logo.png"));
+        compilerCombo->setSizeAdjustPolicy(QComboBox::AdjustToContents);   // rev.160: room for "SAS/C (vamos)"
         compilerCombo->setCurrentIndex(p_defaultCompiler);
         compilerCombo->setStatusTip(tr("Select compiler to use for this file"));
 
@@ -12204,6 +12290,7 @@ void MainWindow::initializeGUI()
         if(p_defaultCompiler == 0)
             osCombo->setEnabled(true);
     }
+    updateSascVamosAvailability();   // rev.160: grey out "SAS/C (vamos)" unless vamos + SAS/C are there
 
     connect(btnCloseOutput, SIGNAL(clicked(bool)), this, SLOT(actionCloseOutputConsole()));
 
@@ -12252,10 +12339,11 @@ void MainWindow::printFile()
     // textEdit->text().size() == 0. No text available. We will not print anything!
     else
     {
-        this->createStatusBarMessage(tr("Printing canceled tue to wasting!"), 6000);
+        this->createStatusBarMessage(tr("Printing cancelled - nothing to print!"), 6000);
         (void)QMessageBox::information(this,
-                                        "Printing - " AMIGAED_VERSION_STRING, "It seems there is <i><b>no text</b></i> in this editor window!<br> Printing is cancelled due to waste of paper."
-                                        "<br>There's allways a unicorn dying if you waste things, ya know?!",
+                                        tr("Printing - %1").arg(QStringLiteral(AMIGAED_VERSION_STRING)),
+                                        tr("It seems there is <i><b>no text</b></i> in this editor window!<br> Printing is cancelled to avoid wasting paper."
+                                           "<br>There's always a unicorn dying if you waste things, ya know?!"),
                                         QMessageBox::Ok);
     }
 }
@@ -12709,6 +12797,22 @@ void MainWindow::runCommand(QString command, QStringList arguments)
         if(p_mydebug)
             qDebug() << "runCommand(): prepending to PATH: " << compilerBinDir;
     }
+    // rev.160: compiler, make and FlexCat messages always in English,
+    // whatever the system locale or AmigaED's GUI language - a German
+    // LANG would make GNU make/gcc (NLS builds) print "Fehler"/"Warnung",
+    // which the error parsers (checkGCC()/checkVBCC()/checkFlexCat())
+    // don't recognise, and the output pane shows tool messages verbatim.
+    // Only the message language is pinned (LC_MESSAGES=C); LC_ALL would
+    // override that, so its value moves to LC_CTYPE (character handling
+    // unchanged). LANGUAGE (GNU gettext's own list) goes completely.
+    env.remove(QStringLiteral("LANGUAGE"));
+    if (env.contains(QStringLiteral("LC_ALL")))
+    {
+        if (!env.contains(QStringLiteral("LC_CTYPE")))
+            env.insert(QStringLiteral("LC_CTYPE"), env.value(QStringLiteral("LC_ALL")));
+        env.remove(QStringLiteral("LC_ALL"));
+    }
+    env.insert(QStringLiteral("LC_MESSAGES"), QStringLiteral("C"));
     cmd->setProcessEnvironment(env);
 
     // check if there's allready a compiled file with that name
@@ -12875,18 +12979,18 @@ int MainWindow::stopCommand(int exitCode, QProcess::ExitStatus exitStatus)
         // Let's check if the compiler produced an executable file:
         if(fileExists(p_compiledFile))
         {
-            successMessage = "Compiler run finished, took " + QString::number(nMilliseconds) + " mSecs";
+            successMessage = tr("Compiler run finished, took %1 ms").arg(nMilliseconds);
             createStatusBarMessage(successMessage, 0);
 
             if(!(p_no_warn_requesters))
             {
-                (void)QMessageBox::information(this, tr("Compilation finished - " AMIGAED_VERSION_STRING),
+                (void)QMessageBox::information(this, tr("Compilation finished - %1").arg(QStringLiteral(AMIGAED_VERSION_STRING)),
                                                 tr("Successfully compiled.\nCompilation took %1 milliseconds to finish.\n\n"
                                                    "You may now want to test your program in UAE.").arg(nMilliseconds),
                                                 QMessageBox::Ok);
             }
 
-            successMessage = "Compiled successfully. Compile time: " + QString::number(nMilliseconds) + " mSecs";
+            successMessage = tr("Compiled successfully. Compile time: %1 ms").arg(nMilliseconds);
             createStatusBarMessage(successMessage, 0);
 
 
@@ -12924,7 +13028,7 @@ int MainWindow::stopCommand(int exitCode, QProcess::ExitStatus exitStatus)
                                                "Please check for Errors and recompile."),
                                             QMessageBox::Ok);
 
-            successMessage = "Compiled successfully. Compile time: " + QString::number(nMilliseconds) + " mSecs";
+            successMessage = tr("Compiled successfully. Compile time: %1 ms").arg(nMilliseconds);
             createStatusBarMessage(successMessage, 0);
         }
 
@@ -13093,15 +13197,15 @@ void MainWindow::finished(int exitCode, QProcess::ExitStatus exitStatus)
         // Let's check if the compiler produced an executable file:
         if(fileExists(p_compiledFile))
         {
-            successMessage = "Compiled successfully. Compile time: " + QString::number(nMilliseconds) + " mSecs";
+            successMessage = tr("Compiled successfully. Compile time: %1 ms").arg(nMilliseconds);
             createStatusBarMessage(successMessage, 0);
 
-            (void)QMessageBox::information(this, tr("Compilation finished - " AMIGAED_VERSION_STRING),
+            (void)QMessageBox::information(this, tr("Compilation finished - %1").arg(QStringLiteral(AMIGAED_VERSION_STRING)),
                                             tr("Successfully compiled.\nCompilation took %1 milliseconds to finish.\n\n"
                                                "You may now want to test your program in UAE.").arg(nMilliseconds),
                                             QMessageBox::Ok);
 
-            successMessage = "Compiled successfully. Compile time: " + QString::number(nMilliseconds) + " mSecs";
+            successMessage = tr("Compiled successfully. Compile time: %1 ms").arg(nMilliseconds);
             createStatusBarMessage(successMessage, 0);
         }
         else
@@ -13529,6 +13633,15 @@ QString MainWindow::resolveDebugFilePath(const QString &fileName)
             return QFileInfo(candidate).absoluteFilePath();
     }
 
+    // rev.160: relative to the project folder (a SAS/C/smake project build
+    // reports "file.c 12 Error ..." while a header may be the current tab)
+    if (currentProject)
+    {
+        QString candidate = QDir(currentProject->projectDir()).filePath(fileName);
+        if (QFileInfo::exists(candidate))
+            return QFileInfo(candidate).absoluteFilePath();
+    }
+
     // Fall back to the application's current working directory - this is
     // also the directory the compiler QProcess runs in (no explicit
     // setWorkingDirectory() is used), so relative paths reported by gcc
@@ -13844,7 +13957,8 @@ void MainWindow::stopVamosProgram()
 // or still busy (the user has already been told).
 //
 bool MainWindow::startVamos(VamosJob job, const QString &hostDir, const QStringList &extraAssigns,
-                            const QString &path, const QStringList &tail, const QString &header)
+                            const QString &path, const QStringList &tail, const QString &header,
+                            const QStringList &vamosOpts)
 {
     if (vamosProcess && vamosProcess->state() != QProcess::NotRunning)
     {
@@ -13865,6 +13979,8 @@ bool MainWindow::startVamos(VamosJob job, const QString &hostDir, const QStringL
     const QString program = command.takeFirst();
     QStringList args = command;                                  // e.g. "~/amitools-venv/bin/vamos" behind "wsl"
     args << QProcess::splitCommand(p_vamos_opts);                 // user's own options, as typed
+    for (const QString &o : vamosOpts)                            // rev.160: job-specific vamos options (e.g. smake's icon.library)
+        args << vamosArg(o);
     if (!p_vamos_workbench_dir.isEmpty())
         args << vamosArg(QStringLiteral("-V")) << vamosArg(QStringLiteral("workbench:") + vamosHostPath(p_vamos_workbench_dir));
     if (!p_vamos_work_dir.isEmpty())
@@ -13875,6 +13991,10 @@ bool MainWindow::startVamos(VamosJob job, const QString &hostDir, const QStringL
         args << vamosArg(QStringLiteral("-p")) << vamosArg(path);
     args << vamosArg(QStringLiteral("-V")) << vamosArg(QStringLiteral("amigaed:") + vamosHostPath(hostDir))
          << vamosArg(QStringLiteral("--cwd")) << vamosArg(QStringLiteral("amigaed:"));
+    // rev.160: "--" ends vamos' own options - otherwise vamos takes an
+    // Amiga program's dash options for its own ("smake -f Makefile.sc":
+    // "unrecognized arguments: -f")
+    args << vamosArg(QStringLiteral("--"));
     for (const QString &t : tail)
         args << vamosArg(t);
 
@@ -13957,19 +14077,29 @@ void MainWindow::vamosFinished(int exitCode, QProcess::ExitStatus status)
         return;
     }
 
-    // VamosJob::SascBuild - sc's return code alone isn't enough: with
-    // BATCH (needed so slink never waits for keyboard input that can't
-    // come), an undefined symbol is linked to a stub and slink STILL writes
-    // the program (return code 3 here). Running it would crash, so that
-    // half-built program is removed again.
+    // VamosJob::SascBuild/SascCompile - sc's return code alone isn't
+    // enough: with BATCH (needed so slink never waits for keyboard input
+    // that can't come), an undefined symbol is linked to a stub and slink
+    // STILL writes the program (return code 3 here; under smake the build
+    // stops with an error). Running it would crash, so that half-built
+    // program is removed again. p_vamosSascTarget is its host path.
     highlightOutputDiagnostics();
     const bool undefinedSymbols = output->toPlainText().contains(QStringLiteral("Undefined symbols"), Qt::CaseInsensitive);
-    const QString target = currentProject ? (currentProject->projectDir() + QDir::separator() + p_vamosSascTarget) : QString();
+    const QString target = p_vamosSascTarget;
+    const bool singleFile = (p_vamosJob == VamosJob::SascCompile);
 
     if (exitCode == 0 && !undefinedSymbols)
     {
-        appendLine(tr("--- SAS/C build finished successfully ---"));
-        createStatusBarMessage(tr("SAS/C (vamos): project build finished successfully."), 0);
+        if (singleFile)
+        {
+            appendLine(tr("--- SAS/C compile finished successfully: %1 ---").arg(QDir::toNativeSeparators(target)));
+            createStatusBarMessage(tr("SAS/C (vamos): %1 compiled successfully.").arg(QFileInfo(target).fileName()), 0);
+        }
+        else
+        {
+            appendLine(tr("--- SAS/C build finished successfully ---"));
+            createStatusBarMessage(tr("SAS/C (vamos): project build finished successfully."), 0);
+        }
     }
     else
     {
@@ -13980,8 +14110,18 @@ void MainWindow::vamosFinished(int exitCode, QProcess::ExitStatus status)
             QFile::remove(target + QStringLiteral(".info"));
             why += tr(" - the incomplete program was removed");
         }
-        appendLine(tr("--- SAS/C build failed (%1) ---").arg(why));
-        createStatusBarMessage(tr("SAS/C (vamos): project build failed - see compiler output."), 0);
+        if (singleFile)
+        {
+            appendLine(tr("--- SAS/C compile failed (%1) ---").arg(why));
+            createStatusBarMessage(tr("SAS/C (vamos): compile failed - see compiler output."), 0);
+        }
+        else
+        {
+            appendLine(tr("--- SAS/C build failed (%1) ---").arg(why));
+            createStatusBarMessage(tr("SAS/C (vamos): project build failed - see compiler output."), 0);
+        }
+        if (p_console_on_fail)
+            actionShowOutputConsole();
     }
     if (currentProject)
         refreshProjectTree();
@@ -14050,27 +14190,13 @@ void MainWindow::actionBuildProjectSascVamos()
         return;
     }
 
-    const QString sascDir = p_vamos_sasc_dir.isEmpty() ? QStringLiteral("workbench:SAS-C") : p_vamos_sasc_dir;
-    if (sascDir.startsWith(QStringLiteral("workbench:"), Qt::CaseInsensitive) && p_vamos_workbench_dir.isEmpty())
-    {
-        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
-                             tr("SAS/C is expected in \"%1\", but no Workbench folder is set.\n\n"
-                                "Please enter the host folder of your emulator's Workbench partition in Prefs > vamos.").arg(sascDir));
-        actionPrefsDialog(7);
+    QStringList assigns;
+    if (!sascVamosAssigns(currentProject->templateKind == 5 || currentProject->templateKind == 7, assigns))
         return;
-    }
 
     QString targetName = currentProject->name;
     targetName.replace(QRegularExpression("[^A-Za-z0-9_\\-]"), "_");
-    p_vamosSascTarget = targetName;
-
-    QStringList assigns;
-    assigns << QStringLiteral("sc:") + sascDir
-            << QStringLiteral("lib:sc:lib")
-            << QStringLiteral("include:sc:include")
-            << QStringLiteral("cxxinclude:sc:cxxinclude");
-    if (currentProject->templateKind == 5 || currentProject->templateKind == 7)
-        assigns << QStringLiteral("MUI:") + (p_vamos_mui_dir.isEmpty() ? QStringLiteral("work:MUI") : p_vamos_mui_dir);
+    p_vamosSascTarget = currentProject->projectDir() + QDir::separator() + targetName;
 
     QStringList tail;
     tail << QStringLiteral("sc") << QProcess::splitCommand(sascOptionsForProject()) << QStringLiteral("BATCH")
@@ -14078,6 +14204,204 @@ void MainWindow::actionBuildProjectSascVamos()
 
     if (startVamos(VamosJob::SascBuild, currentProject->projectDir(), assigns, QStringLiteral("sc:c,c:"), tail,
                    tr("--- SAS/C (vamos): building project \"%1\" ---").arg(currentProject->name)))
+        createStatusBarMessage(tr("SAS/C (vamos): building project \"%1\"...").arg(currentProject->name), 0);
+}
+
+//
+// rev.160: compiler entry "SAS/C (vamos)" (p_defaultCompiler 5, Build >
+// Select Compiler and the status bar combo). Like "Build Project with
+// SAS/C (vamos)" it runs SAS/C 6.58 under vamos, but as a regular compiler
+// choice:
+//   - dice button / F6:  sc <options> BATCH <file>.c LINK TO <file>_sc
+//                        in the current tab's folder (actionCompileSascVamos())
+//   - Build / Shift+F6:  smake -f Makefile.sc in the project folder
+//                        (actionBuildProjectSascMakefile())
+// Only enabled while the vamos command can be found AND SAS/C's sc and
+// smake sit in "SAS/C folder" (Prefs > vamos, default workbench:SAS-C,
+// resolved through the Workbench/Work host folders set there). Can also
+// be the default compiler (Prefs > Misc > "Default cross compiler").
+//
+
+// rev.160: the check itself lives in PrefsDialog, which also uses it
+// for its "Default cross compiler" box
+bool MainWindow::sascVamosAvailable(QString *why) const
+{
+    return PrefsDialog::sascVamosAvailable(p_vamos_command, p_vamos_workbench_dir, p_vamos_work_dir, p_vamos_sasc_dir, why);
+}
+
+void MainWindow::updateSascVamosAvailability()
+{
+    QString why;
+    p_sascVamosAvailable = sascVamosAvailable(&why);
+
+    if (selectCompilerSascVamosAct)
+    {
+        selectCompilerSascVamosAct->setEnabled(p_sascVamosAvailable);
+        selectCompilerSascVamosAct->setStatusTip(p_sascVamosAvailable
+            ? tr("Set Compiler to SAS/C, running under vamos (see Prefs > vamos)...")
+            : tr("SAS/C (vamos) is not available: %1").arg(why));
+    }
+    if (!p_no_compilerbuttons && compilerCombo && compilerCombo->count() > 5)
+    {
+        if (QStandardItemModel *model = qobject_cast<QStandardItemModel *>(compilerCombo->model()))
+            if (QStandardItem *item = model->item(5))
+            {
+                item->setEnabled(p_sascVamosAvailable);
+                item->setToolTip(p_sascVamosAvailable ? QString() : tr("Not available: %1").arg(why));
+            }
+    }
+
+    // was selected, but isn't usable any more (Prefs > vamos changed)
+    if (!p_sascVamosAvailable && selectCompilerSascVamosAct && selectCompilerSascVamosAct->isChecked())
+        actionSelectCompilerVBCC();
+}
+
+// The assigns SAS/C needs under vamos, as in its setup guide: sc: (Prefs >
+// vamos > SAS/C folder), lib:, include:, cxxinclude: - plus MUI: (Prefs >
+// vamos > MUI folder) for MUI sources. False if the volume SAS/C lives on
+// isn't set up (the user has been told and Prefs > vamos opened).
+bool MainWindow::sascVamosAssigns(bool mui, QStringList &assigns)
+{
+    const QString sascDir = p_vamos_sasc_dir.isEmpty() ? QStringLiteral("workbench:SAS-C") : p_vamos_sasc_dir;
+    if (sascDir.startsWith(QStringLiteral("workbench:"), Qt::CaseInsensitive) && p_vamos_workbench_dir.isEmpty())
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("SAS/C is expected in \"%1\", but no Workbench folder is set.\n\n"
+                                "Please enter the host folder of your emulator's Workbench partition in Prefs > vamos.").arg(sascDir));
+        actionPrefsDialog(7);
+        return false;
+    }
+
+    assigns.clear();
+    assigns << QStringLiteral("sc:") + sascDir
+            << QStringLiteral("lib:sc:lib")
+            << QStringLiteral("include:sc:include")
+            << QStringLiteral("cxxinclude:sc:cxxinclude");
+    if (mui)
+        assigns << QStringLiteral("MUI:") + (p_vamos_mui_dir.isEmpty() ? QStringLiteral("work:MUI") : p_vamos_mui_dir);
+    return true;
+}
+
+//
+// Dice button / F6 with "SAS/C (vamos)" selected: compile and link the
+// current tab in its own folder (= amigaed:), named like the other
+// compilers' single-file results (<name>_sc):
+//   sc <options> BATCH <name>.c LINK TO <name>_sc
+// Options: a project file gets exactly the project's SAS/C options (as in
+// Makefile.sc), any other file Prefs > SAS/C's plus MATH=IEEE if it uses
+// float/double and the MUI SDK includes if it includes a MUI header.
+//
+void MainWindow::actionCompileSascVamos()
+{
+    if (!textEdit || textEdit->text().isEmpty())
+        return;
+    if ((curFile.isEmpty() || textEdit->isModified() || !QFileInfo::exists(curFile)) && !save())
+        return;   // cancelled or failed - nothing on disk to compile
+    if (curFile.isEmpty() || !QFileInfo::exists(curFile))
+        return;
+
+    const QFileInfo file(curFile);
+    if (file.suffix().compare(QStringLiteral("c"), Qt::CaseInsensitive) != 0)
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("SAS/C (vamos) compiles plain C source files (.c) only."));
+        return;
+    }
+
+    const bool inProject = currentProject && currentProject->contains(curFile);
+    const QString source = textEdit->text();
+    bool mui = inProject ? (currentProject->templateKind == 5 || currentProject->templateKind == 7)
+                         : source.contains(QRegularExpression(QStringLiteral("#\\s*include\\s*[<\"](libraries/)?mui\\.h[>\"]"),
+                                                              QRegularExpression::CaseInsensitiveOption));
+    QString opts;
+    if (inProject)
+        opts = sascOptionsForProject();
+    else
+    {
+        opts = p_compiler_sc_call;
+        static const QRegularExpression floatRe(QStringLiteral("\\b(float|double)\\b"));
+        if (floatRe.match(source).hasMatch() && !opts.contains(QStringLiteral("MATH="), Qt::CaseInsensitive))
+            opts += QStringLiteral(" MATH=IEEE");
+        if (mui && !opts.contains(QStringLiteral("IDIR="), Qt::CaseInsensitive))
+            opts += QStringLiteral(" IDIR=MUI:Developer/C/Include");
+        opts = opts.trimmed();
+    }
+    // the user's own IDIR=MUI:... also needs the MUI: assign
+    if (opts.contains(QStringLiteral("MUI:"), Qt::CaseInsensitive))
+        mui = true;
+
+    QStringList assigns;
+    if (!sascVamosAssigns(mui, assigns))
+        return;
+
+    const QString outName = file.completeBaseName() + QStringLiteral("_sc");
+    p_vamosSascTarget = file.absolutePath() + QDir::separator() + outName;
+    p_compiledFile = p_vamosSascTarget;
+
+    QStringList tail;
+    tail << QStringLiteral("sc") << QProcess::splitCommand(opts) << QStringLiteral("BATCH")
+         << file.fileName() << QStringLiteral("LINK") << QStringLiteral("TO") << outName;
+
+    if (startVamos(VamosJob::SascCompile, file.absolutePath(), assigns, QStringLiteral("sc:c,c:"), tail,
+                   tr("--- SAS/C (vamos): sc %1 BATCH %2 LINK TO %3 ---").arg(opts, file.fileName(), outName)))
+        createStatusBarMessage(tr("SAS/C (vamos): compiling %1...").arg(file.fileName()), 0);
+}
+
+//
+// Build / Shift+F6 with "SAS/C (vamos)" selected: run the project's
+// Makefile.sc with SAS/C's own make tool, exactly as on the Amiga:
+//   smake -f Makefile.sc
+// smake opens icon.library at start-up, which vamos doesn't provide - a
+// "fake" library (calls do nothing) is enough for it. The program name for
+// vamosFinished() comes from the Makefile's "TARGET =" line, so a
+// hand-edited Makefile.sc works as well.
+//
+void MainWindow::actionBuildProjectSascMakefile()
+{
+    if (!currentProject)
+        return;
+
+    const QString dir = currentProject->projectDir();
+    const QString makefilePath = dir + QDir::separator() + QStringLiteral("Makefile.sc");
+    if (!QFileInfo::exists(makefilePath))
+    {
+        QMessageBox::warning(this, tr(AMIGAED_VERSION_STRING),
+                             tr("Makefile not found:\n%1\n\nSAS/C builds plain C (.c) files only - add at least one to the project. "
+                                "If the project has some, check \"Generate Makefile.sc\" in Build > Project Options...")
+                                 .arg(QDir::toNativeSeparators(makefilePath)));
+        return;
+    }
+
+    QString targetName;
+    QFile mf(makefilePath);
+    if (mf.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        static const QRegularExpression targetRe(QStringLiteral("^\\s*TARGET\\s*=\\s*(\\S+)"), QRegularExpression::MultilineOption);
+        const QString content = QString::fromLatin1(mf.readAll());
+        QRegularExpressionMatch m = targetRe.match(content);
+        if (m.hasMatch())
+            targetName = m.captured(1);
+        mf.close();
+    }
+    if (targetName.isEmpty() || targetName.contains(QLatin1Char('$')))
+    {
+        targetName = currentProject->name;
+        targetName.replace(QRegularExpression("[^A-Za-z0-9_\\-]"), "_");
+    }
+    p_vamosSascTarget = dir + QDir::separator() + targetName;
+
+    QStringList assigns;
+    const bool mui = (currentProject->templateKind == 5 || currentProject->templateKind == 7)
+                     || sascOptionsForProject().contains(QStringLiteral("MUI:"), Qt::CaseInsensitive);
+    if (!sascVamosAssigns(mui, assigns))
+        return;
+
+    QStringList tail;
+    tail << QStringLiteral("smake") << QStringLiteral("-f") << QStringLiteral("Makefile.sc");
+
+    if (startVamos(VamosJob::SascBuild, dir, assigns, QStringLiteral("sc:c,c:"), tail,
+                   tr("--- SAS/C (vamos): smake -f Makefile.sc - project \"%1\" ---").arg(currentProject->name),
+                   QStringList() << QStringLiteral("-O") << QStringLiteral("icon.library=mode:fake")))
         createStatusBarMessage(tr("SAS/C (vamos): building project \"%1\"...").arg(currentProject->name), 0);
 }
 

@@ -1,0 +1,15 @@
+rev.160: compiler "SAS/C (vamos)", SAS/C as default compiler, I18n fixes
+
+- Build > Select Compiler and the status bar combo get "SAS/C (vamos)",
+  greyed out unless vamos and SAS/C (c/sc, c/smake) are found;
+  re-checked at start-up and after Prefs
+- Dice button / F6: sc <opts> BATCH <file>.c LINK TO <file>_sc
+- Build Project / Shift+F6: smake -f Makefile.sc under vamos
+- SAS/C (vamos) selectable as default compiler (Prefs > Misc); the box
+  stores the compiler index (VBCC 0, gcc 1, g++ 2, SAS/C 5)
+- vamos: "--" before the Amiga command line (fixes "-f" being eaten)
+- Clean Project removes <target>.lnk; project-relative diagnostics
+- Remaining hard-coded English messages/labels now follow the GUI
+  language (message boxes, "Compilation finished" title, status bar)
+- Compiler/make/FlexCat output stays English (LC_MESSAGES=C)
+- Manual EN/DE (HTML + PDF), German translations, Revisions.md

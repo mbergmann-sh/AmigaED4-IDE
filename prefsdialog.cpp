@@ -3,6 +3,11 @@
 #include "ui_prefsdialog.h"
 #include "mainwindow.h"
 #include <QMap>
+#include <QProcess>
+#include <QStandardPaths>
+#include <QStandardItemModel>
+#include <QDir>
+#include <QFileInfo>
 
 PrefsDialog::PrefsDialog(QWidget *parent, int tabindex) :
     QDialog(parent),
@@ -48,7 +53,19 @@ PrefsDialog::PrefsDialog(QWidget *parent, int tabindex) :
     ui->comboBoxDefaultStyle->addItem(QStringLiteral("Visual Studio Code Dark"));
 
     // set items for default compiler combobox:
-    ui->comboBoxDefaultCompiler->addItems(p_Compilers);
+    // (item data = MainWindow's compiler index, saved as
+    // MISC/DefaultCrossCompiler - rev.160 added "SAS/C (vamos)" = 5,
+    // greyed out while vamos/SAS/C aren't found, re-checked live whenever
+    // a field on the vamos tab changes)
+    // (labels translated like the Build > Select Compiler menu entries)
+    ui->comboBoxDefaultCompiler->addItem(tr("VBCC (C mode only)"), 0);
+    ui->comboBoxDefaultCompiler->addItem(tr("GNU gcc (C mode)"), 1);
+    ui->comboBoxDefaultCompiler->addItem(tr("GNU g++ (C++ mode)"), 2);
+    ui->comboBoxDefaultCompiler->addItem(QStringLiteral("SAS/C (vamos)"), sascVamosCompilerIndex);
+    ui->comboBoxDefaultCompiler->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    for (QLineEdit *e : { ui->lineEdit_vamosCommand, ui->lineEdit_vamosWorkbenchDir,
+                          ui->lineEdit_vamosWorkDir, ui->lineEdit_vamosSascDir })
+        connect(e, &QLineEdit::textChanged, this, &PrefsDialog::updateDefaultCompilerSascEntry);
 
     // set items for default GUI language combobox (data = settings code,
     // text = the language's own name - shown untranslated on purpose, so
@@ -552,7 +569,7 @@ void PrefsDialog::save_mySettings()
      mySettings.setValue("MISC/NoLCDstatusbar", ui->checkBoxNoLCD->isChecked());
      mySettings.setValue("MISC/NoCompileButton", ui->checkBoxNoCompileButton->isChecked());
      mySettings.setValue("MISC/SimpleStatusbar", ui->checkBoxSimpleStatusbar->isChecked());
-     mySettings.setValue("MISC/DefaultCrossCompiler", ui->comboBoxDefaultCompiler->currentIndex());
+     mySettings.setValue("MISC/DefaultCrossCompiler", ui->comboBoxDefaultCompiler->currentData().toInt());   // rev.160: compiler index, not row
      mySettings.setValue("MISC/CreateIcon", ui->checkBoxCreateIcon->isChecked());
      mySettings.setValue("MISC/OpenConsoleOnFail", ui->checkBoxOpenOnFail->isChecked());
      mySettings.setValue("MISC/NoWarnRequester", ui->checkBoxWarnRequesters->isChecked());
@@ -619,7 +636,12 @@ void PrefsDialog::load_mySettings()
     ui->checkBoxNoLCD->setChecked(mySettings.value("MISC/NoLCDstatusbar").toBool());
     ui->checkBoxNoCompileButton->setChecked(mySettings.value("MISC/NoCompileButton").toBool());
     ui->checkBoxSimpleStatusbar->setChecked(mySettings.value("MISC/SimpleStatusbar").toBool());
-    ui->comboBoxDefaultCompiler->setCurrentIndex(mySettings.value("MISC/DefaultCrossCompiler").toInt());
+    {
+        // rev.160: rows no longer equal compiler indices (SAS/C = 5); an
+        // index without an entry here (vasm/GNU as) falls back to VBCC
+        const int row = ui->comboBoxDefaultCompiler->findData(mySettings.value("MISC/DefaultCrossCompiler").toInt());
+        ui->comboBoxDefaultCompiler->setCurrentIndex(row < 0 ? 0 : row);
+    }
     ui->checkBoxCreateIcon->setChecked(mySettings.value("MISC/CreateIcon").toBool());
     ui->checkBoxOpenOnFail->setChecked(mySettings.value("MISC/OpenConsoleOnFail").toBool());
     ui->checkBoxWarnRequesters->setChecked(mySettings.value("MISC/NoWarnRequester").toBool());
@@ -682,6 +704,8 @@ void PrefsDialog::load_mySettings()
     ui->lineEdit_vamosOpts->setText(mySettings.value("VAMOS/ExtraOpts", QStringLiteral("-m 8000 -s 256")).toString());
     ui->lineEdit_vamosSascDir->setText(mySettings.value("VAMOS/SascDir", QStringLiteral("workbench:SAS-C")).toString());
     ui->lineEdit_vamosMuiDir->setText(mySettings.value("VAMOS/MuiDir", QStringLiteral("work:MUI")).toString());
+
+    updateDefaultCompilerSascEntry();   // rev.160: the textChanged signals above may have fired before every field was set
 }
 
 void PrefsDialog::on_checkBoxSimpleStatusbar_clicked()
@@ -736,6 +760,98 @@ void PrefsDialog::on_checkBoxNoCompileButton_clicked()
 // default calls it through wsl.exe from the amitools venv the setup guide
 // creates; everywhere else it's simply "vamos" from the PATH.
 //
+//
+// rev.160: "SAS/C (vamos)" availability (see MainWindow::updateSascVamosAvailability()).
+//
+// "workbench:SAS-C" -> "<Workbench host folder>/SAS-C" - only the two
+// volumes AmigaED mounts itself (Prefs > vamos). Each path component is
+// matched case-insensitively, like AmigaDOS does (the folders may come
+// from an emulator's hard drive folder with any spelling). Empty if the
+// volume is unknown or the path doesn't exist.
+QString PrefsDialog::vamosHostPathForAmiga(const QString &amigaPath, const QString &workbenchHost, const QString &workHost)
+{
+    const int colon = amigaPath.indexOf(QLatin1Char(':'));
+    if (colon <= 0)
+        return QString();
+    const QString volume = amigaPath.left(colon).toLower();
+    QString dir;
+    if (volume == QLatin1String("workbench"))
+        dir = workbenchHost;
+    else if (volume == QLatin1String("work"))
+        dir = workHost;
+    if (dir.isEmpty() || !QFileInfo(dir).isDir())
+        return QString();
+
+    const QStringList parts = amigaPath.mid(colon + 1).split(QLatin1Char('/'), Qt::SkipEmptyParts);
+    for (const QString &part : parts)
+    {
+        QDir d(dir);
+        QString found;
+        if (QFileInfo::exists(d.filePath(part)))
+            found = part;
+        else
+        {
+            const QStringList entries = d.entryList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+            for (const QString &e : entries)
+                if (e.compare(part, Qt::CaseInsensitive) == 0) { found = e; break; }
+        }
+        if (found.isEmpty())
+            return QString();
+        dir = d.filePath(found);
+    }
+    return QDir::cleanPath(dir);
+}
+
+// vamos runnable (first word of the command found as a program - for
+// "wsl ..." that is wsl.exe) AND SAS/C's c/sc and c/smake in <sascDir>.
+bool PrefsDialog::sascVamosAvailable(const QString &vamosCommand, const QString &workbenchHost, const QString &workHost,
+                                     const QString &sascDirIn, QString *why)
+{
+    auto fail = [why](const QString &reason) { if (why) *why = reason; return false; };
+
+    const QStringList command = QProcess::splitCommand(vamosCommand);
+    if (command.isEmpty())
+        return fail(tr("No vamos command is configured."));
+    const QString program = command.first();
+    const QFileInfo programInfo(program);
+    const bool found = (programInfo.isAbsolute() || program.contains(QLatin1Char('/')) || program.contains(QLatin1Char('\\')))
+                       ? programInfo.isExecutable()
+                       : !QStandardPaths::findExecutable(program).isEmpty();
+    if (!found)
+        return fail(tr("The vamos command \"%1\" was not found.").arg(program));
+
+    const QString sascDir = sascDirIn.isEmpty() ? QStringLiteral("workbench:SAS-C") : sascDirIn;
+    if (vamosHostPathForAmiga(sascDir, workbenchHost, workHost).isEmpty())
+        return fail(tr("The SAS/C folder \"%1\" was not found (check the Workbench/Work folders in Prefs > vamos).").arg(sascDir));
+    for (const char *tool : { "c/sc", "c/smake" })
+    {
+        const QString amigaTool = sascDir + (sascDir.endsWith(QLatin1Char(':')) ? QString() : QStringLiteral("/")) + QLatin1String(tool);
+        if (vamosHostPathForAmiga(amigaTool, workbenchHost, workHost).isEmpty())
+            return fail(tr("\"%1\" was not found - is SAS/C installed there?").arg(amigaTool));
+    }
+    if (why)
+        why->clear();
+    return true;
+}
+
+void PrefsDialog::updateDefaultCompilerSascEntry()
+{
+    QString why;
+    const bool ok = sascVamosAvailable(ui->lineEdit_vamosCommand->text().trimmed(),
+                                       ui->lineEdit_vamosWorkbenchDir->text().trimmed(),
+                                       ui->lineEdit_vamosWorkDir->text().trimmed(),
+                                       ui->lineEdit_vamosSascDir->text().trimmed(), &why);
+    const int row = ui->comboBoxDefaultCompiler->findData(sascVamosCompilerIndex);
+    if (QStandardItemModel *model = qobject_cast<QStandardItemModel *>(ui->comboBoxDefaultCompiler->model()))
+        if (QStandardItem *item = model->item(row))
+        {
+            item->setEnabled(ok);
+            item->setToolTip(ok ? QString() : tr("Not available: %1").arg(why));
+        }
+    // A saved SAS/C default stays visible even while greyed out - MainWindow
+    // tells the user and falls back to VBCC - C if it can't be used.
+}
+
 QString PrefsDialog::vamosDefaultCommand()
 {
 #ifdef Q_OS_WIN

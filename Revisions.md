@@ -8,6 +8,71 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
 > documented here (see the "Earlier milestones" section at the bottom
 > for what's known about the wider rev1–52 range).
 
+## rev.160
+
+- **New**: compiler entry **"SAS/C (vamos)"** in Build &rarr; Select
+  Compiler and in the status bar's compiler box (index 5). It is greyed
+  out unless the vamos command is found and SAS/C's `c/sc` and `c/smake`
+  exist in Prefs &rarr; vamos &rarr; "SAS/C directory" (default
+  `workbench:SAS-C`, resolved case-insensitively through the Workbench/Work
+  host folders set there). Checked at start-up and whenever the Prefs are
+  closed (or reloaded); the status tip of the disabled entry names what is
+  missing. If it becomes unavailable while selected, AmigaED falls back
+  to VBCC - C. The OS 1.3/3.x box is disabled while it is selected.
+  - **Dice button / F6** compiles and links the current tab in its own
+    folder: `sc <options> BATCH <name>.c LINK TO <name>_sc`. Project files
+    get the project's SAS/C options (`sascOptionsForProject()`, same as
+    Makefile.sc); other files Prefs &rarr; SAS/C's options plus
+    `MATH=IEEE` (float/double) and `IDIR=MUI:Developer/C/Include` (MUI
+    header) where needed. Plain `.c` files only.
+  - **Build Project / Shift+F6** runs `smake -f Makefile.sc` under vamos
+    in the project folder. smake needs icon.library, which vamos lacks -
+    it gets a fake one (`-O icon.library=mode:fake`). The program name for
+    the result check is read from the Makefile's `TARGET =` line, so a
+    hand-edited Makefile.sc works too. Undefined symbols: build reported
+    as failed, incomplete program removed (as in rev.159).
+- **New**: "SAS/C (vamos)" can be the **default compiler** (Prefs &rarr;
+  Misc &rarr; "Default cross compiler"). The box now stores the compiler
+  index as item data (VBCC 0, gcc 1, g++ 2, SAS/C 5) instead of the row;
+  the SAS/C entry is greyed out while unavailable, re-checked live
+  whenever the vamos command, Workbench/Work folder or SAS/C directory on
+  the vamos tab changes. A saved SAS/C default that can't be used at
+  start-up is reported (with the reason) and replaced by VBCC - C for
+  that session. The availability check moved into
+  `PrefsDialog::sascVamosAvailable()` / `vamosHostPathForAmiga()`
+  (static), shared with MainWindow.
+- **Fixed**: vamos took an Amiga program's dash options for its own
+  ("unrecognized arguments: -f"). AmigaED now ends vamos' options with
+  `--` before the Amiga command line - this also affects "Run in vamos
+  with arguments...".
+- **Changed**: Clean Project also removes `<target>.lnk` (written by
+  SAS/C's slink). Compiler messages with a file name relative to the
+  project folder are now found even if the current tab lives elsewhere.
+- **Changed**: the generated Makefile.sc header comment now describes the
+  smake build instead of "AmigaED never runs this Makefile itself"
+  (existing unedited Makefile.sc files are rewritten once; hand-edited
+  ones stay untouched as before).
+- **Fixed (I18n)**: messages and labels that were always English now
+  follow the GUI language (English built-in, German via amigaed_de.qm):
+  the "C++ source with VBCC/GCC", "empty source file", "main() already
+  there", "version string already there", "no emulator config" and
+  "nothing to print" message boxes; the "Compilation finished" window
+  title (a `tr("..." AMIGAED_VERSION_STRING)` macro concatenation that
+  lupdate cannot extract - now `tr("... %1").arg(...)`); the
+  compile-time status bar messages; the compiler names in Prefs &rarr;
+  Misc &rarr; "Default cross compiler". Spelling fixed along the way
+  ("allready", "permit to compile", "tue to wasting", "allways").
+  Deliberately unchanged: the language names ("English"/"Deutsch"), the
+  style names (saved by their text) and the compiler names in the status
+  bar box.
+  Compiler/tool output itself is never translated - it is shown
+  verbatim. In addition, compiler, make and FlexCat runs now get
+  `LC_MESSAGES=C` (and no `LANGUAGE`; an `LC_ALL` moves to `LC_CTYPE`), so
+  a German system locale can't make NLS builds of gcc/make print
+  "Fehler"/"Warnung", which the error parsers wouldn't recognise.
+- Manual (EN/DE, in-app and PDF): new section "SAS/C (vamos) as the
+  selected compiler"; German translations for all new strings.
+
 ## rev.159
 
 - **New**: File &rarr; New Project &rarr; "Import existing Project..." now

@@ -30,7 +30,8 @@ public:
     //explicit PrefsDialog(int tabindex);
     ~PrefsDialog();
 
-    QStringList p_Compilers = {"VBCC (C mode only)", "GNU gcc (C mode)", "GNU g++ (C++ mode)"};    // used for building combobox entries
+    // rev.160: extra entry "SAS/C (vamos)" = MainWindow compiler index 5, only selectable while available
+    static constexpr int sascVamosCompilerIndex = 5;
     QStringList p_style_items;
 
     QSettings mySettings;
@@ -39,6 +40,13 @@ public:
     // MainWindow::readSettings() - see prefsdialog.cpp
     static QString vamosDefaultCommand();
     static bool vamosDefaultUseWSL();
+
+    // rev.160: is SAS/C under vamos usable? Shared by the Prefs dialog
+    // (default compiler box, checked live against the vamos tab) and
+    // MainWindow (menu entry + status bar combo) - see prefsdialog.cpp
+    static QString vamosHostPathForAmiga(const QString &amigaPath, const QString &workbenchHost, const QString &workHost);
+    static bool sascVamosAvailable(const QString &vamosCommand, const QString &workbenchHost, const QString &workHost,
+                                   const QString &sascDir, QString *why = nullptr);
 
     // rev.159: start programs in the emulator - see prefsdialog.cpp
     struct EmuMount { QString volume; QString hostPath; int bootPri = 0; };
@@ -54,6 +62,7 @@ public:
     static bool writeJobRunner(const QString &hostJobDir, const QString &amigaJobDir);   // <job dir>/autorun, see prefsdialog.cpp
 
 public slots:
+    void updateDefaultCompilerSascEntry();   // rev.160: enable/disable "SAS/C (vamos)" from the vamos tab's current values
     void save_mySettings();
     void load_mySettings();
     void simpleStatusbar();

@@ -223,7 +223,7 @@ public:
     QString p_compiler_vc30_call;                // VBCC compiler opts, OS 3.x (must keep '+aos68k' as its first token)
     QString p_compiler_vc13_linker_call;         // VBCC linker opts, OS 1.3
     QString p_compiler_vc30_linker_call;         // VBCC linker opts, OS 3.x
-    QString p_compiler_sc_call;                  // SAS/C default opts (e.g. "ICONS ERRORREXX") - used ONLY for generating Makefile.sc; SAS/C itself is never invoked by AmigaED (it only runs on a real Amiga/emulator), and makes no OS 1.3/3.x distinction
+    QString p_compiler_sc_call;                  // SAS/C default opts (e.g. "ICONS ERRORREXX") - Makefile.sc and the SAS/C builds under vamos (rev.159/160); SAS/C makes no OS 1.3/3.x distinction
     int  p_compiler_vc_default_target;          // holds the status bar's shared target-OS gadget value (0 = OS 1.3, 1 = OS 3.x) - despite the name, used by whichever compiler (VBCC, GCC or G++) is currently selected
     int  p_prefsPersistedDefaultTarget = 1;     // the value Prefs itself was actually set to at startup, BEFORE any per-project change to p_compiler_vc_default_target above - re-asserted into QSettings on exit (see writeSettings()) so a session's project-driven target switches never leak into what the user permanently configured in Prefs
     QString p_selected_compiler;                // holds value of compiler to use for recent compilation
@@ -262,7 +262,7 @@ public:
     // after the existing three rather than inserted, so any saved
     // MISC/DefaultCrossCompiler index from before this change keeps
     // meaning the same C compiler it always did.
-    QStringList p_Compilers = {"VBCC - C", "GNU - C", "GNU - C++", "vasm", "GNU as"};
+    QStringList p_Compilers = {"VBCC - C", "GNU - C", "GNU - C++", "vasm", "GNU as", "SAS/C (vamos)"};   // rev.160: index 5 = SAS/C under vamos, only enabled if installed (see updateSascVamosAvailability())
     QStringList p_targetOS = {"OS 1.3", "OS 3.x"};
     int p_defaultCompiler;          // set from prefs file
     QString p_default_style;        // set from prefs file
@@ -541,6 +541,7 @@ private slots:
     void actionSelectCompilerGPP();
     void actionSelectCompilerVasm();
     void actionSelectCompilerGnuAs();
+    void actionSelectCompilerSascVamos();   // rev.160
     void actionToggleGccDefaultOptsDialog();
     void actionToggleVbccDefaultOptsDialog();
     void actionSetGuiLanguageEnglish();             // switch GUI language to English (source language, no translator)
@@ -982,6 +983,7 @@ private:
     QAction *selectCompilerGCCAct;       // select the compiler to use (vbcc, gcc, g++)
     QAction *selectCompilerGPPAct;       // select the compiler to use (vbcc, gcc, g++)
     QAction *selectCompilerVasmAct;      // select vasm - assembles/links an ASM project via Makefile.vbcc, see SelectCompiler()/actionBuildProject()
+    QAction *selectCompilerSascVamosAct = nullptr;   // rev.160: SAS/C 6.58 under vamos - compile current file / build via Makefile.sc + smake
     QAction *selectCompilerGnuAsAct;     // select GNU as - assembles/links an ASM project via Makefile.gcc, see SelectCompiler()/actionBuildProject()
     QAction *compileAct;                 // calls compilation of current file
     QAction *showOutputAct;              // pops up compiler output pane
@@ -1026,12 +1028,20 @@ private:
     QString p_vamos_command, p_vamos_workbench_dir, p_vamos_work_dir, p_vamos_opts;
     bool p_vamos_wsl = false;
     QString p_lastVamosArgs;   // remembered for the next "Run in vamos with arguments..."
-    enum class VamosJob { RunProgram, SascBuild };
+    enum class VamosJob { RunProgram, SascBuild, SascCompile };   // rev.160: SascCompile = single file (dice button)
     VamosJob p_vamosJob = VamosJob::RunProgram;
     QString p_vamos_sasc_dir, p_vamos_mui_dir;   // Prefs > vamos: Amiga paths assigned as sc: / MUI: for SAS/C builds
-    QString p_vamosSascTarget;                   // program name of the SAS/C build in progress (see vamosFinished())
+    QString p_vamosSascTarget;                   // host path of the program the SAS/C build in progress writes (see vamosFinished())
     bool startVamos(VamosJob job, const QString &hostDir, const QStringList &extraAssigns,
-                    const QString &path, const QStringList &tail, const QString &header);
+                    const QString &path, const QStringList &tail, const QString &header,
+                    const QStringList &vamosOpts = QStringList());
+    // rev.160: compiler entry "SAS/C (vamos)" (index 5)
+    bool p_sascVamosAvailable = false;
+    bool sascVamosAvailable(QString *why = nullptr) const;            // vamos runnable AND sc found in Prefs > vamos > SAS/C folder
+    void updateSascVamosAvailability();                               // enable/disable the menu entry + combo item
+    bool sascVamosAssigns(bool mui, QStringList &assigns);            // sc:/lib:/include:/... (+ MUI:), false (user told) if not usable
+    void actionCompileSascVamos();                                    // dice button with SAS/C selected: compile + link the current tab
+    void actionBuildProjectSascMakefile();                            // Build with SAS/C selected: smake -f Makefile.sc under vamos
     void vamosFinished(int exitCode, QProcess::ExitStatus status);
     QString sascOptionsForProject() const;       // SAS/C options for Makefile.sc AND the vamos build
     bool checkSASC(const QString &str_to_search);  // RegEx SAS/C messages ("file.c 12 Error 34: ...")
@@ -1111,7 +1121,7 @@ private:
     QLCDNumber  *statusLCD_Y;       // shows cursor's column coordinate
     QLabel *statusContainer_X;      // alternative view for cursor position
     QLabel *statusContainer_Y;      // alternative view for cursor position
-    QComboBox *compilerCombo;       // puts a Compobox for compiler selection into statusbar
+    QComboBox *compilerCombo = nullptr;   // puts a Compobox for compiler selection into statusbar
     QComboBox *osCombo;             // puts a Compobox for AmigaOS target selection into statusbar
     QPushButton *compilerButton;    // puts a dice button for compiler start into statusbar
 

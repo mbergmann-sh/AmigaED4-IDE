@@ -2699,6 +2699,24 @@ void MainWindow::readSettings()
     p_console_on_fail = (settings.value("MISC/OpenConsoleOnFail").toBool());
     p_no_warn_requesters = (settings.value("MISC/NoWarnRequester").toBool());
 
+    // rev.160: Prefs > Misc > "Fonts" - the GUI font is applied right away
+    // (on the very first call before any widget exists); a changed editor
+    // font goes to every open tab, new tabs pick it up in initializeFont()
+    const QString newGuiFont = settings.value("MISC/GuiFont").toString();
+    const bool guiFontChanged = (newGuiFont != p_guiFontSetting);
+    p_guiFontSetting = newGuiFont;
+    if (guiFontChanged || !tabWidget)
+        applyGuiFont();
+    const QString newEditorFont = settings.value("MISC/EditorFont").toString();
+    const bool editorFontChanged = (newEditorFont != p_editorFontSetting);
+    p_editorFontSetting = newEditorFont;
+    // QApplication::setFont() reaches the editors as (posted) FontChange
+    // events, and QScintilla then falls back to the application font for
+    // its default style - so the editor fonts are (re)applied only after
+    // those events, also when just the GUI font changed
+    if ((editorFontChanged || guiFontChanged) && tabWidget)
+        QTimer::singleShot(0, this, &MainWindow::applyEditorFontToOpenTabs);
+
     // GUI Language: applyGuiLanguage() itself is safe to call before any
     // widget exists (see its comment) - this is exactly what happens on the
     // very first call, since readSettings() is the first statement in the
@@ -7080,72 +7098,85 @@ void MainWindow::reapplyEditorTheme()
 //
 void MainWindow::initializeFont()
 {
-// set a readable default font for Linux and Windows:
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    QFont font("Courier New", 10);
-#elif defined(__APPLE__)
-    QFont font("SF Mono Regular", 11);
-    if(p_mydebug)
-        qDebug() << "Running on Mac. Font is SF Mono Regular now!";
-#elif defined(__unix__)
-    QFont font("Source Code Pro", 9);
-    if(p_mydebug)
-        qDebug() << "Linux detected. Setting font to Source Code Pro";
-#endif
-
-    myfont = font;
-    myfont.setFixedPitch(true);
-    // Belt-and-braces: if the named font above isn't installed on this
-    // system, Qt's font substitution should still prefer a monospace
-    // replacement rather than silently falling back to a proportional one.
-    myfont.setStyleHint(QFont::Monospace, QFont::PreferMatch);
-
-#if defined(__unix__) && !defined(__APPLE__)
-    // Root cause of the "editor text crumbles/overlaps itself" bug reported
-    // on Linux: setFixedPitch(true)/setStyleHint(Monospace) above only
-    // steer *our own* 'myfont' object. QScintilla itself does NOT reuse
-    // that QFont internally - every syntax-highlighting style (see the
-    // various initializeLexerXxx() functions below, all of which do
-    // lexer->setFont(myfont)) is handed just the family name and point
-    // size, and QScintilla's own Qt platform layer then builds a brand
-    // new, *unhinted* QFont from that family+size alone for each style it
-    // draws with - our setFixedPitch()/setStyleHint() flags never reach
-    // those internal font objects. So if "Source Code Pro" isn't actually
-    // installed (it needs a separate font package on most distros and is
-    // often missing), Qt's font matching has no monospace hint to fall
-    // back on for THOSE internal fonts and can silently substitute a
-    // *proportional* font (e.g. plain "DejaVu Sans") - while our own
-    // hinted 'myfont' here still reports a perfectly fine fixed-pitch
-    // replacement, hiding the problem from this code. Scintilla then
-    // measures and positions every character as if it were on a fixed-
-    // width grid, so a proportional font's naturally uneven glyph widths
-    // (and its kerning) make neighbouring style runs land right on top of
-    // each other or swallow the space between them - worst exactly at
-    // syntax-colour boundaries, matching the reported symptom precisely.
-    //
-    // Fix: check whether the requested font *actually* resolves to a
-    // fixed-pitch font on this system and, if not, fall back to
-    // Fontconfig's "monospace" generic family. Being a generic alias (not
-    // a real font name), Fontconfig always resolves it to a genuine
-    // fixed-pitch font on any correctly configured Linux system, with no
-    // hinting needed on our end - so it stays correct even for
-    // QScintilla's own internal, unhinted font objects.
-    QFontInfo resolvedFontInfo(font);
-    if (!resolvedFontInfo.fixedPitch())
+    // rev.160: the user's editor font (Prefs > Misc > Fonts) - or AmigaED's
+    // built-in monospaced default for this platform (Courier New / SF Mono
+    // / Source Code Pro, falling back to Fontconfig's "monospace" on Linux
+    // if Source Code Pro isn't installed: QScintilla builds its own,
+    // unhinted fonts from family + size for every style, so a missing font
+    // could otherwise be replaced by a proportional one and make the text
+    // overlap at syntax-colour boundaries - see PrefsDialog::defaultEditorFont()).
+    myfont = PrefsDialog::fontFromSetting(p_editorFontSetting, PrefsDialog::defaultEditorFont());
+    if (p_editorFontSetting.isEmpty())
     {
-        if(p_mydebug)
-            qDebug() << "Preferred editor font" << font.family()
-                      << "is not installed / not fixed-pitch on this system"
-                      << "(resolved to" << resolvedFontInfo.family() << ") -"
-                      << "falling back to the system default monospace font.";
-        font = QFont(QStringLiteral("monospace"), 9);
-        myfont = font;
         myfont.setFixedPitch(true);
         myfont.setStyleHint(QFont::Monospace, QFont::PreferMatch);
     }
-#endif
+    if(p_mydebug)
+        qDebug() << "Editor font:" << myfont.toString();
 
     textEdit->setFont(myfont);
+}
+
+//
+// rev.160: Prefs > Misc > "Fonts" - GUI font for the whole application
+// (menus, dialogs, project tree, compiler output). Called from
+// readSettings(): on the very first call no widget exists yet, so every
+// widget is created with it; afterwards QApplication::setFont() updates
+// all widgets that don't set a font of their own. "Default" restores the
+// system's general font.
+//
+void MainWindow::applyGuiFont()
+{
+    if (p_guiFontSetting.isEmpty())
+    {
+        if (!p_guiFontApplied)
+            return;   // never changed - leave Qt's own default untouched
+        QApplication::setFont(PrefsDialog::defaultGuiFont());
+        p_guiFontApplied = false;
+    }
+    else
+    {
+        QApplication::setFont(PrefsDialog::fontFromSetting(p_guiFontSetting, PrefsDialog::defaultGuiFont()));
+        p_guiFontApplied = true;
+    }
+    if (currentProject && projectTree)
+        refreshProjectTree();   // its bold group/main-file items copy the font when they're built
+}
+
+//
+// rev.160: a new editor font (Prefs closed) for every open tab - each
+// lexer gets it for all its styles (C/C++: Amiga types stay bold, as in
+// initializeLexerCPP()), a plain-text tab for the widget itself; the line
+// number margin follows. The zoom level is kept.
+//
+void MainWindow::applyEditorFontToOpenTabs()
+{
+    if (!tabWidget)
+        return;
+    QsciScintilla *previous = textEdit;
+    for (int i = 0; i < tabWidget->count(); ++i)
+    {
+        QsciScintilla *editor = qobject_cast<QsciScintilla *>(tabWidget->widget(i));
+        if (!editor)
+            continue;
+        textEdit = editor;   // initializeFont()/initializeMargin() work on textEdit
+        initializeFont();
+        if (QsciLexer *lexer = editor->lexer())
+        {
+            lexer->setFont(myfont);
+            if (auto *cpp = dynamic_cast<QsciLexerCPP *>(lexer))
+            {
+                QFont typeFont = myfont;
+                typeFont.setBold(true);
+                cpp->setFont(typeFont, QsciLexerCPP::GlobalClass);
+            }
+            editor->recolor();
+        }
+        initializeMargin(editor);
+        editor->setMarginsFont(myfont);
+        editor->zoomTo(p_zoomLevel);   // makes Scintilla re-measure the margin and all styles
+    }
+    textEdit = previous;
 }
 
 //

@@ -175,6 +175,9 @@ ol.steps li { margin-bottom:10px; font-size:14px; }
     <p><b>Build Project / Shift+F6</b> runs the project's Makefile.sc with SAS/C's own make tool, exactly as on the Amiga: <code>smake -f Makefile.sc</code> in the project folder. smake only rebuilds the program if a source file is newer. A hand-edited Makefile.sc is used as it is; the program name for the result check comes from its <code>TARGET =</code> line. Clean Project also removes the <code>.lnk</code> file SAS/C writes.</p>
     <div class="note"><b>Note:</b> Errors and warnings are coloured and clickable as usual. If symbols are undefined, the build is reported as failed and the incomplete program removed. smake opens icon.library, which vamos does not have - AmigaED gives it a dummy library (<code>-O icon.library=mode:fake</code>). The separate entry Build &rarr; <b>Build Project with SAS/C (vamos)</b> remains: it calls sc directly with all the project's .c files, without Makefile.sc and whatever compiler is selected.</div>
 
+    <h2>Fonts</h2>
+    <p>Prefs &rarr; Misc &rarr; <b>Fonts</b> sets two fonts independently: <b>GUI font</b> for menus, dialogs, the project tree and the compiler output, and <b>Editor font</b> for the source editor (every tab and every syntax style). <b>Choose...</b> opens the font requester; with <b>Fixed font</b> checked (the default) the editor's requester only lists fonts with a fixed character width - uncheck it to pick any font. Each field shows the chosen font in its own typeface; <b>Default</b> goes back to the system font (GUI) or AmigaED's built-in monospaced font (editor). Both take effect as soon as the Prefs are saved - no restart needed; the editor's zoom level is kept.</p>
+
     
     <a name="quickstart"></a>
     <h1 id="quickstart">Quick Start: From Template to Clean Build</h1>

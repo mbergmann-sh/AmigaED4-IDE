@@ -1,0 +1,11 @@
+rev.160: user-selectable GUI and editor fonts (Prefs > Misc > Fonts)
+
+- GroupBox "Fonts": GUI font / Editor font with font requester and
+  "Default" button each, "Fixed font" checkbox (monospaced-only filter
+  for the editor font requester)
+- Applied live: QApplication::setFont(); all open tabs/lexer styles get
+  the editor font after the app font's FontChange events
+- Fix: Linux default editor font check used the hinted font and missed
+  a missing "Source Code Pro" (overlapping text)
+- Manual EN/DE (HTML + PDF), translations, Revisions.md
+

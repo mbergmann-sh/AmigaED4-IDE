@@ -14,6 +14,7 @@
 #include <QProcess>
 #include <QMessageBox>
 #include <QRegularExpression>
+#include <QFont>
 
 class MainWindow;
 
@@ -40,6 +41,12 @@ public:
     // MainWindow::readSettings() - see prefsdialog.cpp
     static QString vamosDefaultCommand();
     static bool vamosDefaultUseWSL();
+
+    // rev.160: Prefs > Misc > "Fonts" - user-selectable GUI and editor
+    // fonts, saved as QFont::toString() (empty = default). See prefsdialog.cpp.
+    static QFont defaultEditorFont();                       // AmigaED's built-in monospaced editor font for this platform
+    static QFont defaultGuiFont();                          // the system's general GUI font
+    static QFont fontFromSetting(const QString &value, const QFont &fallback);
 
     // rev.160: is SAS/C under vamos usable? Shared by the Prefs dialog
     // (default compiler box, checked live against the vamos tab) and
@@ -99,6 +106,10 @@ private slots:
 
     void on_btn_setupStartScript_clicked();
     void on_btn_getProjectsRootAmiga_clicked();    // Prefs > Project: Amiga path of the projects root via folder dialog (rev.159)        // Prefs > Emulator: AmigaED block in S:User-Startup (rev.159)
+    void on_btn_guiFontChoose_clicked();            // rev.160: Prefs > Misc > Fonts
+    void on_btn_guiFontDefault_clicked();
+    void on_btn_editorFontChoose_clicked();
+    void on_btn_editorFontDefault_clicked();
     void on_btn_getFlexCatPath_clicked();          // Prefs > Tools > "Multilingual Programs": FlexCat executable (rev.159)
     void on_btn_getVamosWorkbenchDir_clicked();   // Prefs > vamos: host folder of the "Workbench" partition (rev.159)
     void on_btn_getVamosWorkDir_clicked();        // Prefs > vamos: host folder of the "Work" partition (rev.159)
@@ -112,6 +123,10 @@ private slots:
     void on_checkBoxNoCompileButton_clicked();
 
 private:
+    QString p_guiFontSetting, p_editorFontSetting;   // rev.160: current Fonts values (QFont::toString(), empty = default)
+    QString fontDescription(const QString &setting) const;
+    void showFontSettings();
+
     Ui::PrefsDialog *ui;
 
     // Shared by on_btn_editOS13Configfile_clicked()/on_btn_editOS3Configfile_clicked() -

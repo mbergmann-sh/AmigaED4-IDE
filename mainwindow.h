@@ -693,7 +693,7 @@ private:
     QSplitter *mainSplitter;                     // horizontal: [projectPanel | splitter]
     QWidget *projectPanel;                        // tree + Add/Remove buttons
     QGroupBox *projectGroupBox = nullptr;         // "Project" - groups the tree and its buttons
-    QTreeWidget *projectTree;
+    QTreeWidget *projectTree = nullptr;
     QPushButton *addProjectFileBtn;
     QPushButton *removeProjectFileBtn;
     QTreeWidgetItem *projectSourceGroupItem;      // "C/C++ Files" category node
@@ -1127,6 +1127,11 @@ private:
 
     // Font in use
     QFont myfont;
+    // rev.160: Prefs > Misc > "Fonts" (QFont::toString(), empty = default)
+    QString p_guiFontSetting, p_editorFontSetting;
+    bool p_guiFontApplied = false;            // a user GUI font was set before - "Default" must restore the system font
+    void applyGuiFont();                      // QApplication::setFont() from p_guiFontSetting
+    void applyEditorFontToOpenTabs();         // re-font every open tab (all lexer styles + margin)
 
     // is search allready opened?
     bool p_search_is_open = false;

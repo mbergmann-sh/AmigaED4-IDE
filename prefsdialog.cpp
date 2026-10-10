@@ -3,6 +3,9 @@
 #include "ui_prefsdialog.h"
 #include "mainwindow.h"
 #include <QMap>
+#include <QFontDialog>
+#include <QFontDatabase>
+#include <QFontInfo>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QStandardItemModel>
@@ -573,6 +576,9 @@ void PrefsDialog::save_mySettings()
      mySettings.setValue("MISC/CreateIcon", ui->checkBoxCreateIcon->isChecked());
      mySettings.setValue("MISC/OpenConsoleOnFail", ui->checkBoxOpenOnFail->isChecked());
      mySettings.setValue("MISC/NoWarnRequester", ui->checkBoxWarnRequesters->isChecked());
+     mySettings.setValue("MISC/GuiFont", p_guiFontSetting);                                   // rev.160: Fonts
+     mySettings.setValue("MISC/EditorFont", p_editorFontSetting);
+     mySettings.setValue("MISC/EditorFixedFontOnly", ui->checkBox_editorFixedFont->isChecked());
      mySettings.setValue("MISC/DefaultGUILanguage", ui->comboBoxDefaultGuiLanguage->currentData().toString());
      mySettings.setValue("MISC/HighlightBraceBlock", ui->checkBoxHighlightBraceBlock->isChecked());
      mySettings.setValue("MISC/NoSplashScreen", ui->checkBoxNoSplashScreen->isChecked());
@@ -645,6 +651,10 @@ void PrefsDialog::load_mySettings()
     ui->checkBoxCreateIcon->setChecked(mySettings.value("MISC/CreateIcon").toBool());
     ui->checkBoxOpenOnFail->setChecked(mySettings.value("MISC/OpenConsoleOnFail").toBool());
     ui->checkBoxWarnRequesters->setChecked(mySettings.value("MISC/NoWarnRequester").toBool());
+    p_guiFontSetting = mySettings.value("MISC/GuiFont").toString();                           // rev.160: Fonts
+    p_editorFontSetting = mySettings.value("MISC/EditorFont").toString();
+    ui->checkBox_editorFixedFont->setChecked(mySettings.value("MISC/EditorFixedFontOnly", true).toBool());
+    showFontSettings();
 
     int guiLangIndex = ui->comboBoxDefaultGuiLanguage->findData(mySettings.value("MISC/DefaultGUILanguage", "en").toString());
     ui->comboBoxDefaultGuiLanguage->setCurrentIndex(guiLangIndex >= 0 ? guiLangIndex : 0);
@@ -850,6 +860,130 @@ void PrefsDialog::updateDefaultCompilerSascEntry()
         }
     // A saved SAS/C default stays visible even while greyed out - MainWindow
     // tells the user and falls back to VBCC - C if it can't be used.
+}
+
+//
+// rev.160: Prefs > Misc > "Fonts". Both fonts are stored as
+// QFont::toString() in MISC/GuiFont / MISC/EditorFont; an empty value
+// means "default" (system GUI font / AmigaED's built-in monospaced editor
+// font) and is what the "Default" buttons restore. MainWindow applies
+// them when the Prefs are closed (readSettings()).
+//
+QFont PrefsDialog::defaultGuiFont()
+{
+    return QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+}
+
+QFont PrefsDialog::defaultEditorFont()
+{
+#if defined(Q_OS_WIN)
+    QFont font(QStringLiteral("Courier New"), 10);
+#elif defined(Q_OS_MACOS)
+    QFont font(QStringLiteral("SF Mono Regular"), 11);
+#else
+    QFont font(QStringLiteral("Source Code Pro"), 9);
+#endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+    // Source Code Pro is often not installed - QScintilla builds its own,
+    // UNHINTED fonts from family + size, which could then end up
+    // proportional (text overlapping at syntax-colour boundaries). So the
+    // check must use the plain, unhinted font, exactly as QScintilla will
+    // see it - with the monospace hint set first, Qt would happily report
+    // a fixed-pitch substitute and hide the problem. Fontconfig's
+    // "monospace" alias always resolves to a real fixed-pitch font.
+    if (!QFontInfo(font).fixedPitch())
+        font = QFont(QStringLiteral("monospace"), 9);
+#endif
+    font.setFixedPitch(true);
+    font.setStyleHint(QFont::Monospace, QFont::PreferMatch);
+    return font;
+}
+
+QFont PrefsDialog::fontFromSetting(const QString &value, const QFont &fallback)
+{
+    QFont f;
+    if (value.isEmpty() || !f.fromString(value))
+        return fallback;
+    return f;
+}
+
+// "Source Code Pro, 10 pt, bold" - or empty (the line edit's placeholder
+// then says which default applies)
+QString PrefsDialog::fontDescription(const QString &setting) const
+{
+    if (setting.isEmpty())
+        return QString();
+    const QFont f = fontFromSetting(setting, QFont());
+    QString text = f.family();
+    if (f.pointSizeF() > 0)
+        text += QStringLiteral(", ") + tr("%1 pt").arg(QLocale().toString(f.pointSizeF(), 'g', 3));
+    else if (f.pixelSize() > 0)
+        text += QStringLiteral(", ") + tr("%1 px").arg(f.pixelSize());
+    if (f.bold())
+        text += QStringLiteral(", ") + tr("bold");
+    if (f.italic())
+        text += QStringLiteral(", ") + tr("italic");
+    return text;
+}
+
+void PrefsDialog::showFontSettings()
+{
+    ui->lineEdit_guiFont->setPlaceholderText(tr("System default"));
+    ui->lineEdit_editorFont->setPlaceholderText(tr("Built-in default (monospaced)"));
+    ui->lineEdit_guiFont->setText(fontDescription(p_guiFontSetting));
+    ui->lineEdit_editorFont->setText(fontDescription(p_editorFontSetting));
+    // preview: each field shows its font's family and style, at the
+    // dialog's own size (a 20 pt font would not fit into the field)
+    auto preview = [this](QLineEdit *field, const QFont &chosen)
+    {
+        QFont f = chosen;
+        const QFont base = this->font();
+        if (base.pointSizeF() > 0)
+            f.setPointSizeF(base.pointSizeF());
+        field->setFont(f);
+        field->setCursorPosition(0);
+    };
+    preview(ui->lineEdit_guiFont, fontFromSetting(p_guiFontSetting, defaultGuiFont()));
+    preview(ui->lineEdit_editorFont, fontFromSetting(p_editorFontSetting, defaultEditorFont()));
+    ui->btn_guiFontDefault->setEnabled(!p_guiFontSetting.isEmpty());
+    ui->btn_editorFontDefault->setEnabled(!p_editorFontSetting.isEmpty());
+}
+
+void PrefsDialog::on_btn_guiFontChoose_clicked()
+{
+    bool ok = false;
+    const QFont f = QFontDialog::getFont(&ok, fontFromSetting(p_guiFontSetting, defaultGuiFont()), this,
+                                         tr("Choose GUI font"));
+    if (!ok)
+        return;
+    p_guiFontSetting = f.toString();
+    showFontSettings();
+}
+
+void PrefsDialog::on_btn_guiFontDefault_clicked()
+{
+    p_guiFontSetting.clear();
+    showFontSettings();
+}
+
+void PrefsDialog::on_btn_editorFontChoose_clicked()
+{
+    bool ok = false;
+    QFontDialog::FontDialogOptions options;
+    if (ui->checkBox_editorFixedFont->isChecked())
+        options |= QFontDialog::MonospacedFonts;   // "Fixed font": only fixed-width fonts in the list
+    const QFont f = QFontDialog::getFont(&ok, fontFromSetting(p_editorFontSetting, defaultEditorFont()), this,
+                                         tr("Choose editor font"), options);
+    if (!ok)
+        return;
+    p_editorFontSetting = f.toString();
+    showFontSettings();
+}
+
+void PrefsDialog::on_btn_editorFontDefault_clicked()
+{
+    p_editorFontSetting.clear();
+    showFontSettings();
 }
 
 QString PrefsDialog::vamosDefaultCommand()

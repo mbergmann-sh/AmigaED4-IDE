@@ -52,6 +52,24 @@ appears in every window title as `AmigaED 4.0 rev.<n>`.
   smake build instead of "AmigaED never runs this Makefile itself"
   (existing unedited Makefile.sc files are rewritten once; hand-edited
   ones stay untouched as before).
+- **New**: Prefs &rarr; Misc &rarr; group **"Fonts"** with a user
+  selectable **GUI font** and **Editor font** (font requester each, plus a
+  "Default" button) and a **"Fixed font"** checkbox that limits the editor
+  font requester to fixed-width fonts (`QFontDialog::MonospacedFonts`, on
+  by default). Saved as `MISC/GuiFont`, `MISC/EditorFont` (QFont::toString,
+  empty = default) and `MISC/EditorFixedFontOnly`. Applied live when the
+  Prefs are saved: `QApplication::setFont()` for the GUI; every open tab
+  gets the editor font for all lexer styles (Amiga types in C/C++ stay
+  bold), the margin follows, zoom is kept. The editor fonts are re-applied
+  after the application font's FontChange events (QScintilla otherwise
+  falls back to the application font), also when only the GUI font
+  changed.
+- **Fixed**: the built-in Linux editor font check ("Source Code Pro"
+  missing &rarr; Fontconfig "monospace") tested the font *with* the
+  monospace style hint already set, so Qt reported a fixed-pitch
+  substitute while QScintilla (unhinted) drew a proportional one -
+  overlapping text. The check now uses the unhinted font. The default font
+  logic moved to `PrefsDialog::defaultEditorFont()`.
 - **Fixed (I18n)**: messages and labels that were always English now
   follow the GUI language (English built-in, German via amigaed_de.qm):
   the "C++ source with VBCC/GCC", "empty source file", "main() already
